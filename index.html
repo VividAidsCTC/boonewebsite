@@ -3,677 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kelp Forest Viewer</title>
+    <title>GLB Viewer</title>
     <style>
-        * {
+        body {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(180deg, #1e3a5f 0%, #0d1b2a 100%);
             overflow: hidden;
-            height: 100vh;
-            color: white;
+            background: #000;
         }
-
         #container {
             width: 100vw;
             height: 100vh;
-            position: relative;
-        }
-
-        #controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 20, 40, 0.9);
-            padding: 20px;
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            min-width: 200px;
-            z-index: 100;
-        }
-
-        .control {
-            margin-bottom: 15px;
-        }
-
-        .control label {
-            display: block;
-            font-size: 13px;
-            margin-bottom: 8px;
-            color: #a8c5e6;
-        }
-
-        .control input[type="range"] {
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-            outline: none;
-        }
-
-        .value {
-            color: #00b4d8;
-            font-weight: bold;
-        }
-
-        #status {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 12px;
-            background: rgba(0, 20, 40, 0.7);
-            padding: 10px 15px;
-            border-radius: 8px;
-        }
-
-        #loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            z-index: 200;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #00b4d8;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        .error {
-            color: #ff6b6b;
-            background: rgba(255, 0, 0, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 10px;
-            border: 1px solid rgba(255, 0, 0, 0.3);
-        }
-
-        .success {
-            color: #51cf66;
-            background: rgba(0, 255, 0, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 10px;
-            border: 1px solid rgba(0, 255, 0, 0.3);
         }
     </style>
 </head>
 <body>
-    <div id="container">
-        <div id="loading">
-            <div class="spinner"></div>
-            <div id="loadingText">Checking Three.js availability...</div>
-            <div id="debugInfo"></div>
-        </div>
+    <div id="container"></div>
 
-        <div id="controls" style="display: none;">
-            <div class="control">
-                <label>Animation Speed: <span class="value" id="speedVal">1.0</span></label>
-                <input type="range" id="animSpeed" min="0" max="3" step="0.1" value="1.0">
-            </div>
-            
-            <div class="control">
-                <label>Wave Effect: <span class="value" id="waveVal">1.0</span></label>
-                <input type="range" id="waveStrength" min="0" max="2" step="0.1" value="1.0">
-            </div>
-            
-            <div class="control">
-                <label>Rotation: <span class="value" id="rotVal">0</span>°</label>
-                <input type="range" id="rotation" min="0" max="360" step="15" value="0">
-            </div>
-            
-            <div class="control">
-                <label>Distance: <span class="value" id="distVal">8</span></label>
-                <input type="range" id="distance" min="3" max="25" step="0.5" value="8">
-            </div>
-        </div>
-
-        <div id="status">
-            <strong>Kelp Forest Viewer</strong><br>
-            <span id="statusText">Starting up...</span>
-        </div>
-    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/OrbitControls.js"></script>
 
     <script>
-        console.log('🌊 Kelp Forest Viewer Starting...');
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         
-        // Debug info display
-        function addDebugInfo(message, type = 'info') {
-            const debugDiv = document.getElementById('debugInfo');
-            const p = document.createElement('div');
-            p.className = type;
-            p.textContent = message;
-            debugDiv.appendChild(p);
-            console.log(message);
-        }
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x333333);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         
-        function updateStatus(text) {
-            document.getElementById('statusText').textContent = text;
-            document.getElementById('loadingText').textContent = text;
-            addDebugInfo(text);
-        }
+        document.getElementById('container').appendChild(renderer.domElement);
 
-        // Check what's available
-        updateStatus('Checking browser capabilities...');
+        // Controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 5);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Load GLB file
+        const loader = new THREE.GLTFLoader();
         
-        // Test 1: Basic JavaScript
-        try {
-            addDebugInfo('✅ JavaScript is working', 'success');
+        // Replace 'your-model.glb' with the path to your GLB file
+        loader.load('animated_kelp.glb', function(gltf) {
+            const model = gltf.scene;
             
-            // Test 2: Check if we can create a canvas
-            const testCanvas = document.createElement('canvas');
-            if (testCanvas.getContext) {
-                addDebugInfo('✅ Canvas support available', 'success');
-                
-                const ctx = testCanvas.getContext('2d');
-                if (ctx) {
-                    addDebugInfo('✅ 2D Canvas context working', 'success');
+            // Enable shadows for the model
+            model.traverse(function(node) {
+                if (node.isMesh) {
+                    node.castShadow = true;
+                    node.receiveShadow = true;
                 }
-                
-                const webglCtx = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
-                if (webglCtx) {
-                    addDebugInfo('✅ WebGL support available', 'success');
-                } else {
-                    addDebugInfo('❌ WebGL not available', 'error');
-                }
-            } else {
-                addDebugInfo('❌ Canvas not supported', 'error');
-            }
+            });
             
-        } catch (error) {
-            addDebugInfo('❌ Basic JavaScript error: ' + error.message, 'error');
-        }
-        
-        // Test 3: Try to load Three.js with multiple fallbacks
-        let loadAttempt = 0;
-        const threeJsUrls = [
-            'https://cdnjs.cloudflare.com/ajax/libs/three.js/r150/three.min.js',
-            'https://unpkg.com/three@0.150.0/build/three.min.js',
-            'https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js',
-            'https://threejs.org/build/three.min.js'
-        ];
-        
-        function tryLoadThreeJS() {
-            if (loadAttempt >= threeJsUrls.length) {
-                addDebugInfo('❌ All Three.js CDNs failed', 'error');
-                updateStatus('Error: Cannot load Three.js library');
-                showManualInstructions();
-                return;
-            }
+            scene.add(model);
             
-            const url = threeJsUrls[loadAttempt];
-            addDebugInfo(`⏳ Trying Three.js from: ${url.split('/')[2]}...`);
-            updateStatus(`Loading Three.js (attempt ${loadAttempt + 1}/${threeJsUrls.length})...`);
+            // Auto-center and scale the model
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            model.position.sub(center);
             
-            const script = document.createElement('script');
-            script.src = url;
-            script.timeout = 10000; // 10 second timeout
+            const size = box.getSize(new THREE.Vector3());
+            const maxSize = Math.max(size.x, size.y, size.z);
+            const scale = 2 / maxSize;
+            model.scale.setScalar(scale);
             
-            const timeout = setTimeout(() => {
-                addDebugInfo(`⏰ Timeout loading from ${url.split('/')[2]}`, 'error');
-                script.remove();
-                loadAttempt++;
-                tryLoadThreeJS();
-            }, 10000);
-            
-            script.onload = function() {
-                clearTimeout(timeout);
-                addDebugInfo(`✅ Three.js loaded from ${url.split('/')[2]}`, 'success');
-                
-                if (typeof THREE !== 'undefined') {
-                    addDebugInfo('✅ THREE object available', 'success');
-                    loadGLTFLoader();
-                } else {
-                    addDebugInfo('❌ THREE object not found after loading', 'error');
-                    loadAttempt++;
-                    tryLoadThreeJS();
-                }
-            };
-            
-            script.onerror = function() {
-                clearTimeout(timeout);
-                addDebugInfo(`❌ Failed to load from ${url.split('/')[2]}`, 'error');
-                script.remove();
-                loadAttempt++;
-                tryLoadThreeJS();
-            };
-            
-            document.head.appendChild(script);
-        }
-        
-        function loadGLTFLoader() {
-            updateStatus('Loading GLTF loader...');
-            
-            const gltfUrls = [
-                'https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/loaders/GLTFLoader.js',
-                'https://unpkg.com/three@0.150.0/examples/js/loaders/GLTFLoader.js',
-                'https://threejs.org/examples/js/loaders/GLTFLoader.js'
-            ];
-            
-            let gltfAttempt = 0;
-            
-            function tryGLTFLoader() {
-                if (gltfAttempt >= gltfUrls.length) {
-                    addDebugInfo('❌ GLTFLoader failed to load', 'error');
-                    updateStatus('Error: Cannot load GLTF loader');
-                    proceedWithoutGLTF();
-                    return;
-                }
-                
-                const url = gltfUrls[gltfAttempt];
-                addDebugInfo(`⏳ Loading GLTFLoader from: ${url.split('/')[2]}...`);
-                
-                const script = document.createElement('script');
-                script.src = url;
-                
-                const timeout = setTimeout(() => {
-                    script.remove();
-                    gltfAttempt++;
-                    tryGLTFLoader();
-                }, 8000);
-                
-                script.onload = function() {
-                    clearTimeout(timeout);
-                    if (typeof THREE.GLTFLoader !== 'undefined') {
-                        addDebugInfo('✅ GLTFLoader loaded successfully', 'success');
-                        startKelpViewer();
-                    } else {
-                        addDebugInfo('❌ GLTFLoader object not found', 'error');
-                        gltfAttempt++;
-                        tryGLTFLoader();
-                    }
-                };
-                
-                script.onerror = function() {
-                    clearTimeout(timeout);
-                    script.remove();
-                    gltfAttempt++;
-                    tryGLTFLoader();
-                };
-                
-                document.head.appendChild(script);
-            }
-            
-            tryGLTFLoader();
-        }
-        
-        function proceedWithoutGLTF() {
-            addDebugInfo('⚠️ Proceeding without GLTF support', 'error');
-            updateStatus('Creating fallback kelp forest...');
-            startSimpleKelpViewer();
-        }
-        
-        function startKelpViewer() {
-            updateStatus('Initializing 3D scene...');
-            addDebugInfo('🎬 Starting full kelp viewer with GLTF support', 'success');
-            
-            // Hide loading, show controls
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('controls').style.display = 'block';
-            
-            initializeThreeJSScene();
-        }
-        
-        function startSimpleKelpViewer() {
-            addDebugInfo('🎬 Starting simple kelp viewer', 'success');
-            updateStatus('Simple kelp forest ready!');
-            
-            // Hide loading, show controls
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('controls').style.display = 'block';
-            
-            createSimpleKelpAnimation();
-        }
-        
-        function initializeThreeJSScene() {
-            try {
-                // Create basic Three.js scene
-                const scene = new THREE.Scene();
-                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                const renderer = new THREE.WebGLRenderer({ antialias: true });
-                
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                renderer.setClearColor(0x001122);
-                document.getElementById('container').appendChild(renderer.domElement);
-                
-                // Add some lighting
-                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-                scene.add(ambientLight);
-                
-                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-                directionalLight.position.set(10, 10, 5);
-                scene.add(directionalLight);
-                
-                camera.position.z = 5;
-                
-                // Try to load GLB
-                updateStatus('Attempting to load animated_kelp.glb...');
-                loadKelpGLB(scene, camera, renderer);
-                
-            } catch (error) {
-                addDebugInfo('❌ Three.js scene error: ' + error.message, 'error');
-                createSimpleKelpAnimation();
-            }
-        }
-        
-        function loadKelpGLB(scene, camera, renderer) {
-            const loader = new THREE.GLTFLoader();
-            
-            loader.load(
-                './animated_kelp.glb',
-                function(gltf) {
-                    addDebugInfo('🎉 GLB loaded successfully!', 'success');
-                    updateStatus('Kelp model loaded!');
-                    
-                    scene.add(gltf.scene);
-                    
-                    // Position camera
-                    camera.position.set(0, 2, 8);
-                    camera.lookAt(0, 0, 0);
-                    
-                    // Start animation
-                    function animate() {
-                        requestAnimationFrame(animate);
-                        renderer.render(scene, camera);
-                    }
-                    animate();
-                },
-                function(progress) {
-                    const percent = progress.total ? (progress.loaded / progress.total * 100).toFixed(1) : '...';
-                    updateStatus(`Loading GLB: ${percent}%`);
-                },
-                function(error) {
-                    addDebugInfo('❌ GLB loading failed: ' + error.message, 'error');
-                    updateStatus('GLB failed, creating fallback...');
-                    createFallbackKelp(scene, camera, renderer);
-                }
-            );
-        }
-        
-        function createFallbackKelp(scene, camera, renderer) {
-            // Create simple kelp geometry
-            for (let i = 0; i < 5; i++) {
-                const geometry = new THREE.CylinderGeometry(0.1, 0.2, 3, 8);
-                const material = new THREE.MeshPhongMaterial({ color: 0x228B22 });
-                const kelp = new THREE.Mesh(geometry, material);
-                
-                kelp.position.x = (i - 2) * 2;
-                kelp.position.y = 1.5;
-                scene.add(kelp);
-            }
-            
-            camera.position.set(0, 2, 8);
+            // Position camera
+            camera.position.set(3, 3, 3);
             camera.lookAt(0, 0, 0);
             
-            function animate() {
-                requestAnimationFrame(animate);
-                renderer.render(scene, camera);
-            }
-            animate();
-            
-            updateStatus('Fallback kelp ready!');
+        }, function(progress) {
+            console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
+        }, function(error) {
+            console.error('Error loading GLB file:', error);
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
         }
-        
-        function createSimpleKelpAnimation() {
-            // Create a canvas-based kelp animation
-            const canvas = document.createElement('canvas');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            canvas.style.position = 'absolute';
-            canvas.style.top = '0';
-            canvas.style.left = '0';
-            document.getElementById('container').appendChild(canvas);
-            
-            const ctx = canvas.getContext('2d');
-            
-            // Animation parameters controlled by sliders
-            let animSpeed = 1.0;
-            let waveEffect = 1.0;
-            let rotation = 0;
-            let distance = 8;
-            
-            // Connect sliders to animation
-            document.getElementById('animSpeed').addEventListener('input', function(e) {
-                animSpeed = parseFloat(e.target.value);
-                document.getElementById('speedVal').textContent = animSpeed.toFixed(1);
-            });
-            
-            document.getElementById('waveStrength').addEventListener('input', function(e) {
-                waveEffect = parseFloat(e.target.value);
-                document.getElementById('waveVal').textContent = waveEffect.toFixed(1);
-            });
-            
-            document.getElementById('rotation').addEventListener('input', function(e) {
-                rotation = parseFloat(e.target.value);
-                document.getElementById('rotVal').textContent = rotation;
-            });
-            
-            document.getElementById('distance').addEventListener('input', function(e) {
-                distance = parseFloat(e.target.value);
-                document.getElementById('distVal').textContent = distance.toFixed(1);
-            });
-            
-            // Kelp strand properties
-            const kelpStrands = [];
-            const numKelp = 12;
-            
-            for (let i = 0; i < numKelp; i++) {
-                kelpStrands.push({
-                    baseX: (canvas.width / (numKelp + 1)) * (i + 1),
-                    height: 0.4 + Math.random() * 0.3, // Height as fraction of screen
-                    phase: Math.random() * Math.PI * 2,
-                    frequency: 0.8 + Math.random() * 0.6,
-                    amplitude: 15 + Math.random() * 25,
-                    segments: 8 + Math.floor(Math.random() * 6),
-                    width: 6 + Math.random() * 8,
-                    color: `hsl(${85 + Math.random() * 35}, ${60 + Math.random() * 30}%, ${25 + Math.random() * 20}%)`
-                });
-            }
-            
-            // Floating particles
-            const particles = [];
-            for (let i = 0; i < 20; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    size: 2 + Math.random() * 4,
-                    speed: 0.2 + Math.random() * 0.8,
-                    phase: Math.random() * Math.PI * 2
-                });
-            }
-            
-            function drawKelp() {
-                // Clear with ocean gradient
-                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                gradient.addColorStop(0, '#4a90e2');
-                gradient.addColorStop(0.4, '#2e6ea6');
-                gradient.addColorStop(0.8, '#1a4c8c');
-                gradient.addColorStop(1, '#0a1a2a');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                const time = Date.now() * 0.001 * animSpeed;
-                const rotationRad = (rotation * Math.PI) / 180;
-                
-                // Draw seafloor
-                ctx.fillStyle = 'rgba(139, 115, 85, 0.6)';
-                ctx.fillRect(0, canvas.height * 0.85, canvas.width, canvas.height * 0.15);
-                
-                // Draw kelp strands
-                kelpStrands.forEach((kelp, index) => {
-                    ctx.strokeStyle = kelp.color;
-                    ctx.lineWidth = kelp.width;
-                    ctx.lineCap = 'round';
-                    
-                    const kelpHeight = canvas.height * kelp.height;
-                    const baseY = canvas.height * 0.85;
-                    
-                    // Calculate sway with rotation influence
-                    const mainSway = Math.sin(time * kelp.frequency + kelp.phase) * kelp.amplitude * waveEffect;
-                    const rotationInfluence = Math.sin(rotationRad) * 30 * waveEffect;
-                    const totalSway = mainSway + rotationInfluence;
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(kelp.baseX, baseY);
-                    
-                    // Draw kelp with multiple segments for realistic curve
-                    for (let seg = 1; seg <= kelp.segments; seg++) {
-                        const heightFactor = seg / kelp.segments;
-                        const segmentY = baseY - (kelpHeight * heightFactor);
-                        
-                        // More sway at the top
-                        const swayAtHeight = totalSway * (heightFactor * heightFactor);
-                        const segmentX = kelp.baseX + swayAtHeight + Math.sin(time * 1.5 + kelp.phase + seg) * 5 * waveEffect * heightFactor;
-                        
-                        if (seg === 1) {
-                            ctx.lineTo(segmentX, segmentY);
-                        } else {
-                            // Use quadratic curves for smooth kelp movement
-                            const prevSeg = seg - 1;
-                            const prevHeightFactor = prevSeg / kelp.segments;
-                            const prevY = baseY - (kelpHeight * prevHeightFactor);
-                            const prevSwayAtHeight = totalSway * (prevHeightFactor * prevHeightFactor);
-                            const prevX = kelp.baseX + prevSwayAtHeight + Math.sin(time * 1.5 + kelp.phase + prevSeg) * 5 * waveEffect * prevHeightFactor;
-                            
-                            const controlX = (prevX + segmentX) / 2 + Math.sin(time + seg) * 8 * waveEffect;
-                            const controlY = (prevY + segmentY) / 2;
-                            
-                            ctx.quadraticCurveTo(controlX, controlY, segmentX, segmentY);
-                        }
-                    }
-                    
-                    ctx.stroke();
-                    
-                    // Add some fronds
-                    for (let frond = 2; frond < kelp.segments; frond += 2) {
-                        const heightFactor = frond / kelp.segments;
-                        const frondY = baseY - (kelpHeight * heightFactor);
-                        const swayAtHeight = totalSway * (heightFactor * heightFactor);
-                        const frondX = kelp.baseX + swayAtHeight + Math.sin(time * 1.5 + kelp.phase + frond) * 5 * waveEffect * heightFactor;
-                        
-                        ctx.fillStyle = kelp.color;
-                        ctx.save();
-                        ctx.translate(frondX, frondY);
-                        ctx.rotate(swayAtHeight * 0.01);
-                        ctx.fillRect(-8, -3, 16, 6);
-                        ctx.fillRect(-6, -2, 12, 4);
-                        ctx.restore();
-                    }
-                });
-                
-                // Draw floating particles
-                particles.forEach(particle => {
-                    const particleTime = time * particle.speed;
-                    particle.x += Math.sin(particleTime + particle.phase) * 0.5;
-                    particle.y += Math.cos(particleTime + particle.phase * 0.7) * 0.3;
-                    
-                    // Wrap around screen
-                    if (particle.x < 0) particle.x = canvas.width;
-                    if (particle.x > canvas.width) particle.x = 0;
-                    if (particle.y < 0) particle.y = canvas.height;
-                    if (particle.y > canvas.height) particle.y = 0;
-                    
-                    ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + Math.sin(particleTime) * 0.2})`;
-                    ctx.beginPath();
-                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                    ctx.fill();
-                });
-                
-                // Add distance effect (zoom simulation)
-                const scale = 1 / (distance * 0.1);
-                ctx.save();
-                ctx.translate(canvas.width / 2, canvas.height / 2);
-                ctx.scale(scale, scale);
-                ctx.translate(-canvas.width / 2, -canvas.height / 2);
-                ctx.restore();
-                
-                requestAnimationFrame(drawKelp);
-            }
-            
-            // Handle window resize
-            function resizeCanvas() {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                
-                // Update kelp positions for new canvas size
-                kelpStrands.forEach((kelp, i) => {
-                    kelp.baseX = (canvas.width / (numKelp + 1)) * (i + 1);
-                });
-                
-                // Update particle positions
-                particles.forEach(particle => {
-                    if (particle.x > canvas.width) particle.x = canvas.width;
-                    if (particle.y > canvas.height) particle.y = canvas.height;
-                });
-            }
-            
-            window.addEventListener('resize', resizeCanvas);
-            
-            drawKelp();
-        }
-        
-        function showManualInstructions() {
-            document.getElementById('loading').innerHTML = `
-                <div style="max-width: 400px; text-align: left;">
-                    <h3 style="color: #ff6b6b; margin-bottom: 15px;">Loading Failed</h3>
-                    <div class="error">
-                        <p><strong>Possible issues:</strong></p>
-                        <ul style="margin: 10px 0; padding-left: 20px;">
-                            <li>Internet connection problems</li>
-                            <li>CDN blocking by firewall/antivirus</li>
-                            <li>Browser security restrictions</li>
-                            <li>Missing animated_kelp.glb file</li>
-                        </ul>
-                        <p><strong>Solutions:</strong></p>
-                        <ul style="margin: 10px 0; padding-left: 20px;">
-                            <li>Check internet connection</li>
-                            <li>Try a different browser</li>
-                            <li>Disable browser extensions</li>
-                            <li>Make sure animated_kelp.glb is uploaded</li>
-                        </ul>
-                    </div>
-                    <button onclick="location.reload()" style="
-                        background: #00b4d8; 
-                        color: white; 
-                        border: none; 
-                        padding: 10px 20px; 
-                        border-radius: 5px; 
-                        cursor: pointer;
-                        margin-top: 15px;
-                    ">Try Again</button>
-                </div>
-            `;
-        }
-        
-        // Start the loading process
-        setTimeout(() => {
-            tryLoadThreeJS();
-        }, 1000);
-        
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
     </script>
 </body>
 </html>
