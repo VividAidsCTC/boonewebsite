@@ -1,68 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Simple GLTF Test</title>
-    <style>
-        body { margin: 0; background: #001133; }
-        canvas { display: block; }
-        #info { position: absolute; top: 10px; left: 10px; color: white; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Kelp Forest</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="info">Loading...</div>
-    
-    <script type="module">
-        import * as THREE from 'https://unpkg.com/three@0.150.0/build/three.module.js';
-        import { GLTFLoader } from 'https://unpkg.com/three@0.150.0/examples/jsm/loaders/GLTFLoader.js';
+    <div id="container">
+        <div id="controls">
+            <div class="control-group">
+                <label>Animation Speed: <span id="speedValue">1.0</span></label>
+                <input type="range" id="animationSpeed" min="0.1" max="3" step="0.1" value="1.0">
+            </div>
+            <div class="control-group">
+                <label>Wave Intensity: <span id="intensityValue">1.0</span></label>
+                <input type="range" id="waveIntensity" min="0.1" max="3" step="0.1" value="1.0">
+            </div>
+            <div class="control-group">
+                <label>Current Direction: <span id="directionValue">0</span>°</label>
+                <input type="range" id="currentDirection" min="0" max="360" step="10" value="0">
+            </div>
+            <div class="control-group">
+                <label>Camera Distance: <span id="distanceValue">10</span></label>
+                <input type="range" id="cameraDistance" min="2" max="50" step="1" value="10">
+            </div>
+        </div>
         
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-        
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(10, 10, 5);
-        scene.add(directionalLight);
-        
-        // Load GLTF
-        const loader = new GLTFLoader();
-        loader.load(
-            './scene.gltf',
-            function(gltf) {
-                console.log('GLTF loaded!', gltf);
-                scene.add(gltf.scene);
-                
-                // Position camera
-                const box = new THREE.Box3().setFromObject(gltf.scene);
-                const size = box.getSize(new THREE.Vector3());
-                const center = box.getCenter(new THREE.Vector3());
-                
-                camera.position.copy(center);
-                camera.position.z += size.z * 2;
-                camera.lookAt(center);
-                
-                document.getElementById('info').textContent = 'GLTF loaded successfully!';
-            },
-            function(progress) {
-                console.log('Loading...', progress);
-            },
-            function(error) {
-                console.error('Error loading GLTF:', error);
-                document.getElementById('info').textContent = 'Error loading GLTF: ' + error.message;
-            }
-        );
-        
-        camera.position.z = 5;
-        
-        function animate() {
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
-        }
-        animate();
-    </script>
+        <div id="info">
+            Mouse: Click and drag to orbit | Scroll: Zoom<br>
+            Animated Kelp Forest from GLB<br>
+            <span id="loadingStatus">Loading animated_kelp.glb...</span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r150/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
