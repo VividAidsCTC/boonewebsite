@@ -148,28 +148,45 @@
 
     // load & clone model
     const loader = new THREE.GLTFLoader();
-    let kelps = [];
-    
     loader.load(
       'https://raw.githubusercontent.com/VividAidsCTC/boonetest/99e8af7024a27e85ca31e3bedec37c7c8204101a/animated_kelp.glb',
       gltf => {
         const root = gltf.scene;
-        root.scale.setScalar(1); // basic scale
-    
-        const radius = 10;
-        for (let i = 0; i < 10; i++) {
-          const clone = root.clone();
-          const angle = Math.random() * Math.PI * 2;
-          const x = Math.cos(angle) * radius;
-          const z = Math.sin(angle) * radius;
-    
-          clone.position.set(x, 0, z);
-          clone.rotation.y = Math.random() * Math.PI * 2;
-          scene.add(clone);
-          kelps.push(clone);
-        }
-      }
+        root.scale.setScalar(MODEL_SCALE);
+        scene.add(root); // optional single model
+        $('loading').style.display='none';
+        $('statusText').textContent = 'Creating forest…';
+        original = root;
+        resetForest();
+        $('statusText').textContent = 'Ready!';
+      },
+      prog => {
+        const p = prog.total ? (prog.loaded/prog.total*100).toFixed(1)+'%' : '';
+        $('statusText').textContent = Loading: ${p};
+      },
+      err => { console.error(err); $('statusText').textContent='Load error'; }
     );
+
+    let original, kelps=[], mixers=[], clock=new THREE.Clock(), t=0;
+    function resetForest(){
+      // clear old
+      kelps.forEach(m=>scene.remove(m));
+      kelps=[]; mixers=[];
+      if(!original) return;
+      for(let i=0; i<forestDensity; i++){
+        const clone = original.clone();
+        clone.position.set(
+          (Math.random()-0.5)*30,
+          0,
+          (Math.random()-0.5)*30
+        );
+        clone.rotation.y = Math.random()*Math.PI*2;
+        const s = 0.8 + Math.random()*0.4;
+        clone.scale.setScalar(MODEL_SCALE * s);
+        scene.add(clone);
+        kelps.push(clone);
+      }
+    }
 
 
     // animate
