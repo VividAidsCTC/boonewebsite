@@ -5,522 +5,567 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Animated Kelp Forest</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
-            background: linear-gradient(to bottom, #001122, #003366);
-            overflow: hidden;
-            font-family: Arial, sans-serif;
+            box-sizing: border-box;
         }
 
-        #container {
-            position: relative;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(180deg, #1e3a5f 0%, #0d1b2a 100%);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #viewer {
             width: 100vw;
             height: 100vh;
+            position: relative;
         }
 
         #controls {
             position: absolute;
             top: 20px;
             left: 20px;
-            z-index: 100;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
-            border-radius: 8px;
+            background: rgba(0, 20, 40, 0.9);
+            padding: 20px;
+            border-radius: 12px;
             color: white;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 200px;
+            z-index: 100;
         }
 
-        .control-group {
-            margin-bottom: 10px;
+        .control {
+            margin-bottom: 15px;
         }
 
-        label {
+        .control:last-child {
+            margin-bottom: 0;
+        }
+
+        .control label {
             display: block;
-            margin-bottom: 5px;
-            font-size: 12px;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #a8c5e6;
+            font-weight: 500;
         }
 
-        input[type="range"] {
-            width: 150px;
+        .control input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
         }
 
-        #info {
+        .control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00b4d8;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 180, 216, 0.3);
+        }
+
+        .control input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00b4d8;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 180, 216, 0.3);
+        }
+
+        .value {
+            color: #00b4d8;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        #status {
             position: absolute;
             bottom: 20px;
             left: 20px;
-            color: rgba(255,255,255,0.8);
+            color: rgba(255, 255, 255, 0.8);
             font-size: 12px;
-            line-height: 1.4;
+            background: rgba(0, 20, 40, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
         }
 
-        #loadingStatus {
-            color: #88ccff;
-            font-weight: bold;
-        }
-
-        .control-group span {
-            color: #88ccff;
-            font-weight: bold;
-        }
-
-        #kelpCanvas {
+        #loading {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            font-size: 18px;
+            z-index: 200;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #00b4d8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        canvas {
+            display: block;
             width: 100%;
             height: 100%;
-            z-index: 1;
         }
     </style>
 </head>
 <body>
-    <div id="container">
-        <canvas id="kelpCanvas"></canvas>
-        
-        <div id="controls">
-            <div class="control-group">
-                <label>Animation Speed: <span id="speedValue">1.0</span></label>
-                <input type="range" id="animationSpeed" min="0.1" max="3" step="0.1" value="1.0">
+    <div id="viewer">
+        <div id="loading">
+            <div class="spinner"></div>
+            <div id="loadingText">Loading Kelp Forest...</div>
+        </div>
+
+        <div id="controls" style="display: none;">
+            <div class="control">
+                <label>Animation Speed: <span class="value" id="speedVal">1.0</span></label>
+                <input type="range" id="animSpeed" min="0" max="3" step="0.1" value="1.0">
             </div>
-            <div class="control-group">
-                <label>Wave Intensity: <span id="intensityValue">1.0</span></label>
-                <input type="range" id="waveIntensity" min="0.1" max="3" step="0.1" value="1.0">
+            
+            <div class="control">
+                <label>Wave Strength: <span class="value" id="waveVal">1.0</span></label>
+                <input type="range" id="waveStrength" min="0" max="2" step="0.1" value="1.0">
             </div>
-            <div class="control-group">
-                <label>Current Direction: <span id="directionValue">0</span>°</label>
-                <input type="range" id="currentDirection" min="0" max="360" step="10" value="0">
+            
+            <div class="control">
+                <label>Current Flow: <span class="value" id="flowVal">0</span>°</label>
+                <input type="range" id="currentFlow" min="0" max="360" step="15" value="0">
             </div>
-            <div class="control-group">
-                <label>Camera Distance: <span id="distanceValue">15</span></label>
-                <input type="range" id="cameraDistance" min="5" max="50" step="1" value="15">
+            
+            <div class="control">
+                <label>View Distance: <span class="value" id="distVal">8</span></label>
+                <input type="range" id="viewDistance" min="3" max="25" step="0.5" value="8">
             </div>
         </div>
-        
-        <div id="info">
-            Mouse: Click and drag to orbit | Scroll: Zoom<br>
-            Kelp Forest (Canvas-based with GLB fallback)<br>
-            <span id="loadingStatus">Initializing...</span>
+
+        <div id="status">
+            <strong>Kelp Forest Viewer</strong><br>
+            Drag to rotate • Scroll to zoom<br>
+            <span id="statusText">Initializing...</span>
         </div>
     </div>
 
     <script type="module">
-        // Import Three.js using ES6 modules from reliable CDN
-        import * as THREE from 'https://unpkg.com/three@0.150.0/build/three.module.js';
-        import { GLTFLoader } from 'https://unpkg.com/three@0.150.0/examples/jsm/loaders/GLTFLoader.js';
-        
-        console.log('🌊 Starting Kelp Forest Viewer...');
-        
-        // Global variables
+        import * as THREE from 'https://cdn.skypack.dev/three@0.150.0';
+        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.150.0/examples/jsm/loaders/GLTFLoader.js';
+
+        // Application state
         let scene, camera, renderer, mixer, clock;
         let kelpModel = null;
-        let kelpMeshes = [];
-        let originalPositions = new Map();
-        
-        // Animation controls
-        let animationSpeed = 1.0;
-        let waveIntensity = 1.0;
-        let currentDirection = 0;
-        let cameraDistance = 15;
+        let controls = {
+            animSpeed: 1.0,
+            waveStrength: 1.0,
+            currentFlow: 0,
+            viewDistance: 8
+        };
         
         // Camera controls
-        let targetRotationX = 0, targetRotationY = 0;
-        let rotationX = 0, rotationY = 0;
+        let mouse = { x: 0, y: 0 };
         let isMouseDown = false;
-        
-        function updateLoadingStatus(message) {
-            const statusElement = document.getElementById('loadingStatus');
-            if (statusElement) {
-                statusElement.textContent = message;
-            }
-            console.log('📢', message);
+        let cameraRotation = { x: 0, y: 0 };
+        let targetCameraRotation = { x: 0, y: 0 };
+
+        function updateStatus(text) {
+            document.getElementById('statusText').textContent = text;
+            document.getElementById('loadingText').textContent = text;
+            console.log('🌊', text);
         }
-        
-        function initThreeJS() {
-            updateLoadingStatus('Initializing 3D scene...');
-            
-            // Scene setup
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('controls').style.display = 'block';
+        }
+
+        function initScene() {
+            updateStatus('Setting up underwater scene...');
+
+            // Create scene
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ 
-                canvas: document.getElementById('kelpCanvas'),
-                antialias: true,
-                alpha: true
-            });
             
+            // Create camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 2, 8);
+            
+            // Create renderer
+            const canvas = document.createElement('canvas');
+            document.getElementById('viewer').appendChild(canvas);
+            
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: canvas,
+                antialias: true,
+                alpha: false 
+            });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 0.8;
+
             clock = new THREE.Clock();
+
+            // Create underwater environment
+            createUnderwaterEnvironment();
+            setupLighting();
             
-            // Create underwater gradient background
-            const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            const context = canvas.getContext('2d');
-            
-            const gradient = context.createLinearGradient(0, 0, 0, 512);
-            gradient.addColorStop(0, '#87CEEB');
-            gradient.addColorStop(0.3, '#4682B4');
-            gradient.addColorStop(0.7, '#2F4F4F');
-            gradient.addColorStop(1, '#191970');
-            
-            context.fillStyle = gradient;
-            context.fillRect(0, 0, 512, 512);
-            
-            scene.background = new THREE.CanvasTexture(canvas);
-            
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0x87CEEB, 0.4);
-            scene.add(ambientLight);
-            
-            const sunLight = new THREE.DirectionalLight(0xB0E0E6, 1.2);
-            sunLight.position.set(20, 50, 10);
-            sunLight.castShadow = true;
-            sunLight.shadow.mapSize.width = 2048;
-            sunLight.shadow.mapSize.height = 2048;
-            scene.add(sunLight);
-            
-            const causticLight = new THREE.SpotLight(0x00CED1, 0.6, 30, Math.PI / 6, 0.3);
-            causticLight.position.set(10, 15, 5);
-            scene.add(causticLight);
-            
-            // Seafloor
-            const floorGeometry = new THREE.PlaneGeometry(100, 100);
-            const floorMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0xDEB887,
+            updateStatus('Loading animated kelp model...');
+        }
+
+        function createUnderwaterEnvironment() {
+            // Underwater gradient background
+            const bgGeometry = new THREE.SphereGeometry(50, 32, 16);
+            const bgMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    topColor: { value: new THREE.Color(0x4a90e2) },
+                    bottomColor: { value: new THREE.Color(0x0a1a2a) },
+                },
+                vertexShader: `
+                    varying vec3 vWorldPosition;
+                    void main() {
+                        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                        vWorldPosition = worldPosition.xyz;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 topColor;
+                    uniform vec3 bottomColor;
+                    varying vec3 vWorldPosition;
+                    void main() {
+                        float h = normalize(vWorldPosition + vec3(0.0, 50.0, 0.0)).y;
+                        gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), 0.6), 0.0)), 1.0);
+                    }
+                `,
+                side: THREE.BackSide
+            });
+            const bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
+            scene.add(bgMesh);
+
+            // Ocean floor
+            const floorGeometry = new THREE.PlaneGeometry(30, 30, 10, 10);
+            const floorMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x8b7355,
                 transparent: true,
                 opacity: 0.8
             });
+            
+            // Add some randomness to floor vertices
+            const positions = floorGeometry.attributes.position;
+            for (let i = 0; i < positions.count; i++) {
+                const y = positions.getY(i);
+                positions.setZ(i, y + Math.random() * 0.3);
+            }
+            positions.needsUpdate = true;
+            floorGeometry.computeVertexNormals();
+            
             const floor = new THREE.Mesh(floorGeometry, floorMaterial);
             floor.rotation.x = -Math.PI / 2;
-            floor.position.y = -5;
+            floor.position.y = -3;
             floor.receiveShadow = true;
             scene.add(floor);
-            
-            // Position camera
-            camera.position.set(0, 5, 15);
-            camera.lookAt(0, 0, 0);
-            
-            updateLoadingStatus('3D scene ready. Attempting to load GLB...');
-            console.log('✅ Three.js scene initialized');
         }
-        
-        async function loadGLB() {
+
+        function setupLighting() {
+            // Ambient underwater light
+            const ambientLight = new THREE.AmbientLight(0x4a90e2, 0.4);
+            scene.add(ambientLight);
+
+            // Main directional light (filtered sunlight)
+            const sunLight = new THREE.DirectionalLight(0x87ceeb, 1.2);
+            sunLight.position.set(10, 20, 5);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 1024;
+            sunLight.shadow.mapSize.height = 1024;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 50;
+            sunLight.shadow.camera.left = -10;
+            sunLight.shadow.camera.right = 10;
+            sunLight.shadow.camera.top = 10;
+            sunLight.shadow.camera.bottom = -10;
+            scene.add(sunLight);
+
+            // Underwater caustic lights
+            const caustic1 = new THREE.SpotLight(0x00bcd4, 0.5, 15, Math.PI / 8, 0.5);
+            caustic1.position.set(5, 8, 3);
+            scene.add(caustic1);
+
+            const caustic2 = new THREE.SpotLight(0x26c6da, 0.3, 12, Math.PI / 6, 0.8);
+            caustic2.position.set(-4, 6, -2);
+            scene.add(caustic2);
+        }
+
+        async function loadKelpModel() {
+            const loader = new GLTFLoader();
+            
             try {
-                updateLoadingStatus('Loading animated_kelp.glb...');
+                updateStatus('Downloading kelp model...');
                 
-                // First check if the file exists
-                const response = await fetch('./animated_kelp.glb');
-                if (!response.ok) {
-                    throw new Error(`GLB file not found: ${response.status} ${response.statusText}`);
-                }
-                
-                updateLoadingStatus('GLB file found, parsing...');
-                
-                const loader = new GLTFLoader();
-                
-                return new Promise((resolve, reject) => {
+                const gltf = await new Promise((resolve, reject) => {
                     loader.load(
                         './animated_kelp.glb',
-                        
-                        // Success
-                        function(gltf) {
-                            console.log('🎉 GLB loaded successfully!', gltf);
-                            
-                            kelpModel = gltf.scene;
-                            
-                            // Setup animations
-                            if (gltf.animations && gltf.animations.length > 0) {
-                                mixer = new THREE.AnimationMixer(kelpModel);
-                                gltf.animations.forEach(clip => {
-                                    const action = mixer.clipAction(clip);
-                                    action.play();
-                                });
-                                console.log(`✨ Started ${gltf.animations.length} animations`);
-                            }
-                            
-                            // Process meshes
-                            let meshCount = 0;
-                            kelpModel.traverse(function(child) {
-                                if (child.isMesh) {
-                                    child.castShadow = true;
-                                    child.receiveShadow = true;
-                                    meshCount++;
-                                    kelpMeshes.push(child);
-                                    
-                                    // Store original positions for wave effects
-                                    if (child.geometry && child.geometry.attributes.position) {
-                                        const positions = child.geometry.attributes.position.array.slice();
-                                        originalPositions.set(child, {
-                                            positions: positions,
-                                            offset1: Math.random() * Math.PI * 2,
-                                            offset2: Math.random() * Math.PI * 2,
-                                            freq1: 0.5 + Math.random() * 0.8,
-                                            freq2: 0.3 + Math.random() * 0.6,
-                                            amplitude1: 0.8 + Math.random() * 0.6,
-                                            amplitude2: 0.6 + Math.random() * 0.5
-                                        });
-                                    }
-                                }
-                            });
-                            
-                            console.log(`📈 Processed ${meshCount} meshes`);
-                            
-                            // Auto-scale and center
-                            const box = new THREE.Box3().setFromObject(kelpModel);
-                            const size = box.getSize(new THREE.Vector3());
-                            const center = box.getCenter(new THREE.Vector3());
-                            
-                            const maxDim = Math.max(size.x, size.y, size.z);
-                            if (maxDim > 20 || maxDim < 1) {
-                                const scale = maxDim > 20 ? 20 / maxDim : 2 / maxDim;
-                                kelpModel.scale.setScalar(scale);
-                            }
-                            
-                            kelpModel.position.set(-center.x, -center.y, -center.z);
-                            scene.add(kelpModel);
-                            
-                            // Position camera
-                            const distance = Math.max(maxDim * 1.5, 10);
-                            camera.position.set(0, size.y * 0.3, distance);
-                            camera.lookAt(0, 0, 0);
-                            
-                            updateLoadingStatus('GLB loaded successfully!');
-                            resolve(gltf);
+                        resolve,
+                        (progress) => {
+                            const percent = progress.total ? 
+                                Math.round((progress.loaded / progress.total) * 100) : 0;
+                            updateStatus(`Loading model: ${percent}%`);
                         },
-                        
-                        // Progress
-                        function(xhr) {
-                            if (xhr.lengthComputable) {
-                                const percent = (xhr.loaded / xhr.total * 100).toFixed(1);
-                                updateLoadingStatus(`Loading GLB: ${percent}%`);
-                            }
-                        },
-                        
-                        // Error
-                        function(error) {
-                            console.error('❌ GLB loading failed:', error);
-                            reject(error);
-                        }
+                        reject
                     );
                 });
-                
+
+                updateStatus('Processing kelp model...');
+                console.log('✅ GLB loaded:', gltf);
+
+                kelpModel = gltf.scene;
+
+                // Setup animations
+                if (gltf.animations && gltf.animations.length > 0) {
+                    mixer = new THREE.AnimationMixer(kelpModel);
+                    
+                    gltf.animations.forEach((clip, index) => {
+                        const action = mixer.clipAction(clip);
+                        action.play();
+                        console.log(`🎬 Playing animation: ${clip.name || `Animation ${index}`}`);
+                    });
+                }
+
+                // Process all meshes
+                let meshCount = 0;
+                kelpModel.traverse((child) => {
+                    if (child.isMesh) {
+                        meshCount++;
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+
+                        // Enhance materials for underwater look
+                        if (child.material) {
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(enhanceUnderwaterMaterial);
+                            } else {
+                                enhanceUnderwaterMaterial(child.material);
+                            }
+                        }
+                    }
+                });
+
+                console.log(`📊 Processed ${meshCount} meshes`);
+
+                // Auto-scale and position model
+                const box = new THREE.Box3().setFromObject(kelpModel);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+
+                // Scale to reasonable size
+                const maxDim = Math.max(size.x, size.y, size.z);
+                if (maxDim > 0) {
+                    const targetSize = 6;
+                    const scale = targetSize / maxDim;
+                    kelpModel.scale.setScalar(scale);
+                }
+
+                // Center the model
+                kelpModel.position.sub(center.multiplyScalar(kelpModel.scale.x));
+                kelpModel.position.y = Math.max(kelpModel.position.y, -2);
+
+                scene.add(kelpModel);
+
+                updateStatus('Kelp forest ready!');
+                hideLoading();
+
+                return true;
+
             } catch (error) {
-                console.error('❌ GLB loading error:', error);
-                throw error;
+                console.error('❌ Failed to load kelp model:', error);
+                updateStatus('Failed to load model - creating fallback');
+                createFallbackKelp();
+                hideLoading();
+                return false;
             }
         }
-        
-        function createFallbackKelp() {
-            console.log('🔄 Creating fallback kelp forest...');
-            updateLoadingStatus('Creating fallback kelp forest...');
+
+        function enhanceUnderwaterMaterial(material) {
+            // Add underwater characteristics to materials
+            material.transparent = true;
+            material.opacity = Math.min(material.opacity || 1, 0.9);
             
-            // Create multiple kelp strands
-            for (let i = 0; i < 12; i++) {
-                const height = 4 + Math.random() * 8;
-                const radius = 0.1 + Math.random() * 0.15;
+            if (material.color) {
+                // Slightly desaturate and darken for underwater effect
+                material.color.multiplyScalar(0.8);
+            }
+        }
+
+        function createFallbackKelp() {
+            updateStatus('Creating procedural kelp...');
+            
+            const kelpGroup = new THREE.Group();
+            
+            // Create several kelp strands
+            for (let i = 0; i < 8; i++) {
+                const height = 3 + Math.random() * 4;
+                const segments = 12;
                 
                 const geometry = new THREE.CylinderGeometry(
-                    radius * 0.3, radius, height, 8, 15
+                    0.05, 0.15, height, 6, segments
                 );
-                
-                const hue = 85 + Math.random() * 30; // Green variations
-                const saturation = 60 + Math.random() * 20;
-                const lightness = 25 + Math.random() * 15;
                 
                 const material = new THREE.MeshPhongMaterial({
-                    color: new THREE.Color().setHSL(hue/360, saturation/100, lightness/100),
+                    color: new THREE.Color().setHSL(
+                        0.25 + Math.random() * 0.1, // Green hue
+                        0.6 + Math.random() * 0.3,  // Saturation
+                        0.2 + Math.random() * 0.2   // Lightness
+                    ),
                     transparent: true,
-                    opacity: 0.85
+                    opacity: 0.8
                 });
                 
-                const kelpMesh = new THREE.Mesh(geometry, material);
+                const kelp = new THREE.Mesh(geometry, material);
                 
-                // Position in a rough circle
-                const angle = (i / 12) * Math.PI * 2;
-                const radius_pos = 3 + Math.random() * 4;
-                kelpMesh.position.set(
-                    Math.cos(angle) * radius_pos,
-                    height / 2 - 2,
-                    Math.sin(angle) * radius_pos
+                // Position in a circle
+                const angle = (i / 8) * Math.PI * 2;
+                const radius = 1.5 + Math.random() * 1;
+                kelp.position.set(
+                    Math.cos(angle) * radius,
+                    height / 2 - 1,
+                    Math.sin(angle) * radius
                 );
                 
-                kelpMesh.castShadow = true;
-                scene.add(kelpMesh);
-                kelpMeshes.push(kelpMesh);
-                
-                // Store original positions for animation
-                const positions = geometry.attributes.position.array.slice();
-                originalPositions.set(kelpMesh, {
-                    positions: positions,
-                    offset1: Math.random() * Math.PI * 2,
-                    offset2: Math.random() * Math.PI * 2,
-                    freq1: 0.5 + Math.random() * 0.8,
-                    freq2: 0.3 + Math.random() * 0.6,
-                    amplitude1: 0.8 + Math.random() * 0.6,
-                    amplitude2: 0.6 + Math.random() * 0.5
-                });
+                kelp.castShadow = true;
+                kelpGroup.add(kelp);
             }
             
-            console.log(`✅ Created ${kelpMeshes.length} fallback kelp strands`);
-            updateLoadingStatus('Fallback kelp forest ready!');
+            scene.add(kelpGroup);
+            kelpModel = kelpGroup;
         }
-        
-        function deformKelp(mesh, time) {
-            const data = originalPositions.get(mesh);
-            if (!data || !mesh.geometry.attributes.position) return;
 
-            const positions = mesh.geometry.attributes.position;
-            const originalPos = data.positions;
-            
-            const dirRad = (currentDirection * Math.PI) / 180;
-            const wave1 = Math.sin(time * data.freq1 + data.offset1) * data.amplitude1;
-            const wave2 = Math.cos(time * data.freq2 + data.offset2) * data.amplitude2;
-            
-            // Get height bounds
-            let minY = Infinity, maxY = -Infinity;
-            for (let i = 1; i < originalPos.length; i += 3) {
-                minY = Math.min(minY, originalPos[i]);
-                maxY = Math.max(maxY, originalPos[i]);
-            }
-            const height = maxY - minY;
-            
-            // Deform vertices
-            for (let i = 0; i < positions.count; i++) {
-                const i3 = i * 3;
-                
-                const originalX = originalPos[i3];
-                const originalY = originalPos[i3 + 1];
-                const originalZ = originalPos[i3 + 2];
-                
-                const heightFactor = height > 0 ? (originalY - minY) / height : 0;
-                const heightFactorSquared = heightFactor * heightFactor;
-                
-                const bendAmountX = (wave1 + wave2 * 0.6) * waveIntensity * heightFactorSquared * 0.8;
-                const bendAmountZ = (wave2 + wave1 * 0.4) * waveIntensity * heightFactorSquared * 0.8;
-                
-                const finalBendX = bendAmountX * Math.cos(dirRad) + bendAmountZ * Math.sin(dirRad) * 0.3;
-                const finalBendZ = bendAmountZ * Math.sin(dirRad) + bendAmountX * Math.cos(dirRad) * 0.3;
-                
-                positions.setX(i, originalX + finalBendX);
-                positions.setY(i, originalY);
-                positions.setZ(i, originalZ + finalBendZ);
-            }
-            
-            positions.needsUpdate = true;
-            mesh.geometry.computeVertexNormals();
-        }
-        
-        function setupControls() {
+        function setupControlListeners() {
             // Animation Speed
-            const speedSlider = document.getElementById('animationSpeed');
-            speedSlider.addEventListener('input', function(e) {
-                animationSpeed = parseFloat(e.target.value);
-                document.getElementById('speedValue').textContent = animationSpeed.toFixed(1);
+            document.getElementById('animSpeed').addEventListener('input', (e) => {
+                controls.animSpeed = parseFloat(e.target.value);
+                document.getElementById('speedVal').textContent = controls.animSpeed.toFixed(1);
             });
 
-            // Wave Intensity
-            const intensitySlider = document.getElementById('waveIntensity');
-            intensitySlider.addEventListener('input', function(e) {
-                waveIntensity = parseFloat(e.target.value);
-                document.getElementById('intensityValue').textContent = waveIntensity.toFixed(1);
+            // Wave Strength
+            document.getElementById('waveStrength').addEventListener('input', (e) => {
+                controls.waveStrength = parseFloat(e.target.value);
+                document.getElementById('waveVal').textContent = controls.waveStrength.toFixed(1);
             });
 
-            // Current Direction
-            const directionSlider = document.getElementById('currentDirection');
-            directionSlider.addEventListener('input', function(e) {
-                currentDirection = parseFloat(e.target.value);
-                document.getElementById('directionValue').textContent = currentDirection;
+            // Current Flow
+            document.getElementById('currentFlow').addEventListener('input', (e) => {
+                controls.currentFlow = parseFloat(e.target.value);
+                document.getElementById('flowVal').textContent = controls.currentFlow + '°';
             });
 
-            // Camera Distance
-            const distanceSlider = document.getElementById('cameraDistance');
-            distanceSlider.addEventListener('input', function(e) {
-                cameraDistance = parseFloat(e.target.value);
-                document.getElementById('distanceValue').textContent = cameraDistance;
+            // View Distance
+            document.getElementById('viewDistance').addEventListener('input', (e) => {
+                controls.viewDistance = parseFloat(e.target.value);
+                document.getElementById('distVal').textContent = controls.viewDistance.toFixed(1);
             });
-            
+
             // Mouse controls
-            document.addEventListener('mousedown', () => isMouseDown = true);
-            document.addEventListener('mouseup', () => isMouseDown = false);
-            
-            document.addEventListener('mousemove', function(event) {
+            document.addEventListener('mousedown', (e) => {
+                isMouseDown = true;
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            });
+
+            document.addEventListener('mouseup', () => {
+                isMouseDown = false;
+            });
+
+            document.addEventListener('mousemove', (e) => {
                 if (isMouseDown) {
-                    targetRotationY += event.movementX * 0.01;
-                    targetRotationX += event.movementY * 0.01;
-                    targetRotationX = Math.max(-Math.PI/3, Math.min(Math.PI/3, targetRotationX));
+                    const deltaX = e.clientX - mouse.x;
+                    const deltaY = e.clientY - mouse.y;
+                    
+                    targetCameraRotation.y += deltaX * 0.01;
+                    targetCameraRotation.x += deltaY * 0.01;
+                    targetCameraRotation.x = Math.max(-1, Math.min(1, targetCameraRotation.x));
+                    
+                    mouse.x = e.clientX;
+                    mouse.y = e.clientY;
                 }
             });
 
-            document.addEventListener('wheel', function(event) {
-                cameraDistance += event.deltaY * 0.01;
-                cameraDistance = Math.max(2, Math.min(50, cameraDistance));
-                distanceSlider.value = cameraDistance;
-                document.getElementById('distanceValue').textContent = cameraDistance.toFixed(1);
+            // Zoom
+            document.addEventListener('wheel', (e) => {
+                controls.viewDistance += e.deltaY * 0.01;
+                controls.viewDistance = Math.max(3, Math.min(25, controls.viewDistance));
+                document.getElementById('viewDistance').value = controls.viewDistance;
+                document.getElementById('distVal').textContent = controls.viewDistance.toFixed(1);
+            });
+
+            // Window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
             });
         }
-        
+
         function animate() {
             requestAnimationFrame(animate);
-            
+
             const deltaTime = clock.getDelta();
-            const time = clock.getElapsedTime() * animationSpeed;
-            
-            // Update GLB animations
+
+            // Update animations
             if (mixer) {
-                mixer.update(deltaTime * animationSpeed);
+                mixer.update(deltaTime * controls.animSpeed);
             }
-            
-            // Apply wave deformation
-            kelpMeshes.forEach(mesh => {
-                deformKelp(mesh, time);
-            });
-            
-            // Camera movement
-            rotationX += (targetRotationX - rotationX) * 0.05;
-            rotationY += (targetRotationY - rotationY) * 0.05;
-            
-            camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * cameraDistance;
-            camera.position.y = Math.sin(rotationX) * cameraDistance + 2;
-            camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * cameraDistance;
+
+            // Smooth camera movement
+            cameraRotation.x += (targetCameraRotation.x - cameraRotation.x) * 0.1;
+            cameraRotation.y += (targetCameraRotation.y - cameraRotation.y) * 0.1;
+
+            // Position camera
+            camera.position.x = Math.sin(cameraRotation.y) * controls.viewDistance;
+            camera.position.z = Math.cos(cameraRotation.y) * controls.viewDistance;
+            camera.position.y = 2 + Math.sin(cameraRotation.x) * 3;
             camera.lookAt(0, 0, 0);
-            
+
             renderer.render(scene, camera);
         }
-        
-        // Handle window resize
-        window.addEventListener('resize', function() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-        
-        // Main initialization
+
+        // Initialize application
         async function init() {
             try {
-                initThreeJS();
-                setupControls();
-                
-                // Try to load GLB, fallback to procedural kelp
-                try {
-                    await loadGLB();
-                } catch (error) {
-                    console.log('🔄 GLB failed, using fallback kelp');
-                    updateLoadingStatus('GLB failed, using procedural kelp...');
-                    createFallbackKelp();
-                }
-                
+                initScene();
+                setupControlListeners();
+                await loadKelpModel();
                 animate();
-                
             } catch (error) {
-                console.error('💥 Initialization failed:', error);
-                updateLoadingStatus('Error: Failed to initialize');
+                console.error('💥 Application failed to start:', error);
+                updateStatus('Error: Failed to initialize');
             }
         }
-        
-        // Start the application
+
+        // Start the app
         init();
     </script>
 </body>
