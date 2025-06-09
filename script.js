@@ -1,14 +1,30 @@
-// Wait for Three.js to load
+// Wait for Three.js and GLTFLoader to load
 document.addEventListener('DOMContentLoaded', function() {
     // Check if Three.js loaded
     if (typeof THREE === 'undefined') {
         console.error('Three.js not loaded');
+        updateLoadingStatus('Error: Three.js failed to load');
         return;
     }
     
-    console.log('Starting kelp forest animation');
+    // Check if GLTFLoader loaded
+    if (typeof THREE.GLTFLoader === 'undefined') {
+        console.error('GLTFLoader not loaded');
+        updateLoadingStatus('Error: GLTFLoader failed to load');
+        return;
+    }
+    
+    console.log('Starting GLTF kelp forest animation');
+    updateLoadingStatus('Initializing scene...');
     startKelpForest();
 });
+
+function updateLoadingStatus(message) {
+    const statusElement = document.getElementById('loadingStatus');
+    if (statusElement) {
+        statusElement.textContent = message;
+    }
+}
 
 function startKelpForest() {
     // Scene setup
@@ -16,6 +32,10 @@ function startKelpForest() {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    
+    // Enable shadows for better GLTF rendering
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
     // Create blue gradient background
     const canvas = document.createElement('canvas');
@@ -37,24 +57,27 @@ function startKelpForest() {
     const container = document.getElementById('container');
     container.appendChild(renderer.domElement);
 
-    // Brighter ocean lighting
-    const ambientLight = new THREE.AmbientLight(0x4488cc, 0.4);
+    // Enhanced lighting for GLTF models
+    const ambientLight = new THREE.AmbientLight(0x4488cc, 0.6); // Brighter ambient
     scene.add(ambientLight);
     
-    const sunLight = new THREE.DirectionalLight(0x88ccff, 1.2);
+    const sunLight = new THREE.DirectionalLight(0x88ccff, 1.5);
     sunLight.position.set(0, 50, 10);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
     scene.add(sunLight);
     
-    const rimLight1 = new THREE.DirectionalLight(0x5599dd, 0.4);
+    const rimLight1 = new THREE.DirectionalLight(0x5599dd, 0.6);
     rimLight1.position.set(20, 20, 0);
     scene.add(rimLight1);
     
-    const rimLight2 = new THREE.DirectionalLight(0x4488cc, 0.3);
+    const rimLight2 = new THREE.DirectionalLight(0x4488cc, 0.4);
     rimLight2.position.set(-20, 15, 0);
     scene.add(rimLight2);
 
-    // Create brighter brown seafloor
-    const floorGeometry = new THREE.PlaneGeometry(500, 500);
+    // Create seafloor
+    const floorGeometry = new THREE.PlaneGeometry(100, 100);
     const floorMaterial = new THREE.MeshPhongMaterial({ 
         color: 0x371c00,
         shininess: 4
@@ -62,6 +85,7 @@ function startKelpForest() {
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -1;
+    floor.receiveShadow = true;
     scene.add(floor);
 
     // Animation controls
@@ -69,62 +93,156 @@ function startKelpForest() {
     let waveIntensity = 1.2;
     let currentDirection = 45;
 
-    // Create bending kelp forest
-    const kelp = [];
+    // GLTF model variables
+    let gltfScene = null;
+    let kelpMeshes = [];
+    let originalPositions = [];
+
+    // Load GLTF model
+    updateLoadingStatus('Loading scene.gltf...');
+    const loader = new THREE.GLTFLoader();
     
-    for(let i = 0; i < 35; i++) {
-        // Random kelp dimensions
-        const kelpHeight = 15 + Math.random() * 20;
-        const bottomRadius = 0.3 + Math.random() * 0.4;
-        const topRadius = bottomRadius * (0.3 + Math.random() * 0.4);
+    loader.load(
+        './scene.gltf',
         
-        // Create custom geometry for bending kelp
-        const segments = 20;
-        const radialSegments = 8;
+        // onLoad callback
+        function(gltf) {
+            console.log('GLTF loaded successfully', gltf);
+            updateLoadingStatus('Model loaded! Setting up animation...');
+            
+            gltfScene = gltf.scene;
+            
+            // Scale and position the model appropriately
+            gltfScene.scale.set(1, 1, 1); // Adjust scale as needed
+            gltfScene.position.set(0, 0, 0); // Adjust position as needed
+            
+            // Enable shadows on all meshes
+            gltfScene.traverse(function(child) {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    
+                    // Store kelp meshes for animation
+                    if (child.name.toLowerCase().includes('kelp') || 
+                        child.material.name.toLowerCase().includes('kelp') ||
+                        child.geometry) {
+                        
+                        kelpMeshes.push(child);
+                        
+                        // Store original positions for animation
+                        const positions = child.geometry.attributes.position.array.slice();
+                        originalPositions.push({
+                            mesh: child,
+                            originalPositions: positions,
+                            offset1: Math.random() * Math.PI * 2,
+                            offset2: Math.random() * Math.PI * 2,
+                            offset3: Math.random() * Math.PI * 2,
+                            freq1: 0.8 + Math.random() * 0.6,
+                            freq2: 1.1 + Math.random() * 0.8,
+                            freq3: 0.5 + Math.random() * 0.4,
+                            amplitude1: 0.8 + Math.random() * 0.6,
+                            amplitude2: 0.6 + Math.random() * 0.5,
+                            amplitude3: 0.4 + Math.random() * 0.3
+                        });
+                        
+                        console.log('Found kelp mesh:', child.name);
+                    }
+                }
+            });
+            
+            scene.add(gltfScene);
+            console.log('GLTF scene added to Three.js scene');
+            console.log('Found', kelpMeshes.length, 'kelp meshes for animation');
+            
+            updateLoadingStatus('Ready! Use controls to adjust animation.');
+            
+            // Position camera to view the model
+            positionCameraForModel(gltfScene);
+        },
         
-        const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, kelpHeight, radialSegments, segments);
+        // onProgress callback
+        function(progress) {
+            const percentComplete = (progress.loaded / progress.total * 100).toFixed(1);
+            updateLoadingStatus(`Loading: ${percentComplete}%`);
+            console.log('Loading progress:', percentComplete + '%');
+        },
         
-        // Store original positions for deformation
-        const positions = geometry.attributes.position.array.slice();
-        geometry.userData.originalPositions = positions;
-        geometry.userData.segmentHeight = kelpHeight / segments;
+        // onError callback
+        function(error) {
+            console.error('Error loading GLTF:', error);
+            updateLoadingStatus('Error: Failed to load scene.gltf. Check console for details.');
+            
+            // Fallback: create a simple placeholder
+            createFallbackKelp();
+        }
+    );
+
+    // Function to position camera appropriately for the loaded model
+    function positionCameraForModel(model) {
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
         
-        // Brighter, less transparent kelp material
-        const greenVariation = 0.7 + Math.random() * 0.5;
-        const kelpMaterial = new THREE.MeshPhongMaterial({
-            color: new THREE.Color(0.15 * greenVariation, 0.6 * greenVariation, 0.25 * greenVariation),
-            transparent: true,
-            opacity: 0.95,
-            shininess: 15
-        });
+        console.log('Model size:', size);
+        console.log('Model center:', center);
         
-        const kelpMesh = new THREE.Mesh(geometry, kelpMaterial);
+        // Position camera based on model size
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const distance = maxDim * 2;
         
-        // Position kelp
-        kelpMesh.position.x = (Math.random() - 0.5) * 40;
-        kelpMesh.position.z = (Math.random() - 0.5) * 40;
-        kelpMesh.position.y = kelpHeight / 2;
+        camera.position.set(center.x, center.y + size.y * 0.5, center.z + distance);
+        camera.lookAt(center);
         
-        // Store animation data
-        kelpMesh.userData = {
-            originalX: kelpMesh.position.x,
-            originalZ: kelpMesh.position.z,
-            originalY: kelpMesh.position.y,
-            height: kelpHeight,
-            segments: segments,
-            offset1: Math.random() * Math.PI * 2,
-            offset2: Math.random() * Math.PI * 2,
-            offset3: Math.random() * Math.PI * 2,
-            freq1: 0.8 + Math.random() * 0.6,
-            freq2: 1.1 + Math.random() * 0.8,
-            freq3: 0.5 + Math.random() * 0.4,
-            amplitude1: 0.8 + Math.random() * 0.6,
-            amplitude2: 0.6 + Math.random() * 0.5,
-            amplitude3: 0.4 + Math.random() * 0.3
-        };
+        console.log('Camera positioned at:', camera.position);
+    }
+
+    // Fallback function to create simple kelp if GLTF fails
+    function createFallbackKelp() {
+        console.log('Creating fallback kelp...');
+        updateLoadingStatus('Using fallback geometry...');
         
-        scene.add(kelpMesh);
-        kelp.push(kelpMesh);
+        for(let i = 0; i < 10; i++) {
+            const kelpHeight = 8 + Math.random() * 12;
+            const kelpRadius = 0.2 + Math.random() * 0.3;
+            
+            const geometry = new THREE.CylinderGeometry(kelpRadius * 0.5, kelpRadius, kelpHeight, 8, 10);
+            const material = new THREE.MeshPhongMaterial({
+                color: new THREE.Color(0.2, 0.6, 0.3),
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const kelpMesh = new THREE.Mesh(geometry, material);
+            kelpMesh.position.x = (Math.random() - 0.5) * 20;
+            kelpMesh.position.z = (Math.random() - 0.5) * 20;
+            kelpMesh.position.y = kelpHeight / 2;
+            kelpMesh.castShadow = true;
+            
+            scene.add(kelpMesh);
+            kelpMeshes.push(kelpMesh);
+            
+            // Store original positions
+            const positions = geometry.attributes.position.array.slice();
+            originalPositions.push({
+                mesh: kelpMesh,
+                originalPositions: positions,
+                offset1: Math.random() * Math.PI * 2,
+                offset2: Math.random() * Math.PI * 2,
+                offset3: Math.random() * Math.PI * 2,
+                freq1: 0.8 + Math.random() * 0.6,
+                freq2: 1.1 + Math.random() * 0.8,
+                freq3: 0.5 + Math.random() * 0.4,
+                amplitude1: 0.8 + Math.random() * 0.6,
+                amplitude2: 0.6 + Math.random() * 0.5,
+                amplitude3: 0.4 + Math.random() * 0.3
+            });
+        }
+        
+        // Position camera for fallback kelp
+        camera.position.set(0, 8, 15);
+        camera.lookAt(0, 4, 0);
+        
+        updateLoadingStatus('Fallback kelp ready!');
     }
 
     // Camera controls
@@ -132,9 +250,6 @@ function startKelpForest() {
     let rotationX = 0, rotationY = 0;
     let distance = 30;
     let isMouseDown = false;
-
-    camera.position.set(0, 8, distance);
-    camera.lookAt(0, 10, 0);
 
     // Mouse controls
     document.addEventListener('mousedown', function() { isMouseDown = true; });
@@ -150,7 +265,7 @@ function startKelpForest() {
 
     document.addEventListener('wheel', function(event) {
         distance += event.deltaY * 0.02;
-        distance = Math.max(8, Math.min(60, distance));
+        distance = Math.max(5, Math.min(100, distance));
     });
 
     // Working sliders
@@ -160,33 +275,47 @@ function startKelpForest() {
 
     waveSpeedSlider.addEventListener('input', function(e) {
         waveSpeed = parseFloat(e.target.value);
+        console.log('Wave speed:', waveSpeed);
     });
 
     waveIntensitySlider.addEventListener('input', function(e) {
         waveIntensity = parseFloat(e.target.value);
+        console.log('Wave intensity:', waveIntensity);
     });
 
     currentDirectionSlider.addEventListener('input', function(e) {
         currentDirection = parseFloat(e.target.value);
+        console.log('Current direction:', currentDirection);
     });
 
     // Animation variables
     let time = 0;
 
-    // Function to deform kelp geometry for bending
-    function deformKelp(kelpMesh, time) {
-        const geometry = kelpMesh.geometry;
+    // Function to deform kelp geometry for bending (works with GLTF meshes)
+    function deformKelp(kelpData, time) {
+        const mesh = kelpData.mesh;
+        const geometry = mesh.geometry;
         const positions = geometry.attributes.position;
-        const originalPositions = geometry.userData.originalPositions;
-        const userData = kelpMesh.userData;
+        const originalPositions = kelpData.originalPositions;
+        
+        if (!positions || !originalPositions) return;
         
         // Convert direction to radians
         const dirRad = (currentDirection * Math.PI) / 180;
         
         // Calculate wave values
-        const wave1 = Math.sin(time * userData.freq1 + userData.offset1) * userData.amplitude1;
-        const wave2 = Math.cos(time * userData.freq2 + userData.offset2) * userData.amplitude2;
-        const wave3 = Math.sin(time * userData.freq3 + userData.offset3) * userData.amplitude3;
+        const wave1 = Math.sin(time * kelpData.freq1 + kelpData.offset1) * kelpData.amplitude1;
+        const wave2 = Math.cos(time * kelpData.freq2 + kelpData.offset2) * kelpData.amplitude2;
+        const wave3 = Math.sin(time * kelpData.freq3 + kelpData.offset3) * kelpData.amplitude3;
+        
+        // Get bounding box for height calculations
+        if (!mesh.userData.boundingBox) {
+            const box = new THREE.Box3().setFromObject(mesh);
+            mesh.userData.boundingBox = box;
+        }
+        
+        const boundingBox = mesh.userData.boundingBox;
+        const height = boundingBox.max.y - boundingBox.min.y;
         
         // Deform each vertex
         for (let i = 0; i < positions.count; i++) {
@@ -198,7 +327,7 @@ function startKelpForest() {
             const originalZ = originalPositions[i3 + 2];
             
             // Calculate height factor (0 at bottom, 1 at top)
-            const heightFactor = (originalY + userData.height/2) / userData.height;
+            const heightFactor = height > 0 ? (originalY - boundingBox.min.y) / height : 0;
             const heightFactorSquared = heightFactor * heightFactor;
             
             // Calculate bending displacement
@@ -220,22 +349,15 @@ function startKelpForest() {
         geometry.computeVertexNormals();
     }
 
-    // Realistic kelp bending animation
+    // Animation loop
     function animate() {
         requestAnimationFrame(animate);
         
         time += 0.01 * waveSpeed;
         
-        kelp.forEach(function(k) {
-            // Deform the kelp geometry to create actual bending
-            deformKelp(k, time);
-            
-            // Add subtle base movement
-            k.position.x = k.userData.originalX + Math.sin(time * 0.4 + k.userData.offset1) * 0.2 * waveIntensity;
-            k.position.z = k.userData.originalZ + Math.cos(time * 0.6 + k.userData.offset2) * 0.2 * waveIntensity;
-            
-            // Very subtle vertical bobbing
-            k.position.y = k.userData.originalY + Math.sin(time * 0.2 + k.userData.offset3) * 0.05 * waveIntensity;
+        // Animate all kelp meshes (both GLTF and fallback)
+        originalPositions.forEach(function(kelpData) {
+            deformKelp(kelpData, time);
         });
         
         // Camera movement
@@ -245,7 +367,15 @@ function startKelpForest() {
         camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
         camera.position.y = Math.sin(rotationX) * distance + 10;
         camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
-        camera.lookAt(0, 8, 0);
+        
+        // Look at the center of the scene or the loaded model
+        if (gltfScene) {
+            const box = new THREE.Box3().setFromObject(gltfScene);
+            const center = box.getCenter(new THREE.Vector3());
+            camera.lookAt(center);
+        } else {
+            camera.lookAt(0, 8, 0);
+        }
         
         renderer.render(scene, camera);
     }
@@ -257,6 +387,6 @@ function startKelpForest() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    console.log('Starting brighter kelp animation');
+    console.log('Starting GLTF kelp animation');
     animate();
 }
