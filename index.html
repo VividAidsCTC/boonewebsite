@@ -1,37 +1,68 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kelp Forest Animation</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Simple GLTF Test</title>
+    <style>
+        body { margin: 0; background: #001133; }
+        canvas { display: block; }
+        #info { position: absolute; top: 10px; left: 10px; color: white; }
+    </style>
 </head>
 <body>
-    <div id="container">
-        <div id="controls">
-            <div class="control-group">
-                <label>Wave Speed</label>
-                <input type="range" id="waveSpeed" min="0.1" max="3" step="0.1" value="1.5">
-            </div>
-            <div class="control-group">
-                <label>Wave Intensity</label>
-                <input type="range" id="waveIntensity" min="0.1" max="3" step="0.1" value="1.2">
-            </div>
-            <div class="control-group">
-                <label>Current Direction</label>
-                <input type="range" id="currentDirection" min="0" max="360" step="10" value="45">
-            </div>
-        </div>
+    <div id="info">Loading...</div>
+    
+    <script type="module">
+        import * as THREE from 'https://unpkg.com/three@0.150.0/build/three.module.js';
+        import { GLTFLoader } from 'https://unpkg.com/three@0.150.0/examples/jsm/loaders/GLTFLoader.js';
         
-        <div id="info">
-            Mouse: Orbit camera | Scroll: Zoom<br>
-            GLTF Kelp forest prototype<br>
-            <span id="loadingStatus">Loading 3D model...</span>
-        </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="script.js"></script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 10, 5);
+        scene.add(directionalLight);
+        
+        // Load GLTF
+        const loader = new GLTFLoader();
+        loader.load(
+            './scene.gltf',
+            function(gltf) {
+                console.log('GLTF loaded!', gltf);
+                scene.add(gltf.scene);
+                
+                // Position camera
+                const box = new THREE.Box3().setFromObject(gltf.scene);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+                
+                camera.position.copy(center);
+                camera.position.z += size.z * 2;
+                camera.lookAt(center);
+                
+                document.getElementById('info').textContent = 'GLTF loaded successfully!';
+            },
+            function(progress) {
+                console.log('Loading...', progress);
+            },
+            function(error) {
+                console.error('Error loading GLTF:', error);
+                document.getElementById('info').textContent = 'Error loading GLTF: ' + error.message;
+            }
+        );
+        
+        camera.position.z = 5;
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
 </body>
 </html>
