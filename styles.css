@@ -1,0 +1,46 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom, #001122, #003366);
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+#container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+
+#controls {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    background: rgba(0,0,0,0.7);
+    padding: 15px;
+    border-radius: 8px;
+    color: white;
+}
+
+.control-group {
+    margin-bottom: 10px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+}
+
+input[type="range"] {
+    width: 150px;
+}
+
+#info {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+}
