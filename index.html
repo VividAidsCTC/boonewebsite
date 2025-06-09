@@ -79,7 +79,7 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script>
     // constants
-    const MODEL_SCALE = 0.3; // shrink entire model
+    const MODEL_SCALE = 1; // shrink entire model
     let forestDensity = 15;
 
     // basic scene/camera/renderer
@@ -118,21 +118,14 @@
     scene.add(sun);
 
     // ocean floor (PlaneGeometry in XZ, displace Y!)
-    const floorGeo = new THREE.PlaneGeometry(120,120,25,25);
-    const pos = floorGeo.attributes.position;
-    for (let i=0; i<pos.count; i++) {
-      // get original X,Z but displace Y
-      const y = (Math.random()-0.5)*1.2;
-      pos.setY(i, y);
-    }
-    pos.needsUpdate = true;
-    floorGeo.computeVertexNormals();
-    const floorMat = new THREE.MeshLambertMaterial({color:0x8B7355, opacity:0.8, transparent:true});
+    const floorGeo = new THREE.PlaneGeometry(500, 500);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x8B7355 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI/2;
-    floor.position.y = -3;
+    floor.rotation.x = -Math.PI / 2; // Rotate to lie flat (XZ plane)
+    floor.position.y = 0;
     floor.receiveShadow = true;
     scene.add(floor);
+
 
     // control vars & UI hookup
     let oceanMovement = 1, waveStrength = 1, currentDir=0, cameraSpeed=1;
