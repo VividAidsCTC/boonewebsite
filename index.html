@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Optimized Kelp Forest</title>
+  <title>Kelp Forest Viewer</title>
   <style>
     body { 
       margin: 0; 
@@ -17,47 +17,64 @@
       top: 20px;
       left: 20px;
       background: rgba(0, 40, 80, 0.9);
-      padding: 15px;
-      border-radius: 8px;
+      padding: 20px;
+      border-radius: 10px;
       color: white;
-      backdrop-filter: blur(5px);
+      backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.2);
-      min-width: 200px;
+      min-width: 220px;
       z-index: 100;
     }
     
     .control-group {
-      margin-bottom: 12px;
+      margin-bottom: 15px;
+    }
+    
+    .control-group:last-child {
+      margin-bottom: 0;
     }
     
     .control-group label {
       display: block;
-      font-size: 12px;
-      margin-bottom: 5px;
+      font-size: 13px;
+      margin-bottom: 8px;
       color: #a8d0f0;
+      font-weight: 500;
     }
     
     .control-group input[type="range"] {
       width: 100%;
-      height: 4px;
+      height: 6px;
       background: rgba(255, 255, 255, 0.2);
-      border-radius: 2px;
+      border-radius: 3px;
       outline: none;
       -webkit-appearance: none;
     }
     
     .control-group input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       background: #00d4ff;
       border-radius: 50%;
       cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 212, 255, 0.4);
+    }
+    
+    .control-group input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: #00d4ff;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 6px rgba(0, 212, 255, 0.4);
     }
     
     .value {
       color: #00d4ff;
       font-weight: bold;
+      font-size: 14px;
     }
     
     #info {
@@ -65,185 +82,185 @@
       bottom: 20px;
       left: 20px;
       color: rgba(255, 255, 255, 0.8);
-      font-size: 11px;
+      font-size: 12px;
       background: rgba(0, 40, 80, 0.7);
-      padding: 8px 12px;
-      border-radius: 6px;
-      line-height: 1.3;
+      padding: 10px 15px;
+      border-radius: 8px;
+      backdrop-filter: blur(5px);
+      line-height: 1.4;
     }
     
-    #fps {
+    #loading {
       position: absolute;
-      top: 20px;
-      right: 20px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       color: white;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-family: monospace;
+      text-align: center;
+      font-size: 18px;
+      z-index: 200;
+      background: rgba(0, 40, 80, 0.8);
+      padding: 20px;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
+  <div id="loading">Loading Kelp Forest...</div>
+  
   <div id="controls">
     <div class="control-group">
-      <label>Animation Speed: <span class="value" id="speedVal">1.0</span></label>
-      <input type="range" id="animSpeed" min="0" max="2" step="0.1" value="1.0">
+      <label>Ocean Movement: <span class="value" id="oceanVal">1.0</span></label>
+      <input type="range" id="oceanMovement" min="0" max="3" step="0.1" value="1.0">
     </div>
     
     <div class="control-group">
-      <label>Wave Strength: <span class="value" id="waveVal">0.5</span></label>
-      <input type="range" id="waveStrength" min="0" max="1" step="0.1" value="0.5">
+      <label>Wave Strength: <span class="value" id="waveVal">1.0</span></label>
+      <input type="range" id="waveStrength" min="0" max="2" step="0.1" value="1.0">
     </div>
     
     <div class="control-group">
-      <label>Kelp Count: <span class="value" id="countVal">8</span></label>
-      <input type="range" id="kelpCount" min="3" max="15" step="1" value="8">
+      <label>Current Direction: <span class="value" id="dirVal">0</span>°</label>
+      <input type="range" id="currentDirection" min="0" max="360" step="15" value="0">
     </div>
     
     <div class="control-group">
-      <label>Quality: <span class="value" id="qualityVal">Medium</span></label>
-      <input type="range" id="quality" min="1" max="3" step="1" value="2">
+      <label>Camera Speed: <span class="value" id="speedVal">1.0</span></label>
+      <input type="range" id="cameraSpeed" min="0.1" max="3" step="0.1" value="1.0">
+    </div>
+    
+    <div class="control-group">
+      <label>Forest Density: <span class="value" id="densityVal">25</span></label>
+      <input type="range" id="forestDensity" min="10" max="50" step="5" value="25">
     </div>
   </div>
   
-  <div id="fps">FPS: --</div>
-  
   <div id="info">
-    <strong>Optimized Kelp Forest</strong><br>
-    Drag to rotate • Scroll to zoom<br>
-    <span id="statusText">Loading...</span>
+    <strong>Kelp Forest Explorer</strong><br>
+    Left click + drag: Rotate camera<br>
+    Right click + drag: Pan view<br>
+    Scroll: Zoom in/out<br>
+    <span id="statusText">Loading model...</span>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script>
-    console.log('🚀 Starting Optimized Kelp Forest...');
+    console.log('🌊 Starting Enhanced Kelp Forest...');
     
-    // Performance monitoring
-    let frameCount = 0;
-    let lastTime = performance.now();
-    let fps = 0;
-    
-    // Scene setup with performance optimizations
+    // Scene setup
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x2F4F4F, 20, 80); // Add fog for distant object culling
     
-    // Simple gradient background (more performant than texture)
-    scene.background = new THREE.Color(0x2F4F4F);
+    // Create underwater atmosphere background
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d');
+    const gradient = context.createLinearGradient(0, 0, 0, 512);
+    gradient.addColorStop(0, '#87CEEB');   // Light blue at top
+    gradient.addColorStop(0.3, '#4682B4'); // Steel blue
+    gradient.addColorStop(0.7, '#2F4F4F'); // Dark slate gray
+    gradient.addColorStop(1, '#1B3A4B');   // Deep blue at bottom
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 512, 512);
+    scene.background = new THREE.CanvasTexture(canvas);
     
-    // Camera
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 5, 12);
+    // Camera setup
+    const camera = new THREE.PerspectiveCamera(
+      60,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      200
+    );
+    camera.position.set(0, 8, 20);
     
-    // Renderer with performance settings
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: false, // Disable for better performance
-      powerPreference: "high-performance"
-    });
+    // Renderer setup
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Limit pixel ratio
-    renderer.shadowMap.enabled = false; // Disable shadows for performance
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.8;
     document.body.appendChild(renderer.domElement);
     
-    // Simplified camera controls
+    // Enhanced camera controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.1;
+    controls.dampingFactor = 0.05;
     controls.minDistance = 3;
-    controls.maxDistance = 25;
-    controls.target.set(0, 3, 0);
+    controls.maxDistance = 50;
+    controls.maxPolarAngle = Math.PI * 0.9;
+    controls.target.set(0, 5, 0);
     
-    // Minimal lighting for performance
-    const ambientLight = new THREE.AmbientLight(0x87CEEB, 0.6);
+    // Lighting setup
+    const ambientLight = new THREE.AmbientLight(0x87CEEB, 0.4);
     scene.add(ambientLight);
     
-    const directionalLight = new THREE.DirectionalLight(0xB0E0E6, 0.8);
-    directionalLight.position.set(10, 20, 5);
-    scene.add(directionalLight);
+    const sunLight = new THREE.DirectionalLight(0xB0E0E6, 1.2);
+    sunLight.position.set(20, 50, 10);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 100;
+    sunLight.shadow.camera.left = -30;
+    sunLight.shadow.camera.right = 30;
+    sunLight.shadow.camera.top = 30;
+    sunLight.shadow.camera.bottom = -30;
+    scene.add(sunLight);
     
-    // Simple, flat ground plane
-    const groundGeometry = new THREE.PlaneGeometry(60, 60);
-    const groundMaterial = new THREE.MeshLambertMaterial({ 
+    // Underwater caustic lights
+    const causticLight1 = new THREE.SpotLight(0x00CED1, 0.6, 40, Math.PI / 8, 0.3);
+    causticLight1.position.set(15, 20, 8);
+    scene.add(causticLight1);
+    
+    const causticLight2 = new THREE.SpotLight(0x20B2AA, 0.4, 35, Math.PI / 6, 0.4);
+    causticLight2.position.set(-12, 18, -5);
+    scene.add(causticLight2);
+    
+    // Ocean floor
+    const floorGeometry = new THREE.PlaneGeometry(120, 120, 25, 25);
+    const floorMaterial = new THREE.MeshLambertMaterial({
       color: 0x8B7355,
       transparent: true,
       opacity: 0.8
     });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2; // Rotate to be horizontal
-    ground.position.y = 0; // At sea level
-    scene.add(ground);
+    
+    // Add random height variation to ocean floor
+    const positions = floorGeometry.attributes.position;
+    for (let i = 0; i < positions.count; i++) {
+      const y = positions.getY(i);
+      positions.setZ(i, y + (Math.random() - 0.5) * 1.2);
+    }
+    positions.needsUpdate = true;
+    floorGeometry.computeVertexNormals();
+    
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -3;
+    floor.receiveShadow = true;
+    scene.add(floor);
     
     // Control variables
-    let animSpeed = 1.0;
-    let waveStrength = 0.5;
-    let kelpCount = 8;
-    let quality = 2; // 1=Low, 2=Medium, 3=High
+    let oceanMovement = 1.0;
+    let waveStrength = 1.0;
+    let currentDirection = 0;
+    let cameraSpeed = 1.0;
+    let forestDensity = 25;
     
-    // Kelp forest data
+    // Kelp forest arrays
     let kelpModels = [];
+    let kelpMixers = [];
     let originalKelpModel = null;
-    let kelpAnimationData = []; // Store animation data separately for performance
     
-    // Performance optimization: Reuse geometry and materials
-    let sharedGeometry = null;
-    let sharedMaterials = [];
-    
-    function updateStatus(text) {
-      document.getElementById('statusText').textContent = text;
-    }
-    
-    function updateFPS() {
-      frameCount++;
-      const currentTime = performance.now();
-      if (currentTime >= lastTime + 1000) {
-        fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
-        document.getElementById('fps').textContent = `FPS: ${fps}`;
-        frameCount = 0;
-        lastTime = currentTime;
-        
-        // Auto-adjust quality based on FPS
-        if (fps < 30 && quality > 1) {
-          quality = Math.max(1, quality - 1);
-          document.getElementById('quality').value = quality;
-          updateQualityDisplay();
-          console.log('🔧 Auto-reduced quality for better performance');
-        }
-      }
-    }
-    
-    function updateQualityDisplay() {
-      const qualityNames = ['Low', 'Medium', 'High'];
-      document.getElementById('qualityVal').textContent = qualityNames[quality - 1];
-      
-      // Adjust renderer settings based on quality
-      switch(quality) {
-        case 1: // Low
-          renderer.setPixelRatio(1);
-          scene.fog.near = 15;
-          scene.fog.far = 40;
-          break;
-        case 2: // Medium
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-          scene.fog.near = 20;
-          scene.fog.far = 60;
-          break;
-        case 3: // High
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-          scene.fog.near = 25;
-          scene.fog.far = 80;
-          break;
-      }
-    }
-    
-    // Setup controls
+    // Setup control listeners
     function setupControls() {
-      document.getElementById('animSpeed').addEventListener('input', function(e) {
-        animSpeed = parseFloat(e.target.value);
-        document.getElementById('speedVal').textContent = animSpeed.toFixed(1);
+      document.getElementById('oceanMovement').addEventListener('input', function(e) {
+        oceanMovement = parseFloat(e.target.value);
+        document.getElementById('oceanVal').textContent = oceanMovement.toFixed(1);
       });
       
       document.getElementById('waveStrength').addEventListener('input', function(e) {
@@ -251,160 +268,173 @@
         document.getElementById('waveVal').textContent = waveStrength.toFixed(1);
       });
       
-      document.getElementById('kelpCount').addEventListener('input', function(e) {
-        const newCount = parseInt(e.target.value);
-        document.getElementById('countVal').textContent = newCount;
-        if (newCount !== kelpCount) {
-          kelpCount = newCount;
+      document.getElementById('currentDirection').addEventListener('input', function(e) {
+        currentDirection = parseFloat(e.target.value);
+        document.getElementById('dirVal').textContent = currentDirection;
+      });
+      
+      document.getElementById('cameraSpeed').addEventListener('input', function(e) {
+        cameraSpeed = parseFloat(e.target.value);
+        document.getElementById('speedVal').textContent = cameraSpeed.toFixed(1);
+        controls.autoRotateSpeed = cameraSpeed * 2;
+      });
+      
+      document.getElementById('forestDensity').addEventListener('input', function(e) {
+        const newDensity = parseInt(e.target.value);
+        document.getElementById('densityVal').textContent = newDensity;
+        if (newDensity !== forestDensity) {
+          forestDensity = newDensity;
           if (originalKelpModel) {
-            recreateKelpForest();
+            updateForestDensity();
           }
         }
       });
-      
-      document.getElementById('quality').addEventListener('input', function(e) {
-        quality = parseInt(e.target.value);
-        updateQualityDisplay();
-      });
     }
     
-    // Optimized kelp creation using instancing
-    function createOptimizedKelp(gltf) {
-      console.log('🌿 Creating optimized kelp forest...');
-      
-      // Extract geometry and materials from the original model
-      originalKelpModel.traverse(function(child) {
-        if (child.isMesh && !sharedGeometry) {
-          sharedGeometry = child.geometry.clone();
-          if (Array.isArray(child.material)) {
-            sharedMaterials = child.material.map(mat => mat.clone());
-          } else {
-            sharedMaterials = [child.material.clone()];
-          }
-          
-          // Optimize materials
-          sharedMaterials.forEach(material => {
-            material.transparent = true;
-            material.opacity = 0.9;
-            // Remove expensive material features
-            if (material.normalMap) material.normalMap = null;
-            if (material.roughnessMap) material.roughnessMap = null;
-          });
-        }
-      });
-      
-      recreateKelpForest();
-    }
-    
-    function recreateKelpForest() {
-      // Remove existing kelp
-      kelpModels.forEach(kelp => scene.remove(kelp));
-      kelpModels = [];
-      kelpAnimationData = [];
-      
-      if (!sharedGeometry || !sharedMaterials.length) return;
-      
-      console.log(`🔄 Creating ${kelpCount} kelp instances...`);
-      
-      for (let i = 0; i < kelpCount; i++) {
-        // Create mesh using shared geometry and materials
-        const kelp = new THREE.Mesh(sharedGeometry, sharedMaterials[0]);
-        
-        // Position in circle
-        const angle = (i / kelpCount) * Math.PI * 2;
-        const radius = 3 + Math.random() * 6;
-        kelp.position.set(
-          Math.cos(angle) * radius,
-          0,
-          Math.sin(angle) * radius
-        );
-        
-        // Random rotation and scale
-        kelp.rotation.y = Math.random() * Math.PI * 2;
-        const scale = 0.8 + Math.random() * 0.4;
-        kelp.scale.setScalar(scale);
-        
-        scene.add(kelp);
-        kelpModels.push(kelp);
-        
-        // Store animation data separately for performance
-        kelpAnimationData.push({
-          originalPosition: kelp.position.clone(),
-          phase: Math.random() * Math.PI * 2,
-          frequency: 0.5 + Math.random() * 0.5
-        });
-      }
-      
-      updateStatus(`Forest ready! ${kelpCount} kelp models`);
+    // Update status
+    function updateStatus(text) {
+      document.getElementById('statusText').textContent = text;
+      console.log('📢', text);
     }
     
     // Load GLB model
     const loader = new THREE.GLTFLoader();
+    
     updateStatus('Loading kelp model...');
     
     loader.load(
       'https://raw.githubusercontent.com/VividAidsCTC/boonetest/99e8af7024a27e85ca31e3bedec37c7c8204101a/animated_kelp.glb',
       
       function(gltf) {
-        console.log('✅ Kelp model loaded');
+        console.log('🎉 Kelp model loaded successfully!', gltf);
+        updateStatus('Model loaded! Creating forest...');
+        
         originalKelpModel = gltf.scene;
         
-        // Scale down the original model if it's too large
-        const box = new THREE.Box3().setFromObject(originalKelpModel);
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        
-        if (maxDim > 5) {
-          const scale = 3 / maxDim;
-          originalKelpModel.scale.setScalar(scale);
+        // Setup animations
+        if (gltf.animations && gltf.animations.length > 0) {
+          console.log(`Found ${gltf.animations.length} animations`);
         }
         
-        createOptimizedKelp(gltf);
+        // Process the original model
+        originalKelpModel.traverse(function(child) {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            
+            // Enhance materials for underwater look
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach(enhanceMaterial);
+              } else {
+                enhanceMaterial(child.material);
+              }
+            }
+          }
+        });
+        
+        // Create the kelp forest
+        createKelpForest(gltf);
+        
+        // Hide loading screen
+        document.getElementById('loading').style.display = 'none';
+        updateStatus('Kelp forest ready!');
       },
       
       function(progress) {
-        const percent = progress.total ? (progress.loaded / progress.total * 100).toFixed(0) : '...';
+        const percent = progress.total ? (progress.loaded / progress.total * 100).toFixed(1) : '...';
         updateStatus(`Loading: ${percent}%`);
       },
       
       function(error) {
-        console.error('❌ Error loading kelp:', error);
+        console.error('❌ Error loading kelp model:', error);
         updateStatus('Error loading model');
-        createFallbackKelp();
+        document.getElementById('loading').innerHTML = 'Error loading kelp model<br><small>Check console for details</small>';
       }
     );
     
-    // Simple fallback kelp for if model fails to load
-    function createFallbackKelp() {
-      console.log('🔄 Creating fallback kelp...');
-      
-      for (let i = 0; i < kelpCount; i++) {
-        const geometry = new THREE.CylinderGeometry(0.1, 0.2, 3, 6, 1);
-        const material = new THREE.MeshLambertMaterial({ color: 0x228B22 });
-        const kelp = new THREE.Mesh(geometry, material);
+    // Enhance material for underwater appearance
+    function enhanceMaterial(material) {
+      if (material.isMeshStandardMaterial || material.isMeshPhongMaterial) {
+        material.transparent = true;
+        material.opacity = Math.max(0.85, material.opacity || 1);
         
-        const angle = (i / kelpCount) * Math.PI * 2;
-        const radius = 3 + Math.random() * 6;
-        kelp.position.set(
-          Math.cos(angle) * radius,
-          1.5,
-          Math.sin(angle) * radius
-        );
-        
-        scene.add(kelp);
-        kelpModels.push(kelp);
-        
-        kelpAnimationData.push({
-          originalPosition: kelp.position.clone(),
-          phase: Math.random() * Math.PI * 2,
-          frequency: 0.5 + Math.random() * 0.5
-        });
+        if (material.color) {
+          // Slightly blue-green tint for underwater effect
+          material.color.multiplyScalar(0.9);
+          material.color.r *= 0.8;
+          material.color.g *= 1.0;
+          material.color.b *= 1.1;
+        }
       }
-      
-      updateStatus('Fallback kelp ready!');
     }
     
-    // Optimized animation loop
+    // Create kelp forest
+    function createKelpForest(gltf) {
+      console.log('🌿 Creating kelp forest...');
+      
+      const forestRadius = 30;
+      
+      for (let i = 0; i < forestDensity; i++) {
+        // Clone the model
+        const kelpClone = originalKelpModel.clone();
+        
+        // Random position in circular pattern
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * forestRadius;
+        const x = Math.cos(angle) * distance;
+        const z = Math.sin(angle) * distance;
+        
+        kelpClone.position.set(x, 0, z);
+        
+        // Random rotation and scale
+        kelpClone.rotation.y = Math.random() * Math.PI * 2;
+        const scale = 0.8 + Math.random() * 0.6;
+        kelpClone.scale.setScalar(scale);
+        
+        // Store reference data for animation
+        kelpClone.userData = {
+          originalPosition: kelpClone.position.clone(),
+          phase: Math.random() * Math.PI * 2,
+          frequency: 0.5 + Math.random() * 0.8,
+          amplitude: 0.3 + Math.random() * 0.4
+        };
+        
+        scene.add(kelpClone);
+        kelpModels.push(kelpClone);
+        
+        // Setup animation mixer if animations exist
+        if (gltf.animations && gltf.animations.length > 0) {
+          const mixer = new THREE.AnimationMixer(kelpClone);
+          gltf.animations.forEach(clip => {
+            const action = mixer.clipAction(clip);
+            action.play();
+          });
+          kelpMixers.push(mixer);
+        }
+      }
+      
+      console.log(`✅ Created forest with ${kelpModels.length} kelp models`);
+    }
+    
+    // Update forest density
+    function updateForestDensity() {
+      console.log(`🔄 Updating forest density to ${forestDensity}`);
+      
+      // Remove existing kelp models
+      kelpModels.forEach(kelp => {
+        scene.remove(kelp);
+      });
+      kelpModels = [];
+      kelpMixers = [];
+      
+      // Create new forest with updated density
+      if (originalKelpModel) {
+        createKelpForest({ scene: originalKelpModel, animations: [] });
+      }
+    }
+    
+    // Animation loop
     const clock = new THREE.Clock();
     let time = 0;
     
@@ -412,25 +442,44 @@
       requestAnimationFrame(animate);
       
       const deltaTime = clock.getDelta();
-      time += deltaTime * animSpeed;
+      time += deltaTime * oceanMovement;
       
-      // Update controls
+      // Update camera controls
+      controls.autoRotateSpeed = cameraSpeed * 2;
       controls.update();
       
-      // Animate kelp with minimal calculations
-      for (let i = 0; i < kelpModels.length; i++) {
-        const kelp = kelpModels[i];
-        const data = kelpAnimationData[i];
-        
-        if (waveStrength > 0) {
-          const wave = Math.sin(time * data.frequency + data.phase) * waveStrength;
-          kelp.position.x = data.originalPosition.x + wave * 0.5;
-          kelp.rotation.z = wave * 0.2;
-        }
-      }
+      // Update GLB animations
+      kelpMixers.forEach(mixer => {
+        mixer.update(deltaTime * oceanMovement);
+      });
       
-      // Update performance counter
-      updateFPS();
+      // Apply ocean current effects to kelp
+      const directionRad = (currentDirection * Math.PI) / 180;
+      
+      kelpModels.forEach((kelp, index) => {
+        const userData = kelp.userData;
+        
+        // Wave motion
+        const wave1 = Math.sin(time * userData.frequency + userData.phase) * userData.amplitude;
+        const wave2 = Math.cos(time * userData.frequency * 0.7 + userData.phase + 1) * userData.amplitude * 0.6;
+        
+        // Apply current direction
+        const swayX = (wave1 + wave2) * Math.cos(directionRad) * waveStrength;
+        const swayZ = (wave1 + wave2) * Math.sin(directionRad) * waveStrength;
+        
+        kelp.position.x = userData.originalPosition.x + swayX;
+        kelp.position.z = userData.originalPosition.z + swayZ;
+        
+        // Slight rotation for more natural movement
+        kelp.rotation.z = swayX * 0.1;
+        kelp.rotation.x = swayZ * 0.1;
+      });
+      
+      // Animate caustic lights
+      causticLight1.position.x = 15 + Math.sin(time * 0.3) * 8;
+      causticLight1.position.z = 8 + Math.cos(time * 0.4) * 6;
+      causticLight2.position.x = -12 + Math.cos(time * 0.25) * 6;
+      causticLight2.position.z = -5 + Math.sin(time * 0.35) * 8;
       
       renderer.render(scene, camera);
     }
@@ -442,12 +491,13 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
     
-    // Initialize
+    // Initialize controls
     setupControls();
-    updateQualityDisplay();
+    
+    // Start animation
     animate();
     
-    console.log('🎬 Optimized kelp forest ready');
+    console.log('🎬 Kelp forest viewer initialized');
   </script>
 </body>
 </html>
