@@ -43,9 +43,15 @@ input[type="range"] {
     left: 20px;
     color: rgba(255,255,255,0.8);
     font-size: 12px;
+    line-height: 1.4;
 }
 
 #loadingStatus {
+    color: #88ccff;
+    font-weight: bold;
+}
+
+.control-group span {
     color: #88ccff;
     font-weight: bold;
 }
