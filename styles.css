@@ -44,3 +44,8 @@ input[type="range"] {
     color: rgba(255,255,255,0.8);
     font-size: 12px;
 }
+
+#loadingStatus {
+    color: #88ccff;
+    font-weight: bold;
+}
