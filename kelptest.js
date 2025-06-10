@@ -1,87 +1,88 @@
-// Simple kelp forest without dynamic imports
-console.log('Starting kelp forest script...');
+// Wait for DOM and then load Three.js
+document.addEventListener('DOMContentLoaded', function() {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    script.onload = function() {
+        console.log('Three.js loaded, starting kelp forest...');
+        startKelpForest();
+    };
+    script.onerror = function() {
+        console.error('Failed to load Three.js');
+    };
+    document.head.appendChild(script);
+});
 
-// Check if Three.js is available
-if (typeof THREE === 'undefined') {
-    console.error('THREE is not defined. Make sure Three.js is loaded before this script.');
-    document.getElementById('container').innerHTML = '<div style="color: white; padding: 20px;">Error: Three.js not found. Add Three.js as a dependency in CodeSandbox.</div>';
-} else {
-    console.log('Three.js found, creating kelp forest...');
+function startKelpForest() {
+    console.log('Starting kelp forest animation');
     
-    // Animation controls
-    let waveSpeed = 1.5;
-    let waveIntensity = 1.2;
-    let currentDirection = 45;
-
     // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x001122);
-
-    // Add renderer to container
-    const container = document.getElementById('container');
-    if (!container) {
-        console.error('Container element not found!');
-    } else {
-        container.appendChild(renderer.domElement);
-        console.log('Renderer added to container');
-    }
-
+    
     // Create blue gradient background
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 512;
     const context = canvas.getContext('2d');
-
+    
+    // Create gradient from light blue (top) to dark blue (bottom)
     const gradient = context.createLinearGradient(0, 0, 0, 512);
     gradient.addColorStop(0, '#4499dd'); // Light blue at top
     gradient.addColorStop(1, '#001133'); // Dark blue at bottom
-
+    
     context.fillStyle = gradient;
     context.fillRect(0, 0, 512, 512);
-
+    
     const gradientTexture = new THREE.CanvasTexture(canvas);
     scene.background = gradientTexture;
+    
+    const container = document.getElementById('container');
+    container.appendChild(renderer.domElement);
 
-    // Enhanced lighting for underwater effect
-    const ambientLight = new THREE.AmbientLight(0x4488cc, 0.6);
+    // Brighter ocean lighting
+    const ambientLight = new THREE.AmbientLight(0x4488cc, 0.4); // Brighter blue ambient
     scene.add(ambientLight);
-
-    const sunLight = new THREE.DirectionalLight(0x88ccff, 1.8);
+    
+    const sunLight = new THREE.DirectionalLight(0x88ccff, 1.2); // Much brighter sunlight
     sunLight.position.set(0, 50, 10);
     scene.add(sunLight);
-
-    const rimLight1 = new THREE.DirectionalLight(0x5599dd, 0.7);
+    
+    const rimLight1 = new THREE.DirectionalLight(0x5599dd, 0.4); // Brighter rim lights
     rimLight1.position.set(20, 20, 0);
     scene.add(rimLight1);
-
-    const rimLight2 = new THREE.DirectionalLight(0x4488cc, 0.5);
+    
+    const rimLight2 = new THREE.DirectionalLight(0x4488cc, 0.3);
     rimLight2.position.set(-20, 15, 0);
     scene.add(rimLight2);
 
-    // Create brown seafloor
-    const floorGeometry = new THREE.PlaneGeometry(100, 100);
+    // Create brighter brown seafloor
+    const floorGeometry = new THREE.PlaneGeometry(500, 500);
     const floorMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x75410a,
-        shininess: 8
+        color: 0x371c00, // Lighter brown seafloor
+        shininess: 4
     });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -1;
     scene.add(floor);
 
-    // Create kelp forest
-    const kelp = [];
+    // Animation controls
+    let waveSpeed = 1.5;
+    let waveIntensity = 1.2;
+    let currentDirection = 45;
 
+    // Create bending kelp forest
+    const kelp = [];
+    
     for(let i = 0; i < 35; i++) {
         // Random kelp dimensions
         const kelpHeight = 15 + Math.random() * 20;
         const bottomRadius = 0.3 + Math.random() * 0.4;
         const topRadius = bottomRadius * (0.3 + Math.random() * 0.4);
         
-        // Create geometry with many segments for smooth bending
+        // Create custom geometry for bending kelp
         const segments = 20;
         const radialSegments = 8;
         
@@ -92,18 +93,18 @@ if (typeof THREE === 'undefined') {
         geometry.userData.originalPositions = positions;
         geometry.userData.segmentHeight = kelpHeight / segments;
         
-        // Kelp material with green variation
-        const greenVariation = 0.7 + Math.random() * 0.5;
+        // Brighter, less transparent kelp material
+        const greenVariation = 0.7 + Math.random() * 0.5; // Brighter green
         const kelpMaterial = new THREE.MeshPhongMaterial({
             color: new THREE.Color(0.15 * greenVariation, 0.6 * greenVariation, 0.25 * greenVariation),
             transparent: true,
-            opacity: 0.95,
+            opacity: 0.95, // Much less transparent
             shininess: 15
         });
         
         const kelpMesh = new THREE.Mesh(geometry, kelpMaterial);
         
-        // Position kelp randomly
+        // Position kelp
         kelpMesh.position.x = (Math.random() - 0.5) * 40;
         kelpMesh.position.z = (Math.random() - 0.5) * 40;
         kelpMesh.position.y = kelpHeight / 2;
@@ -130,8 +131,6 @@ if (typeof THREE === 'undefined') {
         kelp.push(kelpMesh);
     }
 
-    console.log('Created', kelp.length, 'kelp strands');
-
     // Camera controls
     let targetRotationX = 0, targetRotationY = 0;
     let rotationX = 0, rotationY = 0;
@@ -144,7 +143,7 @@ if (typeof THREE === 'undefined') {
     // Mouse controls
     document.addEventListener('mousedown', function() { isMouseDown = true; });
     document.addEventListener('mouseup', function() { isMouseDown = false; });
-
+    
     document.addEventListener('mousemove', function(event) {
         if (isMouseDown) {
             targetRotationY += event.movementX * 0.01;
@@ -158,30 +157,27 @@ if (typeof THREE === 'undefined') {
         distance = Math.max(8, Math.min(60, distance));
     });
 
-    // Control sliders
+    // Working sliders
     const waveSpeedSlider = document.getElementById('waveSpeed');
     const waveIntensitySlider = document.getElementById('waveIntensity');
     const currentDirectionSlider = document.getElementById('currentDirection');
 
-    if (waveSpeedSlider) {
-        waveSpeedSlider.addEventListener('input', function(e) {
-            waveSpeed = parseFloat(e.target.value);
-        });
-    }
+    waveSpeedSlider.addEventListener('input', function(e) {
+        waveSpeed = parseFloat(e.target.value);
+    });
 
-    if (waveIntensitySlider) {
-        waveIntensitySlider.addEventListener('input', function(e) {
-            waveIntensity = parseFloat(e.target.value);
-        });
-    }
+    waveIntensitySlider.addEventListener('input', function(e) {
+        waveIntensity = parseFloat(e.target.value);
+    });
 
-    if (currentDirectionSlider) {
-        currentDirectionSlider.addEventListener('input', function(e) {
-            currentDirection = parseFloat(e.target.value);
-        });
-    }
+    currentDirectionSlider.addEventListener('input', function(e) {
+        currentDirection = parseFloat(e.target.value);
+    });
 
-    // Function to deform kelp geometry for realistic bending
+    // Animation variables
+    let time = 0;
+
+    // Function to deform kelp geometry for bending
     function deformKelp(kelpMesh, time) {
         const geometry = kelpMesh.geometry;
         const positions = geometry.attributes.position;
@@ -228,16 +224,12 @@ if (typeof THREE === 'undefined') {
         geometry.computeVertexNormals();
     }
 
-    // Animation variables
-    let time = 0;
-
-    // Animation loop
+    // Realistic kelp bending animation
     function animate() {
         requestAnimationFrame(animate);
         
         time += 0.01 * waveSpeed;
         
-        // Animate each kelp strand
         kelp.forEach(function(k) {
             // Deform the kelp geometry to create actual bending
             deformKelp(k, time);
@@ -269,7 +261,6 @@ if (typeof THREE === 'undefined') {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Start animation
+    console.log('Starting brighter kelp animation');
     animate();
-    console.log('Kelp forest animation started');
 }
