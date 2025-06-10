@@ -176,7 +176,7 @@ function loadGLTFKelp() {
                 kelpInstance.position.y = -1; // Place on seafloor level
 
                 // Scale between 0.75x and 1.5x the original size
-                const scale = 0.75 + Math.random() * 0.75; // Random scale between 0.75 and 1.5
+                const scale = 0.75 + Math.random() * 5; // Random scale between 0.75 and 1.5
                 kelpInstance.scale.setScalar(scale);
 
                 // Random rotation only
