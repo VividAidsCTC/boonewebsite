@@ -6,11 +6,8 @@ let waveIntensity = 1.2;
 let currentDirection = 45;
 let time = 0;
 
-// Camera controls - mostly static with minimal movement
-let targetRotationX = 0, targetRotationY = 0;
-let rotationX = 0, rotationY = 0;
-let distance = 25; // Closer for better kelp viewing
-let isMouseDown = false;
+// Fixed camera position
+let distance = 25;
 
 // Debug logging function
 function log(message) {
@@ -93,7 +90,7 @@ function initializeScene() {
     floor.position.y = -1;
     scene.add(floor);
 
-    // Camera setup
+    // Fixed camera position
     camera.position.set(0, 8, distance);
     camera.lookAt(0, 10, 0);
 
@@ -126,38 +123,29 @@ function loadGLTFKelp() {
 
             log(`=== GLTF MODEL ANALYSIS ===`);
             log(`Overall model size: X=${size.x.toFixed(3)}, Y=${size.y.toFixed(3)}, Z=${size.z.toFixed(3)}`);
-            log(`Model center: X=${box.getCenter(new THREE.Vector3()).x.toFixed(3)}, Y=${box.getCenter(new THREE.Vector3()).y.toFixed(3)}, Z=${box.getCenter(new THREE.Vector3()).z.toFixed(3)}`);
-            log(`Children count: ${template.children.length}`);
 
-            // Analyze each mesh in the model
-            let meshCount = 0;
+            // Prepare template for vertex deformation
             template.traverse((child) => {
-                if (child.isMesh) {
-                    meshCount++;
+                if (child.isMesh && child.geometry) {
+                    // Ensure geometry has position attributes we can modify
                     child.geometry.computeBoundingBox();
-                    const meshBox = child.geometry.boundingBox;
-                    const meshSize = new THREE.Vector3();
-                    meshBox.getSize(meshSize);
-
-                    log(`Mesh ${meshCount}: ${child.name || 'unnamed'}`);
-                    log(`  Size: X=${meshSize.x.toFixed(3)}, Y=${meshSize.y.toFixed(3)}, Z=${meshSize.z.toFixed(3)}`);
-                    log(`  Position: X=${child.position.x.toFixed(3)}, Y=${child.position.y.toFixed(3)}, Z=${child.position.z.toFixed(3)}`);
-                    log(`  Scale: X=${child.scale.x.toFixed(3)}, Y=${child.scale.y.toFixed(3)}, Z=${child.scale.z.toFixed(3)}`);
-
-                    // Check if it's essentially flat
-                    if (meshSize.y < 0.1) {
-                        log(`  ⚠️  This mesh appears to be FLAT (Y < 0.1)`);
-                    }
+                    const geometry = child.geometry;
+                    
+                    // Store original positions for deformation
+                    const positions = geometry.attributes.position.array.slice();
+                    geometry.userData.originalPositions = positions;
+                    
+                    // Calculate bounding box for height calculations
+                    const bbox = geometry.boundingBox;
+                    geometry.userData.minY = bbox.min.y;
+                    geometry.userData.maxY = bbox.max.y;
+                    geometry.userData.height = bbox.max.y - bbox.min.y;
+                    
+                    log(`Prepared mesh for vertex deformation: height=${geometry.userData.height.toFixed(2)}`);
                 }
             });
 
-            // If the model is flat, let's try to fix it
-            if (size.y < 1.0) {
-                log(`🔧 Model appears flat (Y=${size.y.toFixed(3)}). Trying to stretch in Y direction...`);
-                template.scale.set(1, 100, 1); // Stretch Y by 100x
-            }
-
-            // Clone and position multiple instances - 15-20 kelp
+            // Create 15-20 kelp instances
             for(let i = 0; i < 18; i++) {
                 const kelpInstance = template.clone();
 
@@ -167,10 +155,8 @@ function loadGLTFKelp() {
                 kelpInstance.position.y = 0;
 
                 // Scale between 0.75x and 1.5x the original size
-                const scale = 0.75 + Math.random() * 0.75; // Random between 0.75 and 1.5
+                const scale = 0.75 + Math.random() * 0.75;
                 kelpInstance.scale.setScalar(scale);
-
-                log(`Instance ${i}: scale ${scale.toFixed(1)}`);
 
                 // Random rotation
                 kelpInstance.rotation.y = Math.random() * Math.PI * 2;
@@ -192,11 +178,32 @@ function loadGLTFKelp() {
                     isGLTF: true
                 };
 
+                // Prepare cloned geometries for vertex deformation
+                kelpInstance.traverse((child) => {
+                    if (child.isMesh && child.geometry) {
+                        // Clone geometry so each instance can be deformed independently
+                        child.geometry = child.geometry.clone();
+                        // Copy the original positions and height data
+                        if (template.children.length > 0) {
+                            template.traverse((originalChild) => {
+                                if (originalChild.isMesh && originalChild.geometry.userData.originalPositions) {
+                                    child.geometry.userData.originalPositions = originalChild.geometry.userData.originalPositions.slice();
+                                    child.geometry.userData.minY = originalChild.geometry.userData.minY;
+                                    child.geometry.userData.maxY = originalChild.geometry.userData.maxY;
+                                    child.geometry.userData.height = originalChild.geometry.userData.height;
+                                }
+                            });
+                        }
+                    }
+                });
+
                 scene.add(kelpInstance);
                 kelp.push(kelpInstance);
+
+                log(`Instance ${i}: scale ${scale.toFixed(2)}`);
             }
 
-            log(`Created ${kelp.length} GLTF kelp instances`);
+            log(`Created ${kelp.length} GLTF kelp instances with vertex deformation`);
             startAnimation();
         },
         function(progress) {
@@ -229,7 +236,7 @@ function createFallbackKelp() {
         // Store original positions for deformation
         const positions = geometry.attributes.position.array.slice();
         geometry.userData.originalPositions = positions;
-        geometry.userData.segmentHeight = kelpHeight / segments;
+        geometry.userData.height = kelpHeight;
 
         // Brighter, less transparent kelp material
         const greenVariation = 0.7 + Math.random() * 0.5;
@@ -275,13 +282,7 @@ function createFallbackKelp() {
 }
 
 function setupControls() {
-    // Disable mouse controls for fixed camera
-    // document.addEventListener('mousedown', function() { isMouseDown = true; });
-    // document.addEventListener('mouseup', function() { isMouseDown = false; });
-    // document.addEventListener('mousemove', function(event) { ... });
-    // document.addEventListener('wheel', function(event) { ... });
-
-    // Working sliders only
+    // Only slider controls - camera is completely fixed
     const waveSpeedSlider = document.getElementById('waveSpeed');
     const waveIntensitySlider = document.getElementById('waveIntensity');
     const currentDirectionSlider = document.getElementById('currentDirection');
@@ -317,43 +318,76 @@ function setupControls() {
     }
 }
 
-// Function to deform kelp geometry for bending
+// Function to deform kelp geometry using vertex manipulation
 function deformKelp(kelpMesh, time) {
     if (kelpMesh.userData.isGLTF) {
-        // GLTF kelp bending - create gradual curve from base to top
+        // Vertex-level deformation for GLTF models
         const userData = kelpMesh.userData;
         const dirRad = (currentDirection * Math.PI) / 180;
         
-        const wave1 = Math.sin(time * userData.freq1 + userData.offset1) * userData.amplitude1;
-        const wave2 = Math.cos(time * userData.freq2 + userData.offset2) * userData.amplitude2;
-        
-        // Keep the base completely fixed - no position movement at all
+        // Keep base completely fixed
         kelpMesh.position.x = userData.originalX;
         kelpMesh.position.z = userData.originalZ;
         kelpMesh.position.y = userData.originalY;
         
-        // Apply rotation to the whole kelp model to create bending effect
-        // This simulates the kelp bending from its base while keeping base fixed
+        // Calculate wave values
+        const wave1 = Math.sin(time * userData.freq1 + userData.offset1) * userData.amplitude1;
+        const wave2 = Math.cos(time * userData.freq2 + userData.offset2) * userData.amplitude2;
+        const wave3 = Math.sin(time * userData.freq3 + userData.offset3) * userData.amplitude3;
         
-        // Calculate bending amounts
-        const bendX = wave1 * waveIntensity * 0.2 * Math.cos(dirRad);
-        const bendZ = wave2 * waveIntensity * 0.2 * Math.sin(dirRad);
-        
-        // Apply rotation to create the bending effect
-        // The kelp rotates around its base, creating natural swaying
-        kelpMesh.rotation.z = bendX; // Side-to-side sway
-        kelpMesh.rotation.x = bendZ; // Front-to-back sway
-        
-        // Add some secondary motion for more realistic movement
-        const secondaryWave = Math.sin(time * userData.freq3 + userData.offset3) * userData.amplitude3;
-        kelpMesh.rotation.y += secondaryWave * waveIntensity * 0.05; // Slight twist
+        // Deform each mesh in the GLTF model
+        kelpMesh.traverse((child) => {
+            if (child.isMesh && child.geometry && child.geometry.userData.originalPositions) {
+                const geometry = child.geometry;
+                const positions = geometry.attributes.position;
+                const originalPositions = geometry.userData.originalPositions;
+                const height = geometry.userData.height;
+                const minY = geometry.userData.minY;
+                
+                // Deform each vertex
+                for (let i = 0; i < positions.count; i++) {
+                    const i3 = i * 3;
+                    
+                    // Get original position
+                    const originalX = originalPositions[i3];
+                    const originalY = originalPositions[i3 + 1];
+                    const originalZ = originalPositions[i3 + 2];
+                    
+                    // Calculate height factor (0 at bottom, 1 at top)
+                    const heightFactor = Math.max(0, (originalY - minY) / height);
+                    const heightFactorCurved = heightFactor * heightFactor; // Quadratic for natural curve
+                    
+                    // Calculate bending displacement - increases with height
+                    const bendAmountX = (wave1 + wave2 * 0.7) * waveIntensity * heightFactorCurved * 2;
+                    const bendAmountZ = (wave2 + wave3 * 0.8) * waveIntensity * heightFactorCurved * 2;
+                    
+                    // Apply directional bending
+                    const finalBendX = bendAmountX * Math.cos(dirRad) + bendAmountZ * Math.sin(dirRad) * 0.3;
+                    const finalBendZ = bendAmountZ * Math.sin(dirRad) + bendAmountX * Math.cos(dirRad) * 0.3;
+                    
+                    // Set new position - bottom stays fixed, top moves more
+                    positions.setX(i, originalX + finalBendX);
+                    positions.setY(i, originalY);
+                    positions.setZ(i, originalZ + finalBendZ);
+                }
+                
+                // Mark for update
+                positions.needsUpdate = true;
+                geometry.computeVertexNormals();
+            }
+        });
 
     } else {
-        // Vertex deformation for cylinder geometry (your original approach)
+        // Vertex deformation for cylinder geometry (fallback)
         const geometry = kelpMesh.geometry;
         const positions = geometry.attributes.position;
         const originalPositions = geometry.userData.originalPositions;
         const userData = kelpMesh.userData;
+
+        // Keep base fixed
+        kelpMesh.position.x = userData.originalX;
+        kelpMesh.position.z = userData.originalZ;
+        kelpMesh.position.y = userData.originalY;
 
         // Convert direction to radians
         const dirRad = (currentDirection * Math.PI) / 180;
@@ -393,13 +427,6 @@ function deformKelp(kelpMesh, time) {
         // Mark for update
         positions.needsUpdate = true;
         geometry.computeVertexNormals();
-
-        // Add subtle base movement
-        kelpMesh.position.x = userData.originalX + Math.sin(time * 0.4 + userData.offset1) * 0.2 * waveIntensity;
-        kelpMesh.position.z = userData.originalZ + Math.cos(time * 0.6 + userData.offset2) * 0.2 * waveIntensity;
-
-        // Very subtle vertical bobbing
-        kelpMesh.position.y = userData.originalY + Math.sin(time * 0.2 + userData.offset3) * 0.05 * waveIntensity;
     }
 }
 
@@ -413,14 +440,9 @@ function animate() {
         deformKelp(k, time);
     });
 
-    // Fixed camera - no movement
-    // Camera stays in the same position always
-    // rotationX and rotationY remain at 0
-    
-    camera.position.x = Math.sin(0) * Math.cos(0) * distance;
-    camera.position.y = Math.sin(0) * distance + 10;
-    camera.position.z = Math.cos(0) * Math.cos(0) * distance;
-    camera.lookAt(0, 8, 0);
+    // Completely fixed camera
+    camera.position.set(0, 8, distance);
+    camera.lookAt(0, 10, 0);
 
     renderer.render(scene, camera);
 }
