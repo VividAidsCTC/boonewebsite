@@ -90,9 +90,9 @@ function initializeScene() {
     floor.position.y = -1;
     scene.add(floor);
 
-    // Fixed camera position
-    camera.position.set(0, 8, distance);
-    camera.lookAt(0, 10, 0);
+    // Setup camera with orbit controls
+    camera.position.set(0, 7, 15); // Start at 7 feet high, closer to kelp
+    camera.lookAt(0, 7, 0); // Look at kelp midpoint
 
     setupControls();
     log('Scene initialized successfully');
@@ -108,7 +108,7 @@ function loadGLTFKelp() {
     }
 
     const loader = new THREE.GLTFLoader();
-    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp2.glb';
+    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp.glb';
 
     loader.load(
         kelpURL,
@@ -124,7 +124,7 @@ function loadGLTFKelp() {
             log(`=== GLTF MODEL ANALYSIS ===`);
             log(`Overall model size: X=${size.x.toFixed(3)}, Y=${size.y.toFixed(3)}, Z=${size.z.toFixed(3)}`);
 
-            // Prepare template for vertex deformation
+            // Apply dark green-brown kelp material to all meshes
             template.traverse((child) => {
                 if (child.isMesh && child.geometry) {
                     // Ensure geometry has position attributes we can modify
@@ -140,6 +140,15 @@ function loadGLTFKelp() {
                     geometry.userData.minY = bbox.min.y;
                     geometry.userData.maxY = bbox.max.y;
                     geometry.userData.height = bbox.max.y - bbox.min.y;
+                    
+                    // Apply dark green-brown kelp material
+                    const kelpMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x210d05, // Dark green-brown
+                        transparent: true,
+                        opacity: 0.85,
+                        shininess: 10
+                    });
+                    child.material = kelpMaterial;
                     
                     log(`Prepared mesh for vertex deformation: height=${geometry.userData.height.toFixed(2)}`);
                 }
@@ -299,7 +308,21 @@ function createFallbackKelp() {
 }
 
 function setupControls() {
-    // Only slider controls - camera is completely fixed
+    // Full orbit controls
+    if (typeof THREE.OrbitControls !== 'undefined') {
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 7, 0); // Look at kelp midpoint
+        controls.minDistance = 5;
+        controls.maxDistance = 50;
+        controls.maxPolarAngle = Math.PI; // Allow looking underneath
+        
+        // Update controls in animation loop
+        window.orbitControls = controls;
+    }
+
+    // Slider controls
     const waveSpeedSlider = document.getElementById('waveSpeed');
     const waveIntensitySlider = document.getElementById('waveIntensity');
     const currentDirectionSlider = document.getElementById('currentDirection');
@@ -457,9 +480,10 @@ function animate() {
         deformKelp(k, time);
     });
 
-    // Completely fixed camera
-    camera.position.set(0, 8, distance);
-    camera.lookAt(0, 10, 0);
+    // Update orbit controls if available
+    if (window.orbitControls) {
+        window.orbitControls.update();
+    }
 
     renderer.render(scene, camera);
 }
