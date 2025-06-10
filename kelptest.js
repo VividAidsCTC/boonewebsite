@@ -90,7 +90,7 @@ function initializeScene() {
     // Create richer brown seafloor with better material properties
     const floorGeometry = new THREE.PlaneGeometry(2000, 2000);
     const floorMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x8B4513, // Richer saddle brown
+        color: 0x3b261a, // dark brown
         shininess: 2,    // Less shiny for more natural look
         specular: 0x332211 // Warm specular highlights
     });
