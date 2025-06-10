@@ -20,94 +20,63 @@ function startKelpForest() {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    
-    // Create blue gradient background
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const context = canvas.getContext('2d');
-    
-    // Create gradient from light blue (top) to dark blue (bottom)
-    const gradient = context.createLinearGradient(0, 0, 0, 512);
-    gradient.addColorStop(0, '#4499dd'); // Light blue at top
-    gradient.addColorStop(1, '#001133'); // Dark blue at bottom
-    
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, 512, 512);
-    
-    const gradientTexture = new THREE.CanvasTexture(canvas);
-    scene.background = gradientTexture;
+    renderer.setClearColor(0x001122);
     
     const container = document.getElementById('container');
     container.appendChild(renderer.domElement);
 
-    // Brighter ocean lighting
-    const ambientLight = new THREE.AmbientLight(0x4488cc, 0.6); // Brighter blue ambient
+    // Enhanced ocean lighting
+    const ambientLight = new THREE.AmbientLight(0x2266aa, 0.3); // Darker blue ambient
     scene.add(ambientLight);
     
-    const sunLight = new THREE.DirectionalLight(0x88ccff, 1.8); // Much brighter sunlight
+    // Strong top-down sunlight filtering through water
+    const sunLight = new THREE.DirectionalLight(0x66aadd, 1.2);
     sunLight.position.set(0, 50, 10);
+    sunLight.castShadow = true;
     scene.add(sunLight);
     
-    const rimLight1 = new THREE.DirectionalLight(0x5599dd, 0.7); // Brighter rim lights
+    // Additional rim lighting from sides
+    const rimLight1 = new THREE.DirectionalLight(0x3388bb, 0.4);
     rimLight1.position.set(20, 20, 0);
     scene.add(rimLight1);
     
-    const rimLight2 = new THREE.DirectionalLight(0x4488cc, 0.5);
+    const rimLight2 = new THREE.DirectionalLight(0x2266aa, 0.3);
     rimLight2.position.set(-20, 15, 0);
     scene.add(rimLight2);
-
-    // Create brighter brown seafloor
-    const floorGeometry = new THREE.PlaneGeometry(100, 100);
-    const floorMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x6b4d35, // Lighter brown seafloor
-        shininess: 8
-    });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -1;
-    scene.add(floor);
 
     // Animation controls
     let waveSpeed = 1.5;
     let waveIntensity = 1.2;
     let currentDirection = 45;
 
-    // Create bending kelp forest
+    // Create realistic kelp forest
     const kelp = [];
     
     for(let i = 0; i < 35; i++) {
         // Random kelp dimensions
-        const kelpHeight = 15 + Math.random() * 20;
-        const bottomRadius = 0.3 + Math.random() * 0.4;
-        const topRadius = bottomRadius * (0.3 + Math.random() * 0.4);
+        const kelpHeight = 15 + Math.random() * 20; // 15-35 units tall
+        const bottomRadius = 0.3 + Math.random() * 0.4; // 0.3-0.7 thick at bottom
+        const topRadius = bottomRadius * (0.3 + Math.random() * 0.4); // Tapers at top
         
-        // Create custom geometry for bending kelp
-        const segments = 20;
-        const radialSegments = 8;
+        // Create segmented kelp for better bending
+        const segments = Math.floor(kelpHeight / 3); // More segments for smoother bending
+        const kelpGeometry = new THREE.CylinderGeometry(topRadius, bottomRadius, kelpHeight, 8, segments);
         
-        const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, kelpHeight, radialSegments, segments);
-        
-        // Store original positions for deformation
-        const positions = geometry.attributes.position.array.slice();
-        geometry.userData.originalPositions = positions;
-        geometry.userData.segmentHeight = kelpHeight / segments;
-        
-        // Brighter, less transparent kelp material
-        const greenVariation = 0.7 + Math.random() * 0.5; // Brighter green
+        // Kelp material with more realistic coloring
+        const greenVariation = 0.5 + Math.random() * 0.5; // Random green intensity
         const kelpMaterial = new THREE.MeshPhongMaterial({
-            color: new THREE.Color(0.15 * greenVariation, 0.6 * greenVariation, 0.25 * greenVariation),
+            color: new THREE.Color(0.1 * greenVariation, 0.4 * greenVariation, 0.2 * greenVariation),
             transparent: true,
-            opacity: 0.95, // Much less transparent
-            shininess: 15
+            opacity: 0.85,
+            shininess: 10
         });
         
-        const kelpMesh = new THREE.Mesh(geometry, kelpMaterial);
+        const kelpMesh = new THREE.Mesh(kelpGeometry, kelpMaterial);
         
         // Position kelp
         kelpMesh.position.x = (Math.random() - 0.5) * 40;
         kelpMesh.position.z = (Math.random() - 0.5) * 40;
-        kelpMesh.position.y = kelpHeight / 2;
+        kelpMesh.position.y = kelpHeight / 2; // Bottom at y=0, top at kelpHeight
         
         // Store animation data
         kelpMesh.userData = {
@@ -115,14 +84,13 @@ function startKelpForest() {
             originalZ: kelpMesh.position.z,
             originalY: kelpMesh.position.y,
             height: kelpHeight,
-            segments: segments,
-            offset1: Math.random() * Math.PI * 2,
+            offset1: Math.random() * Math.PI * 2, // Random phase offset
             offset2: Math.random() * Math.PI * 2,
             offset3: Math.random() * Math.PI * 2,
-            freq1: 0.8 + Math.random() * 0.6,
+            freq1: 0.8 + Math.random() * 0.6, // Random frequencies for natural variation
             freq2: 1.1 + Math.random() * 0.8,
             freq3: 0.5 + Math.random() * 0.4,
-            amplitude1: 0.8 + Math.random() * 0.6,
+            amplitude1: 0.8 + Math.random() * 0.6, // Random amplitudes
             amplitude2: 0.6 + Math.random() * 0.5,
             amplitude3: 0.4 + Math.random() * 0.3
         };
@@ -134,11 +102,11 @@ function startKelpForest() {
     // Camera controls
     let targetRotationX = 0, targetRotationY = 0;
     let rotationX = 0, rotationY = 0;
-    let distance = 30;
+    let distance = 30; // Pull back a bit for taller kelp
     let isMouseDown = false;
 
     camera.position.set(0, 8, distance);
-    camera.lookAt(0, 10, 0);
+    camera.lookAt(0, 10, 0); // Look up slightly
 
     // Mouse controls
     document.addEventListener('mousedown', function() { isMouseDown = true; });
@@ -177,53 +145,6 @@ function startKelpForest() {
     // Animation variables
     let time = 0;
 
-    // Function to deform kelp geometry for bending
-    function deformKelp(kelpMesh, time) {
-        const geometry = kelpMesh.geometry;
-        const positions = geometry.attributes.position;
-        const originalPositions = geometry.userData.originalPositions;
-        const userData = kelpMesh.userData;
-        
-        // Convert direction to radians
-        const dirRad = (currentDirection * Math.PI) / 180;
-        
-        // Calculate wave values
-        const wave1 = Math.sin(time * userData.freq1 + userData.offset1) * userData.amplitude1;
-        const wave2 = Math.cos(time * userData.freq2 + userData.offset2) * userData.amplitude2;
-        const wave3 = Math.sin(time * userData.freq3 + userData.offset3) * userData.amplitude3;
-        
-        // Deform each vertex
-        for (let i = 0; i < positions.count; i++) {
-            const i3 = i * 3;
-            
-            // Get original position
-            const originalX = originalPositions[i3];
-            const originalY = originalPositions[i3 + 1];
-            const originalZ = originalPositions[i3 + 2];
-            
-            // Calculate height factor (0 at bottom, 1 at top)
-            const heightFactor = (originalY + userData.height/2) / userData.height;
-            const heightFactorSquared = heightFactor * heightFactor;
-            
-            // Calculate bending displacement
-            const bendAmountX = (wave1 + wave2 * 0.7) * waveIntensity * heightFactorSquared * 2;
-            const bendAmountZ = (wave2 + wave3 * 0.8) * waveIntensity * heightFactorSquared * 2;
-            
-            // Apply directional bending
-            const finalBendX = bendAmountX * Math.cos(dirRad) + bendAmountZ * Math.sin(dirRad) * 0.3;
-            const finalBendZ = bendAmountZ * Math.sin(dirRad) + bendAmountX * Math.cos(dirRad) * 0.3;
-            
-            // Set new position
-            positions.setX(i, originalX + finalBendX);
-            positions.setY(i, originalY);
-            positions.setZ(i, originalZ + finalBendZ);
-        }
-        
-        // Mark for update
-        positions.needsUpdate = true;
-        geometry.computeVertexNormals();
-    }
-
     // Realistic kelp bending animation
     function animate() {
         requestAnimationFrame(animate);
@@ -231,15 +152,41 @@ function startKelpForest() {
         time += 0.01 * waveSpeed;
         
         kelp.forEach(function(k) {
-            // Deform the kelp geometry to create actual bending
-            deformKelp(k, time);
+            const userData = k.userData;
             
-            // Add subtle base movement
-            k.position.x = k.userData.originalX + Math.sin(time * 0.4 + k.userData.offset1) * 0.2 * waveIntensity;
-            k.position.z = k.userData.originalZ + Math.cos(time * 0.6 + k.userData.offset2) * 0.2 * waveIntensity;
+            // Convert direction to radians
+            const dirRad = (currentDirection * Math.PI) / 180;
+            
+            // Multiple oscillations with different frequencies and phases
+            const wave1 = Math.sin(time * userData.freq1 + userData.offset1) * userData.amplitude1;
+            const wave2 = Math.cos(time * userData.freq2 + userData.offset2) * userData.amplitude2;
+            const wave3 = Math.sin(time * userData.freq3 + userData.offset3) * userData.amplitude3;
+            
+            // Secondary cross-waves for more natural motion
+            const crossWave1 = Math.cos(time * userData.freq1 * 1.3 + userData.offset2) * userData.amplitude1 * 0.6;
+            const crossWave2 = Math.sin(time * userData.freq2 * 0.7 + userData.offset3) * userData.amplitude2 * 0.4;
+            
+            // Combine waves
+            const totalWaveX = (wave1 + wave2 * 0.7 + wave3 * 0.5 + crossWave1) * waveIntensity;
+            const totalWaveZ = (wave2 + wave1 * 0.6 + crossWave2) * waveIntensity;
+            
+            // Apply bending - more bend at the top (height-based)
+            const heightFactor = userData.height / 35; // Normalize to max height
+            const bendMultiplier = 0.3 + heightFactor * 0.7; // Taller kelp bends more
+            
+            // Apply directional bending
+            k.rotation.z = totalWaveX * Math.cos(dirRad) * bendMultiplier * 0.4;
+            k.rotation.x = totalWaveZ * Math.sin(dirRad) * bendMultiplier * 0.4;
+            
+            // Add some twist for more natural movement
+            k.rotation.y = Math.sin(time * 0.3 + userData.offset1) * 0.1 * waveIntensity;
+            
+            // Subtle position swaying (kelp base moves slightly)
+            k.position.x = userData.originalX + Math.sin(time * 0.4 + userData.offset1) * 0.3 * waveIntensity;
+            k.position.z = userData.originalZ + Math.cos(time * 0.6 + userData.offset2) * 0.3 * waveIntensity;
             
             // Very subtle vertical bobbing
-            k.position.y = k.userData.originalY + Math.sin(time * 0.2 + k.userData.offset3) * 0.05 * waveIntensity;
+            k.position.y = userData.originalY + Math.sin(time * 0.2 + userData.offset3) * 0.1 * waveIntensity;
         });
         
         // Camera movement
@@ -261,6 +208,6 @@ function startKelpForest() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    console.log('Starting brighter kelp animation');
+    console.log('Starting realistic kelp animation');
     animate();
 }
