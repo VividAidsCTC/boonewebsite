@@ -85,7 +85,7 @@ function initializeScene() {
     // Create brighter brown seafloor
     const floorGeometry = new THREE.PlaneGeometry(2000, 2000);
     const floorMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x594738,
+        color: 0x38281d,
         shininess: 4
     });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
