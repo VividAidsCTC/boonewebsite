@@ -6,10 +6,10 @@ let waveIntensity = 1.2;
 let currentDirection = 45;
 let time = 0;
 
-// Camera controls
+// Camera controls - mostly static with minimal movement
 let targetRotationX = 0, targetRotationY = 0;
 let rotationX = 0, rotationY = 0;
-let distance = 30;
+let distance = 25; // Closer for better kelp viewing
 let isMouseDown = false;
 
 // Debug logging function
@@ -49,8 +49,8 @@ function initializeScene() {
     
     // Create blue gradient background
     const canvas = document.createElement('canvas');
-    canvas.width = 2000;
-    canvas.height = 2000;
+    canvas.width = 512;
+    canvas.height = 512;
     const context = canvas.getContext('2d');
     
     const gradient = context.createLinearGradient(0, 0, 0, 512);
@@ -58,7 +58,7 @@ function initializeScene() {
     gradient.addColorStop(1, '#001133');
     
     context.fillStyle = gradient;
-    context.fillRect(0, 0, 2000, 2000);
+    context.fillRect(0, 0, 512, 512);
     
     const gradientTexture = new THREE.CanvasTexture(canvas);
     scene.background = gradientTexture;
@@ -85,7 +85,7 @@ function initializeScene() {
     // Create brighter brown seafloor
     const floorGeometry = new THREE.PlaneGeometry(500, 500);
     const floorMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x594738,
+        color: 0x371c00,
         shininess: 4
     });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -111,8 +111,7 @@ function loadGLTFKelp() {
     }
 
     const loader = new THREE.GLTFLoader();
-    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp.glb';
-    
+    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/99e8af7024a27e85ca31e3bedec37c7c8204101a/animated_kelp.glb';
 
     loader.load(
         kelpURL,
@@ -155,15 +154,15 @@ function loadGLTFKelp() {
             // If the model is flat, let's try to fix it
             if (size.y < 1.0) {
                 log(`🔧 Model appears flat (Y=${size.y.toFixed(3)}). Trying to stretch in Y direction...`);
-                template.scale.set(1, 100, 1); // Stretch Y by 20x
+                template.scale.set(1, 20, 1); // Stretch Y by 20x
             }
             
             // Try different base scales to see what works
             const testScales = [1, 5, 10, 50, 100];
             let scaleIndex = 0;
             
-            // Clone and position multiple instances - fewer for testing
-            for(let i = 0; i < 5; i++) {
+            // Clone and position multiple instances - 5-10 kelp
+            for(let i = 0; i < 8; i++) {
                 const kelpInstance = template.clone();
                 
                 // Random positioning
@@ -171,11 +170,9 @@ function loadGLTFKelp() {
                 kelpInstance.position.z = (Math.random() - 0.5) * 40;
                 kelpInstance.position.y = 0;
                 
-                // Try different scales for each instance to test
-                const baseScale = testScales[scaleIndex % testScales.length];
-                const scale = baseScale + Math.random() * baseScale * 0.5;
+                // Scale between 0.5x and 2x the original size
+                const scale = 0.5 + Math.random() * 1.5; // Random between 0.5 and 2.0
                 kelpInstance.scale.setScalar(scale);
-                scaleIndex++;
                 
                 log(`Instance ${i}: scale ${scale.toFixed(1)}`);
                 
@@ -288,15 +285,17 @@ function setupControls() {
     
     document.addEventListener('mousemove', function(event) {
         if (isMouseDown) {
-            targetRotationY += event.movementX * 0.01;
-            targetRotationX += event.movementY * 0.01;
-            targetRotationX = Math.max(-Math.PI/3, Math.min(Math.PI/3, targetRotationX));
+            // Much slower, more limited camera movement
+            targetRotationY += event.movementX * 0.003; // Reduced from 0.01
+            targetRotationX += event.movementY * 0.003; // Reduced from 0.01
+            targetRotationX = Math.max(-Math.PI/6, Math.min(Math.PI/6, targetRotationX)); // More limited range
         }
     });
 
     document.addEventListener('wheel', function(event) {
-        distance += event.deltaY * 0.02;
-        distance = Math.max(8, Math.min(60, distance));
+        // Limited zoom range for mostly static camera
+        distance += event.deltaY * 0.01; // Reduced zoom sensitivity
+        distance = Math.max(15, Math.min(35, distance)); // Tighter zoom limits
     });
 
     // Working sliders
@@ -421,9 +420,9 @@ function animate() {
         deformKelp(k, time);
     });
     
-    // Camera movement
-    rotationX += (targetRotationX - rotationX) * 0.05;
-    rotationY += (targetRotationY - rotationY) * 0.05;
+    // Camera movement - much more subtle and slow
+    rotationX += (targetRotationX - rotationX) * 0.02; // Slower interpolation (was 0.05)
+    rotationY += (targetRotationY - rotationY) * 0.02; // Slower interpolation
     
     camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
     camera.position.y = Math.sin(rotationX) * distance + 10;
