@@ -145,6 +145,16 @@ function loadGLTFKelp() {
                 }
             });
 
+            // Fix positioning and scaling if needed
+            if (size.y < 1.0) {
+                log(`🔧 Model appears small (Y=${size.y.toFixed(3)}). Scaling up...`);
+                template.scale.set(1, 20, 1); // Scale Y up but keep proportional
+            }
+
+            // Position template at ground level
+            const templateBox = new THREE.Box3().setFromObject(template);
+            template.position.y = -templateBox.min.y; // Move bottom to ground
+
             // Create 15-20 kelp instances
             for(let i = 0; i < 18; i++) {
                 const kelpInstance = template.clone();
