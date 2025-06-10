@@ -91,8 +91,8 @@ function initializeScene() {
     scene.add(floor);
 
     // Setup camera with orbit controls
-    camera.position.set(0, 7, 15); // Start at 7 feet high, closer to kelp
-    camera.lookAt(0, 7, 0); // Look at kelp midpoint
+    camera.position.set(0, 2, 15); // Start at 7 feet high, closer to kelp
+    camera.lookAt(0, 2, 0); // Look at kelp midpoint
 
     setupControls();
     log('Scene initialized successfully');
@@ -171,7 +171,7 @@ function loadGLTFKelp() {
             template.position.y = -scaledBox.min.y;
 
             // Create 15-20 kelp instances
-            for(let i = 0; i < 18; i++) {
+            for(let i = 0; i < 50; i++) {
                 const kelpInstance = template.clone();
 
                 // Position kelp on the seafloor
