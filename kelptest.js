@@ -1,4 +1,4 @@
-// Global variablesMore actions
+// Global variables
 let scene, camera, renderer;
 let kelp = [];
 let waveSpeed = 1.5;
@@ -6,10 +6,10 @@ let waveIntensity = 1.2;
 let currentDirection = 45;
 let time = 0;
 
-// Camera controls
+// Camera controls - mostly static with minimal movement
 let targetRotationX = 0, targetRotationY = 0;
 let rotationX = 0, rotationY = 0;
-let distance = 30;
+let distance = 25; // Closer for better kelp viewing
 let isMouseDown = false;
 
 // Debug logging function
@@ -113,7 +113,6 @@ function loadGLTFKelp() {
     const loader = new THREE.GLTFLoader();
     const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp.glb';
 
-
     loader.load(
         kelpURL,
         function(gltf) {
@@ -155,15 +154,11 @@ function loadGLTFKelp() {
             // If the model is flat, let's try to fix it
             if (size.y < 1.0) {
                 log(`🔧 Model appears flat (Y=${size.y.toFixed(3)}). Trying to stretch in Y direction...`);
-                template.scale.set(1, 100, 1); // Stretch Y by 20x
+                template.scale.set(1, 100, 1); // Stretch Y by 100x
             }
 
-            // Try different base scales to see what works
-            const testScales = [1, 5, 10, 50, 100];
-            let scaleIndex = 0;
-
-            // Clone and position multiple instances - fewer for testing
-            for(let i = 0; i < 5; i++) {
+            // Clone and position multiple instances - 5-10 kelp
+            for(let i = 0; i < 8; i++) {
                 const kelpInstance = template.clone();
 
                 // Random positioning
@@ -171,11 +166,9 @@ function loadGLTFKelp() {
                 kelpInstance.position.z = (Math.random() - 0.5) * 40;
                 kelpInstance.position.y = 0;
 
-                // Try different scales for each instance to test
-                const baseScale = testScales[scaleIndex % testScales.length];
-                const scale = baseScale + Math.random() * baseScale * 0.5;
+                // Scale between 0.5x and 2x the original size
+                const scale = 0.5 + Math.random() * 1.5; // Random between 0.5 and 2.0
                 kelpInstance.scale.setScalar(scale);
-                scaleIndex++;
 
                 log(`Instance ${i}: scale ${scale.toFixed(1)}`);
 
@@ -288,15 +281,17 @@ function setupControls() {
 
     document.addEventListener('mousemove', function(event) {
         if (isMouseDown) {
-            targetRotationY += event.movementX * 0.01;
-            targetRotationX += event.movementY * 0.01;
-            targetRotationX = Math.max(-Math.PI/3, Math.min(Math.PI/3, targetRotationX));
+            // Much slower, more limited camera movement
+            targetRotationY += event.movementX * 0.003; // Reduced from 0.01
+            targetRotationX += event.movementY * 0.003; // Reduced from 0.01
+            targetRotationX = Math.max(-Math.PI/6, Math.min(Math.PI/6, targetRotationX)); // More limited range
         }
     });
 
     document.addEventListener('wheel', function(event) {
-        distance += event.deltaY * 0.02;
-        distance = Math.max(8, Math.min(60, distance));
+        // Limited zoom range for mostly static camera
+        distance += event.deltaY * 0.01; // Reduced zoom sensitivity
+        distance = Math.max(15, Math.min(35, distance)); // Tighter zoom limits
     });
 
     // Working sliders
@@ -338,23 +333,26 @@ function setupControls() {
 // Function to deform kelp geometry for bending
 function deformKelp(kelpMesh, time) {
     if (kelpMesh.userData.isGLTF) {
-        // Simple position-based animation for GLTF models
+        // Simple position-based animation for GLTF models with realistic kelp bending
         const userData = kelpMesh.userData;
         const dirRad = (currentDirection * Math.PI) / 180;
-
+        
         const wave1 = Math.sin(time * userData.freq1 + userData.offset1) * userData.amplitude1;
         const wave2 = Math.cos(time * userData.freq2 + userData.offset2) * userData.amplitude2;
-
-        const bendX = wave1 * waveIntensity * 0.5 * Math.cos(dirRad);
-        const bendZ = wave2 * waveIntensity * 0.5 * Math.sin(dirRad);
-
+        
+        // Much more subtle bending - kelp moves gently with current
+        const bendX = wave1 * waveIntensity * 0.15 * Math.cos(dirRad);
+        const bendZ = wave2 * waveIntensity * 0.15 * Math.sin(dirRad);
+        
+        // Keep position mostly stable, just gentle swaying
         kelpMesh.position.x = userData.originalX + bendX;
         kelpMesh.position.z = userData.originalZ + bendZ;
-        kelpMesh.position.y = userData.originalY + Math.sin(time * 0.2 + userData.offset3) * 0.05 * waveIntensity;
-
-        // Add rotation for more dynamic movement
-        kelpMesh.rotation.z = wave1 * waveIntensity * 0.1;
-        kelpMesh.rotation.x = wave2 * waveIntensity * 0.1;
+        kelpMesh.position.y = userData.originalY;
+        
+        // Rotation simulates top bending while base stays fixed
+        // Only rotate around base point, stronger rotation = more top bending
+        kelpMesh.rotation.z = wave1 * waveIntensity * 0.08; // Side-to-side sway
+        kelpMesh.rotation.x = wave2 * waveIntensity * 0.06; // Front-to-back sway
 
     } else {
         // Vertex deformation for cylinder geometry (your original approach)
@@ -421,9 +419,9 @@ function animate() {
         deformKelp(k, time);
     });
 
-    // Camera movement
-    rotationX += (targetRotationX - rotationX) * 0.05;
-    rotationY += (targetRotationY - rotationY) * 0.05;
+    // Camera movement - much more subtle and slow
+    rotationX += (targetRotationX - rotationX) * 0.02; // Slower interpolation (was 0.05)
+    rotationY += (targetRotationY - rotationY) * 0.02; // Slower interpolation
 
     camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
     camera.position.y = Math.sin(rotationX) * distance + 10;
