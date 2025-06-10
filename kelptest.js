@@ -154,7 +154,7 @@ function loadGLTFKelp() {
             // If the model is flat, let's try to fix it
             if (size.y < 1.0) {
                 log(`🔧 Model appears flat (Y=${size.y.toFixed(3)}). Trying to stretch in Y direction...`);
-                template.scale.set(1, 100, 1); // Stretch Y by 20x
+                template.scale.set(1, 1000, 1); // Stretch Y by 20x
             }
             
             // Try different base scales to see what works
