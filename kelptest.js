@@ -6,6 +6,9 @@ let waveIntensity = 1.2;
 let currentDirection = 45;
 let time = 0;
 
+// Fixed camera position
+let distance = 25;
+
 // Debug logging function
 function log(message) {
     console.log(message);
@@ -76,10 +79,10 @@ function initializeScene() {
     rimLight2.position.set(-20, 15, 0);
     scene.add(rimLight2);
 
-    // Create dark brown seafloor
+    // Create brighter brown seafloor
     const floorGeometry = new THREE.PlaneGeometry(2000, 2000);
     const floorMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x2d1810, // Dark brown
+        color: 0x594738,
         shininess: 4
     });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -88,8 +91,8 @@ function initializeScene() {
     scene.add(floor);
 
     // Setup camera with orbit controls
-    camera.position.set(0, 2, 15);
-    camera.lookAt(0, 2, 0);
+    camera.position.set(0, 2, 15); // Start at 7 feet high, closer to kelp
+    camera.lookAt(0, 2, 0); // Look at kelp midpoint
 
     setupControls();
     log('Scene initialized successfully');
@@ -140,7 +143,7 @@ function loadGLTFKelp() {
                     
                     // Apply dark green-brown kelp material
                     const kelpMaterial = new THREE.MeshPhongMaterial({
-                        color: 0x2d4a1f, // Dark green-brown
+                        color: 0x210d05, // Dark green-brown
                         transparent: true,
                         opacity: 0.85,
                         shininess: 10
@@ -151,11 +154,10 @@ function loadGLTFKelp() {
                 }
             });
 
-            // Position template so bottom touches seafloor (NO HEIGHT SCALING)
-            const templateBox = new THREE.Box3().setFromObject(template);
-            template.position.y = -templateBox.min.y;
+            // Position template so bottom touches ground (Y=0)
+            template.position.y = -1; // Place on seafloor level
 
-            // Create kelp instances
+            // Create 50 kelp instances
             for(let i = 0; i < 50; i++) {
                 const kelpInstance = template.clone();
 
@@ -192,11 +194,13 @@ function loadGLTFKelp() {
                         // Copy userData from the original template mesh
                         template.traverse((originalChild) => {
                             if (originalChild.isMesh && originalChild.geometry && 
-                                originalChild.geometry.userData.originalPositions) {
+                                originalChild.geometry.userData.originalPositions &&
+                                originalChild.name === child.name) {
                                 child.geometry.userData.originalPositions = originalChild.geometry.userData.originalPositions.slice();
                                 child.geometry.userData.minY = originalChild.geometry.userData.minY;
                                 child.geometry.userData.maxY = originalChild.geometry.userData.maxY;
                                 child.geometry.userData.height = originalChild.geometry.userData.height;
+                                return; // Found match, exit traverse
                             }
                         });
                     }
@@ -227,10 +231,10 @@ function createFallbackKelp() {
     log('Creating fallback cylinder kelp...');
 
     for(let i = 0; i < 35; i++) {
-        // Random kelp dimensions
-        const kelpHeight = 15 + Math.random() * 20;
-        const bottomRadius = 0.3 + Math.random() * 0.4;
-        const topRadius = bottomRadius * (0.3 + Math.random() * 0.4);
+        // Fixed kelp dimensions - no random height variation
+        const kelpHeight = 20; // Fixed height
+        const bottomRadius = 0.4; // Fixed bottom radius
+        const topRadius = 0.2; // Fixed top radius
 
         // Create custom geometry for bending kelp
         const segments = 20;
@@ -287,18 +291,19 @@ function createFallbackKelp() {
 }
 
 function setupControls() {
-    // Setup OrbitControls
+    // Full orbit controls
     if (typeof THREE.OrbitControls !== 'undefined') {
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.target.set(0, 7, 0);
+        controls.target.set(0, 7, 0); // Look at kelp midpoint
         controls.minDistance = 5;
         controls.maxDistance = 50;
-        controls.maxPolarAngle = Math.PI;
-        log('OrbitControls initialized successfully');
+        controls.maxPolarAngle = Math.PI; // Allow looking underneath
+        
+        log('Orbit controls initialized successfully');
     } else {
-        log('WARNING: OrbitControls not available');
+        log('OrbitControls not available');
     }
 
     // Slider controls
@@ -324,7 +329,7 @@ function setupControls() {
         });
     }
 
-    // Fallback button
+    // Fallback button (if it exists)
     const fallbackButton = document.getElementById('useFallback');
     if (fallbackButton) {
         fallbackButton.addEventListener('click', function() {
@@ -459,7 +464,7 @@ function animate() {
         deformKelp(k, time);
     });
 
-    // Update orbit controls
+    // Update orbit controls if available
     if (controls) {
         controls.update();
     }
@@ -489,6 +494,3 @@ window.addEventListener('resize', function() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
 });
-    </script>
-</body>
-</html>
