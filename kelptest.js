@@ -1,13 +1,16 @@
 // Global variables
-let scene, camera, renderer, controls;
+let scene, camera, renderer;
 let kelp = [];
 let waveSpeed = 1.5;
 let waveIntensity = 1.2;
 let currentDirection = 45;
 let time = 0;
 
-// Fixed camera position
-let distance = 25;
+// Camera controls
+let targetRotationX = 0, targetRotationY = 0;
+let rotationX = 0, rotationY = 0;
+let distance = 30;
+let isMouseDown = false;
 
 // Debug logging function
 function log(message) {
@@ -90,9 +93,9 @@ function initializeScene() {
     floor.position.y = -1;
     scene.add(floor);
 
-    // Setup camera with orbit controls
-    camera.position.set(0, 2, 15); // Start at 7 feet high, closer to kelp
-    camera.lookAt(0, 2, 0); // Look at kelp midpoint
+    // Setup camera
+    camera.position.set(0, 8, distance);
+    camera.lookAt(0, 10, 0);
 
     setupControls();
     log('Scene initialized successfully');
@@ -161,9 +164,9 @@ function loadGLTFKelp() {
             for(let i = 0; i < 50; i++) {
                 const kelpInstance = template.clone();
 
-                // Position kelp on the seafloor
-                kelpInstance.position.x = (Math.random() - 0.5) * 40;
-                kelpInstance.position.z = (Math.random() - 0.5) * 40;
+                // Position kelp on the seafloor in tighter formation
+                kelpInstance.position.x = (Math.random() - 0.5) * 15; // Reduced from 40 to 15
+                kelpInstance.position.z = (Math.random() - 0.5) * 15; // Reduced from 40 to 15
                 kelpInstance.position.y = -1; // Place on seafloor level
 
                 // Random rotation only
@@ -258,9 +261,9 @@ function createFallbackKelp() {
 
         const kelpMesh = new THREE.Mesh(geometry, kelpMaterial);
 
-        // Position kelp
-        kelpMesh.position.x = (Math.random() - 0.5) * 40;
-        kelpMesh.position.z = (Math.random() - 0.5) * 40;
+        // Position kelp in tighter formation
+        kelpMesh.position.x = (Math.random() - 0.5) * 15; // Reduced from 40 to 15
+        kelpMesh.position.z = (Math.random() - 0.5) * 15; // Reduced from 40 to 15
         kelpMesh.position.y = kelpHeight / 2;
 
         // Store animation data
@@ -291,20 +294,29 @@ function createFallbackKelp() {
 }
 
 function setupControls() {
-    // Full orbit controls
-    if (typeof THREE.OrbitControls !== 'undefined') {
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.target.set(0, 7, 0); // Look at kelp midpoint
-        controls.minDistance = 5;
-        controls.maxDistance = 50;
-        controls.maxPolarAngle = Math.PI; // Allow looking underneath
-        
-        log('Orbit controls initialized successfully');
-    } else {
-        log('OrbitControls not available');
-    }
+    // Mouse controls
+    document.addEventListener('mousedown', function() {
+        isMouseDown = true;
+    });
+
+    document.addEventListener('mouseup', function() {
+        isMouseDown = false;
+    });
+
+    document.addEventListener('mousemove', function(event) {
+        if (isMouseDown) {
+            targetRotationY += event.movementX * 0.01;
+            targetRotationX += event.movementY * 0.01;
+            targetRotationX = Math.max(-Math.PI/3, Math.min(Math.PI/3, targetRotationX));
+        }
+    });
+
+    document.addEventListener('wheel', function(event) {
+        distance += event.deltaY * 0.02;
+        distance = Math.max(8, Math.min(60, distance));
+    });
+
+    log('Manual camera controls initialized successfully');
 
     // Slider controls
     const waveSpeedSlider = document.getElementById('waveSpeed');
@@ -464,10 +476,14 @@ function animate() {
         deformKelp(k, time);
     });
 
-    // Update orbit controls if available
-    if (controls) {
-        controls.update();
-    }
+    // Update camera position based on mouse controls
+    rotationX += (targetRotationX - rotationX) * 0.1;
+    rotationY += (targetRotationY - rotationY) * 0.1;
+
+    camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
+    camera.position.y = Math.sin(rotationX) * distance + 10;
+    camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
+    camera.lookAt(0, 10, 0);
 
     renderer.render(scene, camera);
 }
