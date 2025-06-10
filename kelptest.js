@@ -154,23 +154,11 @@ function loadGLTFKelp() {
                 }
             });
 
-            // Convert from feet to reasonable meter scale for Three.js
-            // Your model is 84 feet = 25.6 meters, way too big!
-            // Scale it down to reasonable kelp size (3-8 meters)
-            const targetHeight = 5 + Math.random() * 3; // 5-8 meter target height
-            const currentHeightInMeters = size.y * 0.3048; // Convert feet to meters
-            const scaleToTarget = targetHeight / currentHeightInMeters;
-            
-            template.scale.setScalar(scaleToTarget);
-            log(`🔧 Scaling model from ${currentHeightInMeters.toFixed(1)}m to ${targetHeight.toFixed(1)}m (scale: ${scaleToTarget.toFixed(3)})`);
-
-            // Recalculate bounding box after scaling
-            const scaledBox = new THREE.Box3().setFromObject(template);
-            
+          
             // Position template so bottom touches ground (Y=0)
             template.position.y = -scaledBox.min.y;
 
-            // Create 15-20 kelp instances
+            // Create 50 kelp instances
             for(let i = 0; i < 50; i++) {
                 const kelpInstance = template.clone();
 
@@ -179,9 +167,6 @@ function loadGLTFKelp() {
                 kelpInstance.position.z = (Math.random() - 0.5) * 40;
                 kelpInstance.position.y = -1; // Place on seafloor level
 
-                // Scale between 0.75x and 1.5x the original size
-                const scale = 0.75 + Math.random() * 0.75;
-                kelpInstance.scale.setScalar(scale);
 
                 // Random rotation
                 kelpInstance.rotation.y = Math.random() * Math.PI * 2;
