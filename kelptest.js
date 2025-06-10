@@ -66,27 +66,33 @@ function initializeScene() {
     const container = document.getElementById('container');
     container.appendChild(renderer.domElement);
 
-    // Brighter ocean lighting
-    const ambientLight = new THREE.AmbientLight(0x4488cc, 0.4);
+    // Brighter ocean lighting - warmer tones to preserve brown seafloor
+    const ambientLight = new THREE.AmbientLight(0x6699bb, 0.3); // Less blue, more neutral
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0x88ccff, 1.2);
+    const sunLight = new THREE.DirectionalLight(0xaaccdd, 1.0); // Lighter blue-white
     sunLight.position.set(0, 50, 10);
     scene.add(sunLight);
 
-    const rimLight1 = new THREE.DirectionalLight(0x5599dd, 0.4);
+    const rimLight1 = new THREE.DirectionalLight(0x7799cc, 0.3); // Warmer blue
     rimLight1.position.set(20, 20, 0);
     scene.add(rimLight1);
 
-    const rimLight2 = new THREE.DirectionalLight(0x4488cc, 0.3);
+    const rimLight2 = new THREE.DirectionalLight(0x6688bb, 0.25); // Even warmer
     rimLight2.position.set(-20, 15, 0);
     scene.add(rimLight2);
 
-    // Create brighter brown seafloor
+    // Add a warm fill light specifically for the seafloor
+    const floorLight = new THREE.DirectionalLight(0xddbb88, 0.4); // Warm golden tone
+    floorLight.position.set(0, -30, 0); // From below to light the floor
+    scene.add(floorLight);
+
+    // Create richer brown seafloor with better material properties
     const floorGeometry = new THREE.PlaneGeometry(2000, 2000);
     const floorMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x38281d,
-        shininess: 4
+        color: 0x8B4513, // Richer saddle brown
+        shininess: 2,    // Less shiny for more natural look
+        specular: 0x332211 // Warm specular highlights
     });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
