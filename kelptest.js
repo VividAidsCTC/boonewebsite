@@ -58,7 +58,7 @@ function initializeScene() {
     gradient.addColorStop(1, '#001133');
 
     context.fillStyle = gradient;
-    context.fillRect(0, 0, 2000, 2000);
+    context.fillRect(0, 0, 200, 200);
 
     const gradientTexture = new THREE.CanvasTexture(canvas);
     scene.background = gradientTexture;
@@ -90,7 +90,7 @@ function initializeScene() {
     // Create richer brown seafloor with better material properties
     const floorGeometry = new THREE.PlaneGeometry(2000, 2000);
     const floorMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x3b261a, // dark brown
+        color: 0x302114, // Richer saddle brown
         shininess: 2,    // Less shiny for more natural look
         specular: 0x332211 // Warm specular highlights
     });
@@ -370,10 +370,10 @@ function setupControls() {
     }
 }
 
-// Function to deform kelp geometry using vertex manipulation
+// Function to deform kelp geometry using vertex manipulation with undulating motion
 function deformKelp(kelpMesh, time) {
     if (kelpMesh.userData.isGLTF) {
-        // Vertex-level deformation for GLTF models
+        // Vertex-level deformation for GLTF models with undulation
         const userData = kelpMesh.userData;
         const dirRad = (currentDirection * Math.PI) / 180;
         
@@ -382,7 +382,7 @@ function deformKelp(kelpMesh, time) {
         kelpMesh.position.z = userData.originalZ;
         kelpMesh.position.y = userData.originalY;
         
-        // Calculate wave values
+        // Calculate wave values for undulation
         const wave1 = Math.sin(time * userData.freq1 + userData.offset1) * userData.amplitude1;
         const wave2 = Math.cos(time * userData.freq2 + userData.offset2) * userData.amplitude2;
         const wave3 = Math.sin(time * userData.freq3 + userData.offset3) * userData.amplitude3;
@@ -407,17 +407,36 @@ function deformKelp(kelpMesh, time) {
                     
                     // Calculate height factor (0 at bottom, 1 at top)
                     const heightFactor = Math.max(0, (originalY - minY) / height);
-                    const heightFactorCurved = heightFactor * heightFactor; // Quadratic for natural curve
                     
-                    // Calculate bending displacement - increases with height
-                    const bendAmountX = (wave1 + wave2 * 0.7) * waveIntensity * heightFactorCurved * 2;
-                    const bendAmountZ = (wave2 + wave3 * 0.8) * waveIntensity * heightFactorCurved * 2;
+                    // Create multiple undulation points along the height
+                    const undulationFreq1 = 3.0; // Low frequency wave (big curves)
+                    const undulationFreq2 = 6.0; // Medium frequency wave
+                    const undulationFreq3 = 9.0; // High frequency wave (small ripples)
                     
-                    // Apply directional bending
-                    const finalBendX = bendAmountX * Math.cos(dirRad) + bendAmountZ * Math.sin(dirRad) * 0.3;
-                    const finalBendZ = bendAmountZ * Math.sin(dirRad) + bendAmountX * Math.cos(dirRad) * 0.3;
+                    // Calculate undulating displacement with multiple sine waves
+                    const undulationX = (
+                        Math.sin(heightFactor * undulationFreq1 + time * userData.freq1 + userData.offset1) * 0.8 +
+                        Math.sin(heightFactor * undulationFreq2 + time * userData.freq2 + userData.offset2) * 0.4 +
+                        Math.sin(heightFactor * undulationFreq3 + time * userData.freq3 + userData.offset3) * 0.2
+                    ) * waveIntensity * heightFactor;
                     
-                    // Set new position - bottom stays fixed, top moves more
+                    const undulationZ = (
+                        Math.cos(heightFactor * undulationFreq1 + time * userData.freq1 + userData.offset1 + Math.PI/4) * 0.6 +
+                        Math.cos(heightFactor * undulationFreq2 + time * userData.freq2 + userData.offset2 + Math.PI/3) * 0.3 +
+                        Math.cos(heightFactor * undulationFreq3 + time * userData.freq3 + userData.offset3 + Math.PI/6) * 0.15
+                    ) * waveIntensity * heightFactor;
+                    
+                    // Apply directional current influence
+                    const currentInfluenceX = (wave1 + wave2 * 0.5) * waveIntensity * heightFactor * heightFactor;
+                    const currentInfluenceZ = (wave2 + wave3 * 0.5) * waveIntensity * heightFactor * heightFactor;
+                    
+                    // Combine undulation with current direction
+                    const finalBendX = (undulationX + currentInfluenceX) * Math.cos(dirRad) + 
+                                       (undulationZ + currentInfluenceZ) * Math.sin(dirRad) * 0.3;
+                    const finalBendZ = (undulationZ + currentInfluenceZ) * Math.sin(dirRad) + 
+                                       (undulationX + currentInfluenceX) * Math.cos(dirRad) * 0.3;
+                    
+                    // Set new position - bottom stays fixed, creates snake-like motion
                     positions.setX(i, originalX + finalBendX);
                     positions.setY(i, originalY);
                     positions.setZ(i, originalZ + finalBendZ);
@@ -430,7 +449,7 @@ function deformKelp(kelpMesh, time) {
         });
 
     } else {
-        // Vertex deformation for cylinder geometry (fallback)
+        // Vertex deformation for cylinder geometry (fallback) with undulation
         const geometry = kelpMesh.geometry;
         const positions = geometry.attributes.position;
         const originalPositions = geometry.userData.originalPositions;
@@ -460,15 +479,34 @@ function deformKelp(kelpMesh, time) {
 
             // Calculate height factor (0 at bottom, 1 at top)
             const heightFactor = (originalY + userData.height/2) / userData.height;
-            const heightFactorSquared = heightFactor * heightFactor;
+            
+            // Create multiple undulation points along the height
+            const undulationFreq1 = 2.5; // Low frequency wave (big curves)
+            const undulationFreq2 = 5.0; // Medium frequency wave
+            const undulationFreq3 = 8.0; // High frequency wave (small ripples)
+            
+            // Calculate undulating displacement with multiple sine waves
+            const undulationX = (
+                Math.sin(heightFactor * undulationFreq1 + time * userData.freq1 + userData.offset1) * 1.0 +
+                Math.sin(heightFactor * undulationFreq2 + time * userData.freq2 + userData.offset2) * 0.5 +
+                Math.sin(heightFactor * undulationFreq3 + time * userData.freq3 + userData.offset3) * 0.25
+            ) * waveIntensity * heightFactor;
+            
+            const undulationZ = (
+                Math.cos(heightFactor * undulationFreq1 + time * userData.freq1 + userData.offset1 + Math.PI/4) * 0.8 +
+                Math.cos(heightFactor * undulationFreq2 + time * userData.freq2 + userData.offset2 + Math.PI/3) * 0.4 +
+                Math.cos(heightFactor * undulationFreq3 + time * userData.freq3 + userData.offset3 + Math.PI/6) * 0.2
+            ) * waveIntensity * heightFactor;
 
-            // Calculate bending displacement
-            const bendAmountX = (wave1 + wave2 * 0.7) * waveIntensity * heightFactorSquared * 2;
-            const bendAmountZ = (wave2 + wave3 * 0.8) * waveIntensity * heightFactorSquared * 2;
+            // Apply directional current influence
+            const currentInfluenceX = (wave1 + wave2 * 0.7) * waveIntensity * heightFactor * heightFactor;
+            const currentInfluenceZ = (wave2 + wave3 * 0.8) * waveIntensity * heightFactor * heightFactor;
 
-            // Apply directional bending
-            const finalBendX = bendAmountX * Math.cos(dirRad) + bendAmountZ * Math.sin(dirRad) * 0.3;
-            const finalBendZ = bendAmountZ * Math.sin(dirRad) + bendAmountX * Math.cos(dirRad) * 0.3;
+            // Combine undulation with current direction
+            const finalBendX = (undulationX + currentInfluenceX) * Math.cos(dirRad) + 
+                               (undulationZ + currentInfluenceZ) * Math.sin(dirRad) * 0.3;
+            const finalBendZ = (undulationZ + currentInfluenceZ) * Math.sin(dirRad) + 
+                               (undulationX + currentInfluenceX) * Math.cos(dirRad) * 0.3;
 
             // Set new position
             positions.setX(i, originalX + finalBendX);
