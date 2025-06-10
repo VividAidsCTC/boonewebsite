@@ -85,7 +85,7 @@ function initializeScene() {
     // Create brighter brown seafloor
     const floorGeometry = new THREE.PlaneGeometry(500, 500);
     const floorMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0xFFFFFF,
+        color: 0x371c00,
         shininess: 4
     });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -119,15 +119,43 @@ function loadGLTFKelp() {
             log('GLTF model loaded successfully');
             const template = gltf.scene;
             
-            // Debug the model structure
-            log(`Model bounding box: ${JSON.stringify(template.children.length)} children`);
+            // Compute overall bounding box for the entire model
+            const box = new THREE.Box3().setFromObject(template);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+            
+            log(`=== GLTF MODEL ANALYSIS ===`);
+            log(`Overall model size: X=${size.x.toFixed(3)}, Y=${size.y.toFixed(3)}, Z=${size.z.toFixed(3)}`);
+            log(`Model center: X=${box.getCenter(new THREE.Vector3()).x.toFixed(3)}, Y=${box.getCenter(new THREE.Vector3()).y.toFixed(3)}, Z=${box.getCenter(new THREE.Vector3()).z.toFixed(3)}`);
+            log(`Children count: ${template.children.length}`);
+            
+            // Analyze each mesh in the model
+            let meshCount = 0;
             template.traverse((child) => {
                 if (child.isMesh) {
+                    meshCount++;
                     child.geometry.computeBoundingBox();
-                    const box = child.geometry.boundingBox;
-                    log(`Mesh size: ${(box.max.x - box.min.x).toFixed(2)} x ${(box.max.y - box.min.y).toFixed(2)} x ${(box.max.z - box.min.z).toFixed(2)}`);
+                    const meshBox = child.geometry.boundingBox;
+                    const meshSize = new THREE.Vector3();
+                    meshBox.getSize(meshSize);
+                    
+                    log(`Mesh ${meshCount}: ${child.name || 'unnamed'}`);
+                    log(`  Size: X=${meshSize.x.toFixed(3)}, Y=${meshSize.y.toFixed(3)}, Z=${meshSize.z.toFixed(3)}`);
+                    log(`  Position: X=${child.position.x.toFixed(3)}, Y=${child.position.y.toFixed(3)}, Z=${child.position.z.toFixed(3)}`);
+                    log(`  Scale: X=${child.scale.x.toFixed(3)}, Y=${child.scale.y.toFixed(3)}, Z=${child.scale.z.toFixed(3)}`);
+                    
+                    // Check if it's essentially flat
+                    if (meshSize.y < 0.1) {
+                        log(`  ⚠️  This mesh appears to be FLAT (Y < 0.1)`);
+                    }
                 }
             });
+            
+            // If the model is flat, let's try to fix it
+            if (size.y < 1.0) {
+                log(`🔧 Model appears flat (Y=${size.y.toFixed(3)}). Trying to stretch in Y direction...`);
+                template.scale.set(1, 20, 1); // Stretch Y by 20x
+            }
             
             // Try different base scales to see what works
             const testScales = [1, 5, 10, 50, 100];
