@@ -93,9 +93,9 @@ function initializeScene() {
     floor.position.y = -1;
     scene.add(floor);
 
-    // Setup camera
-    camera.position.set(0, 8, distance);
-    camera.lookAt(0, 10, 0);
+    // Setup camera - much lower position
+    camera.position.set(0, 2, distance);
+    camera.lookAt(0, 3, 0);
 
     setupControls();
     log('Scene initialized successfully');
@@ -169,6 +169,10 @@ function loadGLTFKelp() {
                 kelpInstance.position.z = (Math.random() - 0.5) * 15; // Reduced from 40 to 15
                 kelpInstance.position.y = -1; // Place on seafloor level
 
+                // Scale between 0.75x and 1.5x the original size
+                const scale = 0.75 + Math.random() * 0.75; // Random scale between 0.75 and 1.5
+                kelpInstance.scale.setScalar(scale);
+
                 // Random rotation only
                 kelpInstance.rotation.y = Math.random() * Math.PI * 2;
 
@@ -212,7 +216,7 @@ function loadGLTFKelp() {
                 scene.add(kelpInstance);
                 kelp.push(kelpInstance);
 
-                log(`Instance ${i}: using original model size`);
+                log(`Instance ${i}: scale=${scale.toFixed(2)}`);
             }
 
             log(`Created ${kelp.length} GLTF kelp instances with vertex deformation`);
@@ -234,10 +238,16 @@ function createFallbackKelp() {
     log('Creating fallback cylinder kelp...');
 
     for(let i = 0; i < 35; i++) {
-        // Fixed kelp dimensions - no random height variation
-        const kelpHeight = 20; // Fixed height
-        const bottomRadius = 0.4; // Fixed bottom radius
-        const topRadius = 0.2; // Fixed top radius
+        // Base kelp dimensions
+        const baseKelpHeight = 20;
+        const baseBottomRadius = 0.4;
+        const baseTopRadius = 0.2;
+
+        // Scale between 0.75x and 1.5x the original size
+        const scale = 0.75 + Math.random() * 0.75;
+        const kelpHeight = baseKelpHeight * scale;
+        const bottomRadius = baseBottomRadius * scale;
+        const topRadius = baseTopRadius * scale;
 
         // Create custom geometry for bending kelp
         const segments = 20;
@@ -476,14 +486,14 @@ function animate() {
         deformKelp(k, time);
     });
 
-    // Update camera position based on mouse controls
+    // Update camera position based on mouse controls - lower Y position
     rotationX += (targetRotationX - rotationX) * 0.1;
     rotationY += (targetRotationY - rotationY) * 0.1;
 
     camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
-    camera.position.y = Math.sin(rotationX) * distance + 10;
+    camera.position.y = Math.sin(rotationX) * distance + 3; // Changed from +10 to +3
     camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
-    camera.lookAt(0, 10, 0);
+    camera.lookAt(0, 3, 0); // Changed from (0, 10, 0) to (0, 3, 0)
 
     renderer.render(scene, camera);
 }
