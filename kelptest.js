@@ -49,8 +49,8 @@ function initializeScene() {
     
     // Create blue gradient background
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
+    canvas.width = 2000;
+    canvas.height = 2000;
     const context = canvas.getContext('2d');
     
     const gradient = context.createLinearGradient(0, 0, 0, 512);
