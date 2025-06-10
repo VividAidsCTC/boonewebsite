@@ -1,8 +1,8 @@
 // Global variables
 let scene, camera, renderer;
 let kelp = [];
-let waveSpeed = 1.5;
-let waveIntensity = 1.2;
+let waveSpeed = 1.0;
+let waveIntensity = 1.0;
 let currentDirection = 45;
 let time = 0;
 
