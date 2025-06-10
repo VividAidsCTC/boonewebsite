@@ -58,7 +58,7 @@ function initializeScene() {
     gradient.addColorStop(1, '#001133');
     
     context.fillStyle = gradient;
-    context.fillRect(0, 0, 512, 512);
+    context.fillRect(0, 0, 2000, 2000);
     
     const gradientTexture = new THREE.CanvasTexture(canvas);
     scene.background = gradientTexture;
