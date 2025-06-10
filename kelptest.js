@@ -157,8 +157,8 @@ function loadGLTFKelp() {
                 template.scale.set(1, 100, 1); // Stretch Y by 100x
             }
 
-            // Clone and position multiple instances - 5-10 kelp
-            for(let i = 0; i < 8; i++) {
+            // Clone and position multiple instances - 15-20 kelp
+            for(let i = 0; i < 18; i++) {
                 const kelpInstance = template.clone();
 
                 // Random positioning
@@ -166,8 +166,8 @@ function loadGLTFKelp() {
                 kelpInstance.position.z = (Math.random() - 0.5) * 40;
                 kelpInstance.position.y = 0;
 
-                // Scale between 0.5x and 2x the original size
-                const scale = 0.5 + Math.random() * 1.5; // Random between 0.5 and 2.0
+                // Scale between 0.75x and 1.5x the original size
+                const scale = 0.75 + Math.random() * 0.75; // Random between 0.75 and 1.5
                 kelpInstance.scale.setScalar(scale);
 
                 log(`Instance ${i}: scale ${scale.toFixed(1)}`);
@@ -275,26 +275,13 @@ function createFallbackKelp() {
 }
 
 function setupControls() {
-    // Mouse controls
-    document.addEventListener('mousedown', function() { isMouseDown = true; });
-    document.addEventListener('mouseup', function() { isMouseDown = false; });
+    // Disable mouse controls for fixed camera
+    // document.addEventListener('mousedown', function() { isMouseDown = true; });
+    // document.addEventListener('mouseup', function() { isMouseDown = false; });
+    // document.addEventListener('mousemove', function(event) { ... });
+    // document.addEventListener('wheel', function(event) { ... });
 
-    document.addEventListener('mousemove', function(event) {
-        if (isMouseDown) {
-            // Much slower, more limited camera movement
-            targetRotationY += event.movementX * 0.003; // Reduced from 0.01
-            targetRotationX += event.movementY * 0.003; // Reduced from 0.01
-            targetRotationX = Math.max(-Math.PI/6, Math.min(Math.PI/6, targetRotationX)); // More limited range
-        }
-    });
-
-    document.addEventListener('wheel', function(event) {
-        // Limited zoom range for mostly static camera
-        distance += event.deltaY * 0.01; // Reduced zoom sensitivity
-        distance = Math.max(15, Math.min(35, distance)); // Tighter zoom limits
-    });
-
-    // Working sliders
+    // Working sliders only
     const waveSpeedSlider = document.getElementById('waveSpeed');
     const waveIntensitySlider = document.getElementById('waveIntensity');
     const currentDirectionSlider = document.getElementById('currentDirection');
@@ -333,26 +320,46 @@ function setupControls() {
 // Function to deform kelp geometry for bending
 function deformKelp(kelpMesh, time) {
     if (kelpMesh.userData.isGLTF) {
-        // Simple position-based animation for GLTF models with realistic kelp bending
+        // GLTF kelp bending - create gradual curve from base to top
         const userData = kelpMesh.userData;
         const dirRad = (currentDirection * Math.PI) / 180;
         
         const wave1 = Math.sin(time * userData.freq1 + userData.offset1) * userData.amplitude1;
         const wave2 = Math.cos(time * userData.freq2 + userData.offset2) * userData.amplitude2;
         
-        // Much more subtle bending - kelp moves gently with current
-        const bendX = wave1 * waveIntensity * 0.15 * Math.cos(dirRad);
-        const bendZ = wave2 * waveIntensity * 0.15 * Math.sin(dirRad);
-        
-        // Keep position mostly stable, just gentle swaying
-        kelpMesh.position.x = userData.originalX + bendX;
-        kelpMesh.position.z = userData.originalZ + bendZ;
+        // Keep the base completely fixed - no position movement at all
+        kelpMesh.position.x = userData.originalX;
+        kelpMesh.position.z = userData.originalZ;
         kelpMesh.position.y = userData.originalY;
         
-        // Rotation simulates top bending while base stays fixed
-        // Only rotate around base point, stronger rotation = more top bending
-        kelpMesh.rotation.z = wave1 * waveIntensity * 0.08; // Side-to-side sway
-        kelpMesh.rotation.x = wave2 * waveIntensity * 0.06; // Front-to-back sway
+        // For GLTF models, we need to traverse and bend individual parts
+        // This creates a more realistic bending effect
+        kelpMesh.traverse((child) => {
+            if (child.isMesh) {
+                // Get the height of this mesh relative to the whole kelp
+                const localY = child.position.y;
+                const boundingBox = new THREE.Box3().setFromObject(kelpMesh);
+                const totalHeight = boundingBox.max.y - boundingBox.min.y;
+                const heightFactor = Math.max(0, localY / totalHeight); // 0 at bottom, 1 at top
+                
+                // Apply progressive bending - more at the top
+                const bendStrength = heightFactor * heightFactor; // Quadratic curve for natural look
+                
+                // Calculate bending
+                const bendX = wave1 * waveIntensity * 0.3 * bendStrength * Math.cos(dirRad);
+                const bendZ = wave2 * waveIntensity * 0.3 * bendStrength * Math.sin(dirRad);
+                
+                // Apply rotation to create curve effect
+                child.rotation.z = wave1 * waveIntensity * 0.15 * bendStrength;
+                child.rotation.x = wave2 * waveIntensity * 0.12 * bendStrength;
+                
+                // Slight position offset for top parts only
+                if (heightFactor > 0.3) { // Only bend upper 70% of kelp
+                    child.position.x = bendX * 0.5;
+                    child.position.z = bendZ * 0.5;
+                }
+            }
+        });
 
     } else {
         // Vertex deformation for cylinder geometry (your original approach)
@@ -419,13 +426,13 @@ function animate() {
         deformKelp(k, time);
     });
 
-    // Camera movement - much more subtle and slow
-    rotationX += (targetRotationX - rotationX) * 0.02; // Slower interpolation (was 0.05)
-    rotationY += (targetRotationY - rotationY) * 0.02; // Slower interpolation
-
-    camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
-    camera.position.y = Math.sin(rotationX) * distance + 10;
-    camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
+    // Fixed camera - no movement
+    // Camera stays in the same position always
+    // rotationX and rotationY remain at 0
+    
+    camera.position.x = Math.sin(0) * Math.cos(0) * distance;
+    camera.position.y = Math.sin(0) * distance + 10;
+    camera.position.z = Math.cos(0) * Math.cos(0) * distance;
     camera.lookAt(0, 8, 0);
 
     renderer.render(scene, camera);
