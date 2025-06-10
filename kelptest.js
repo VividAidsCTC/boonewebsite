@@ -108,7 +108,7 @@ function loadGLTFKelp() {
     }
 
     const loader = new THREE.GLTFLoader();
-    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp.glb';
+    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp2.glb';
 
     loader.load(
         kelpURL,
@@ -145,30 +145,14 @@ function loadGLTFKelp() {
                 }
             });
 
-            // Convert from feet to reasonable meter scale for Three.js
-            // Your model is 84 feet = 25.6 meters, way too big!
-            // Scale it down to reasonable kelp size (3-8 meters)
-            const targetHeight = 5 + Math.random() * 3; // 5-8 meter target height
-            const currentHeightInMeters = size.y * 0.3048; // Convert feet to meters
-            const scaleToTarget = targetHeight / currentHeightInMeters;
-            
-            template.scale.setScalar(scaleToTarget);
-            log(`🔧 Scaling model from ${currentHeightInMeters.toFixed(1)}m to ${targetHeight.toFixed(1)}m (scale: ${scaleToTarget.toFixed(3)})`);
-
-            // Recalculate bounding box after scaling
-            const scaledBox = new THREE.Box3().setFromObject(template);
-            
-            // Position template so bottom touches ground (Y=0)
-            template.position.y = -scaledBox.min.y;
-
             // Create 15-20 kelp instances
             for(let i = 0; i < 18; i++) {
                 const kelpInstance = template.clone();
 
-                // Position kelp on the seafloor
+                // Random positioning
                 kelpInstance.position.x = (Math.random() - 0.5) * 40;
                 kelpInstance.position.z = (Math.random() - 0.5) * 40;
-                kelpInstance.position.y = -1; // Place on seafloor level
+                kelpInstance.position.y = 0;
 
                 // Scale between 0.75x and 1.5x the original size
                 const scale = 0.75 + Math.random() * 0.75;
@@ -199,18 +183,17 @@ function loadGLTFKelp() {
                     if (child.isMesh && child.geometry) {
                         // Clone geometry so each instance can be deformed independently
                         child.geometry = child.geometry.clone();
-                        // Copy userData from the original template mesh
-                        template.traverse((originalChild) => {
-                            if (originalChild.isMesh && originalChild.geometry && 
-                                originalChild.geometry.userData.originalPositions &&
-                                originalChild.name === child.name) {
-                                child.geometry.userData.originalPositions = originalChild.geometry.userData.originalPositions.slice();
-                                child.geometry.userData.minY = originalChild.geometry.userData.minY;
-                                child.geometry.userData.maxY = originalChild.geometry.userData.maxY;
-                                child.geometry.userData.height = originalChild.geometry.userData.height;
-                                return; // Found match, exit traverse
-                            }
-                        });
+                        // Copy the original positions and height data
+                        if (template.children.length > 0) {
+                            template.traverse((originalChild) => {
+                                if (originalChild.isMesh && originalChild.geometry.userData.originalPositions) {
+                                    child.geometry.userData.originalPositions = originalChild.geometry.userData.originalPositions.slice();
+                                    child.geometry.userData.minY = originalChild.geometry.userData.minY;
+                                    child.geometry.userData.maxY = originalChild.geometry.userData.maxY;
+                                    child.geometry.userData.height = originalChild.geometry.userData.height;
+                                }
+                            });
+                        }
                     }
                 });
 
