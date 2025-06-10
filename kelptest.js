@@ -49,11 +49,11 @@ function initializeScene() {
 
     // Create blue gradient background
     const canvas = document.createElement('canvas');
-    canvas.width = 2000;
-    canvas.height = 2000;
+    canvas.width = 200;
+    canvas.height = 200;
     const context = canvas.getContext('2d');
 
-    const gradient = context.createLinearGradient(0, 0, 0, 2000);
+    const gradient = context.createLinearGradient(0, 0, 0, 200);
     gradient.addColorStop(0, '#4499dd');
     gradient.addColorStop(1, '#001133');
 
@@ -88,7 +88,7 @@ function initializeScene() {
     scene.add(floorLight);
 
     // Create richer brown seafloor with better material properties
-    const floorGeometry = new THREE.PlaneGeometry(2000, 2000);
+    const floorGeometry = new THREE.PlaneGeometry(200, 200);
     const floorMaterial = new THREE.MeshPhongMaterial({ 
         color: 0x302114, // Richer saddle brown
         shininess: 2,    // Less shiny for more natural look
