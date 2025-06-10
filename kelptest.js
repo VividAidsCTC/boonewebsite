@@ -108,7 +108,7 @@ function loadGLTFKelp() {
     }
 
     const loader = new THREE.GLTFLoader();
-    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp2.glb';
+    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp.glb';
 
     loader.load(
         kelpURL,
@@ -146,23 +146,32 @@ function loadGLTFKelp() {
             });
 
             // Fix positioning and scaling if needed
-            if (size.y < 1.0) {
-                log(`🔧 Model appears small (Y=${size.y.toFixed(3)}). Scaling up...`);
-                template.scale.set(1, 20, 1); // Scale Y up but keep proportional
+            if (size.y < 5.0) {
+                log(`🔧 Model appears small (Y=${size.y.toFixed(3)}). Scaling up significantly...`);
+                template.scale.set(10, 100, 10); // Scale significantly in all directions
+            } else if (size.y < 15.0) {
+                log(`🔧 Model size moderate (Y=${size.y.toFixed(3)}). Scaling up moderately...`);
+                template.scale.set(5, 50, 5); // Moderate scaling
             }
 
-            // Position template at ground level
-            const templateBox = new THREE.Box3().setFromObject(template);
-            template.position.y = -templateBox.min.y; // Move bottom to ground
+            // Recalculate bounding box after scaling
+            const scaledBox = new THREE.Box3().setFromObject(template);
+            const scaledSize = new THREE.Vector3();
+            scaledBox.getSize(scaledSize);
+            
+            log(`After scaling: X=${scaledSize.x.toFixed(3)}, Y=${scaledSize.y.toFixed(3)}, Z=${scaledSize.z.toFixed(3)}`);
+
+            // Position template so bottom touches ground (Y=0)
+            template.position.y = -scaledBox.min.y;
 
             // Create 15-20 kelp instances
             for(let i = 0; i < 18; i++) {
                 const kelpInstance = template.clone();
 
-                // Random positioning
+                // Position kelp on the seafloor
                 kelpInstance.position.x = (Math.random() - 0.5) * 40;
                 kelpInstance.position.z = (Math.random() - 0.5) * 40;
-                kelpInstance.position.y = 0;
+                kelpInstance.position.y = -1; // Place on seafloor level
 
                 // Scale between 0.75x and 1.5x the original size
                 const scale = 0.75 + Math.random() * 0.75;
@@ -193,17 +202,18 @@ function loadGLTFKelp() {
                     if (child.isMesh && child.geometry) {
                         // Clone geometry so each instance can be deformed independently
                         child.geometry = child.geometry.clone();
-                        // Copy the original positions and height data
-                        if (template.children.length > 0) {
-                            template.traverse((originalChild) => {
-                                if (originalChild.isMesh && originalChild.geometry.userData.originalPositions) {
-                                    child.geometry.userData.originalPositions = originalChild.geometry.userData.originalPositions.slice();
-                                    child.geometry.userData.minY = originalChild.geometry.userData.minY;
-                                    child.geometry.userData.maxY = originalChild.geometry.userData.maxY;
-                                    child.geometry.userData.height = originalChild.geometry.userData.height;
-                                }
-                            });
-                        }
+                        // Copy userData from the original template mesh
+                        template.traverse((originalChild) => {
+                            if (originalChild.isMesh && originalChild.geometry && 
+                                originalChild.geometry.userData.originalPositions &&
+                                originalChild.name === child.name) {
+                                child.geometry.userData.originalPositions = originalChild.geometry.userData.originalPositions.slice();
+                                child.geometry.userData.minY = originalChild.geometry.userData.minY;
+                                child.geometry.userData.maxY = originalChild.geometry.userData.maxY;
+                                child.geometry.userData.height = originalChild.geometry.userData.height;
+                                return; // Found match, exit traverse
+                            }
+                        });
                     }
                 });
 
