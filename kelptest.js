@@ -1,8 +1,8 @@
 // Global variables
 let scene, camera, renderer;
 let kelp = [];
-let waveSpeed = 1.0;
-let waveIntensity = 1.0;
+let waveSpeed = .6;
+let waveIntensity = .8;
 let currentDirection = 45;
 let time = 0;
 
@@ -83,7 +83,7 @@ function initializeScene() {
     scene.add(rimLight2);
 
     // Add a warm fill light specifically for the seafloor
-    const floorLight = new THREE.DirectionalLight(0xddbb88, 0.4); // Warm golden tone
+    const floorLight = new THREE.DirectionalLight(0xddbb88, 0.2); // Warm golden tone
     floorLight.position.set(0, -30, 0); // From below to light the floor
     scene.add(floorLight);
 
