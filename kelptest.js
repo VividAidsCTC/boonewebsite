@@ -119,8 +119,22 @@ function loadGLTFKelp() {
             log('GLTF model loaded successfully');
             const template = gltf.scene;
             
-            // Clone and position multiple instances
-            for(let i = 0; i < 20; i++) {
+            // Debug the model structure
+            log(`Model bounding box: ${JSON.stringify(template.children.length)} children`);
+            template.traverse((child) => {
+                if (child.isMesh) {
+                    child.geometry.computeBoundingBox();
+                    const box = child.geometry.boundingBox;
+                    log(`Mesh size: ${(box.max.x - box.min.x).toFixed(2)} x ${(box.max.y - box.min.y).toFixed(2)} x ${(box.max.z - box.min.z).toFixed(2)}`);
+                }
+            });
+            
+            // Try different base scales to see what works
+            const testScales = [1, 5, 10, 50, 100];
+            let scaleIndex = 0;
+            
+            // Clone and position multiple instances - fewer for testing
+            for(let i = 0; i < 5; i++) {
                 const kelpInstance = template.clone();
                 
                 // Random positioning
@@ -128,9 +142,13 @@ function loadGLTFKelp() {
                 kelpInstance.position.z = (Math.random() - 0.5) * 40;
                 kelpInstance.position.y = 0;
                 
-                // Random scale variation
-                const scale = 0.8 + Math.random() * 0.6;
+                // Try different scales for each instance to test
+                const baseScale = testScales[scaleIndex % testScales.length];
+                const scale = baseScale + Math.random() * baseScale * 0.5;
                 kelpInstance.scale.setScalar(scale);
+                scaleIndex++;
+                
+                log(`Instance ${i}: scale ${scale.toFixed(1)}`);
                 
                 // Random rotation
                 kelpInstance.rotation.y = Math.random() * Math.PI * 2;
