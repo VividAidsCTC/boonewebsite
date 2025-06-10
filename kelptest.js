@@ -332,34 +332,21 @@ function deformKelp(kelpMesh, time) {
         kelpMesh.position.z = userData.originalZ;
         kelpMesh.position.y = userData.originalY;
         
-        // For GLTF models, we need to traverse and bend individual parts
-        // This creates a more realistic bending effect
-        kelpMesh.traverse((child) => {
-            if (child.isMesh) {
-                // Get the height of this mesh relative to the whole kelp
-                const localY = child.position.y;
-                const boundingBox = new THREE.Box3().setFromObject(kelpMesh);
-                const totalHeight = boundingBox.max.y - boundingBox.min.y;
-                const heightFactor = Math.max(0, localY / totalHeight); // 0 at bottom, 1 at top
-                
-                // Apply progressive bending - more at the top
-                const bendStrength = heightFactor * heightFactor; // Quadratic curve for natural look
-                
-                // Calculate bending
-                const bendX = wave1 * waveIntensity * 0.3 * bendStrength * Math.cos(dirRad);
-                const bendZ = wave2 * waveIntensity * 0.3 * bendStrength * Math.sin(dirRad);
-                
-                // Apply rotation to create curve effect
-                child.rotation.z = wave1 * waveIntensity * 0.15 * bendStrength;
-                child.rotation.x = wave2 * waveIntensity * 0.12 * bendStrength;
-                
-                // Slight position offset for top parts only
-                if (heightFactor > 0.3) { // Only bend upper 70% of kelp
-                    child.position.x = bendX * 0.5;
-                    child.position.z = bendZ * 0.5;
-                }
-            }
-        });
+        // Apply rotation to the whole kelp model to create bending effect
+        // This simulates the kelp bending from its base while keeping base fixed
+        
+        // Calculate bending amounts
+        const bendX = wave1 * waveIntensity * 0.2 * Math.cos(dirRad);
+        const bendZ = wave2 * waveIntensity * 0.2 * Math.sin(dirRad);
+        
+        // Apply rotation to create the bending effect
+        // The kelp rotates around its base, creating natural swaying
+        kelpMesh.rotation.z = bendX; // Side-to-side sway
+        kelpMesh.rotation.x = bendZ; // Front-to-back sway
+        
+        // Add some secondary motion for more realistic movement
+        const secondaryWave = Math.sin(time * userData.freq3 + userData.offset3) * userData.amplitude3;
+        kelpMesh.rotation.y += secondaryWave * waveIntensity * 0.05; // Slight twist
 
     } else {
         // Vertex deformation for cylinder geometry (your original approach)
