@@ -18,14 +18,14 @@ const PARTICLE_CONFIG = {
   },
   plankton: {
     count: 1500,
-    radius: 0.01,
+    radius: 0.05,
     color: 0x90ee90,
     opacity: 0.6,
     avoidRadius: 2.0
   },
   sediment: {
     count: 800,
-    radius: 0.02,
+    radius: 0.05,
     color: 0xd2691e,
     opacity: 0.4,
     avoidRadius: 1.5
