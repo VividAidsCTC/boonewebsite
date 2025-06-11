@@ -795,6 +795,11 @@ function animate() {
         deformKelp(k, time);
     });
 
+        if (typeof OceanParticles !== 'undefined') {
+        OceanParticles.update(0.01 * waveSpeed); // Use your existing deltaTime
+    }
+
+
     // Update camera position based on mouse controls - lower Y position
     rotationX += (targetRotationX - rotationX) * 0.1;
     rotationY += (targetRotationY - rotationY) * 0.1;
