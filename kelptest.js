@@ -362,6 +362,8 @@ function initializeScene() {
     const floorLight = new THREE.DirectionalLight(0xddbb88, 0.2); // Warm golden tone
     floorLight.position.set(0, -30, 0); // From below to light the floor
     scene.add(floorLight);
+
+    const floor = createTexturedFloor();
 }
 
 // In your initializeScene() function, after creating the floor:
