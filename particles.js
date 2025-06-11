@@ -3,28 +3,28 @@ console.log('🌊 Enhanced Multi-Type Particle System with Kelp Avoidance Loaded
 // Particle configuration
 const PARTICLE_CONFIG = {
   debris: {
-    count: 1200,
+    count: 2000,
     radius: 0.1,
     color: 0xffffff,
     opacity: 0.2,
     avoidRadius: 5.0
   },
   bubbles: {
-    count: 150,
+    count: 100,
     radius: 0.25,
     color: 0x87ceeb,
     opacity: 0.7,
     avoidRadius: 3.0
   },
   plankton: {
-    count: 400,
+    count: 1500,
     radius: 0.05,
     color: 0x90ee90,
     opacity: 0.6,
     avoidRadius: 2.0
   },
   sediment: {
-    count: 200,
+    count: 800,
     radius: 0.08,
     color: 0xd2691e,
     opacity: 0.4,
@@ -97,7 +97,7 @@ function getInitialPosition(type) {
       base.y = Math.random() * 3; // Lower in water column
       break;
     case 'plankton':
-      base.y = Math.random() * 6 + 2; // Mid-water
+      base.y = Math.random() * 5 + 2; // Mid-water
       break;
     default: // debris
       base.y = Math.random() * 8 + 1; // Throughout water column
@@ -111,7 +111,7 @@ function getTypeSpecificData(type) {
   switch(type) {
     case 'bubbles':
       return {
-        buoyancy: 4.0 + Math.random() * 1.5,
+        buoyancy: 8.0 + Math.random() * 1.5,
         wobble: Math.random() * 0.3,
         expansionRate: 1 + Math.random() * 0.02
       };
