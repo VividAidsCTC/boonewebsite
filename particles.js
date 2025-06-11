@@ -44,7 +44,7 @@ const PARTICLE_CONFIG = {
 
 // Particle system objects
 let particleSystems = {};
-let currentDirection = new THREE.Vector3(1, 0.1, 0.3);
+let particleCurrentDirection = new THREE.Vector3(1, 0.1, 0.3); // RENAMED from currentDirection
 let animationTime = 0;
 
 /**
@@ -234,9 +234,9 @@ function updateParticleType(type, deltaTime) {
         
         // Update velocity with current and turbulence
         const flowStrength = PARTICLE_CONFIG.current.strength;
-        velocities[i3] = currentDirection.x * flowStrength + turbulenceX;
-        velocities[i3 + 1] = currentDirection.y * flowStrength + turbulenceY + config.drift.min;
-        velocities[i3 + 2] = currentDirection.z * flowStrength + turbulenceZ;
+        velocities[i3] = particleCurrentDirection.x * flowStrength + turbulenceX;
+        velocities[i3 + 1] = particleCurrentDirection.y * flowStrength + turbulenceY + config.drift.min;
+        velocities[i3 + 2] = particleCurrentDirection.z * flowStrength + turbulenceZ;
         
         // Update position
         positions[i3] += velocities[i3] * deltaTime;
@@ -262,8 +262,8 @@ function updateParticleType(type, deltaTime) {
  * SET CURRENT DIRECTION
  */
 function setCurrentDirection(x, y, z) {
-    currentDirection.set(x, y, z);
-    currentDirection.normalize();
+    particleCurrentDirection.set(x, y, z);
+    particleCurrentDirection.normalize();
     
     console.log(`🌊 Current direction set to: ${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}`);
     updateDebugDisplay(`🌊 Current: ${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}`);
@@ -370,7 +370,7 @@ window.OceanParticles = {
     // Information
     getStatus: () => ({
         enabled: PARTICLE_CONFIG.enabled,
-        direction: currentDirection,
+        direction: particleCurrentDirection,
         strength: PARTICLE_CONFIG.current.strength,
         types: Object.keys(particleSystems),
         totalParticles: Object.values(PARTICLE_CONFIG.counts).reduce((a, b) => a + b, 0)
