@@ -35,9 +35,9 @@ function initializeModelLoader() {
 const MODEL_URLS = {
     rocks: [
         // Example rock model URLs - replace with your actual files
-        'https://raw.githubusercontent.com/your-username/your-repo/main/models/rock1.glb',
-        'https://raw.githubusercontent.com/your-username/your-repo/main/models/rock2.glb',
-        'https://raw.githubusercontent.com/your-username/your-repo/main/models/rock3.glb'
+        'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/rock1.glb',
+        'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/rock2.glb',
+
         
         // For testing, you can use free models from:
         // - Sketchfab (with CC license)
@@ -45,12 +45,13 @@ const MODEL_URLS = {
         // - Your own hosted files
     ],
     coral: [
-        'https://raw.githubusercontent.com/your-username/your-repo/main/models/coral1.glb',
-        'https://raw.githubusercontent.com/your-username/your-repo/main/models/coral2.glb'
+        'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/coral1.glb',
+        'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/coral2.glb',
+        'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/coral3.glb',
+        'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/coral4.glb',
     ],
     plants: [
-        'https://raw.githubusercontent.com/your-username/your-repo/main/models/seaplant1.glb',
-        'https://raw.githubusercontent.com/your-username/your-repo/main/models/anemone1.glb'
+        'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/lobster.glb',
     ]
 };
 
@@ -79,7 +80,7 @@ const DISTRIBUTION_CONFIG = {
         allowTilt: false // Coral grows upright
     },
     plants: {
-        count: 350,
+        count: 50,
         minScale: 0.6,
         maxScale: 1.8,
         minDistance: 15,
