@@ -1,7 +1,7 @@
 /**
  * OCEAN CURRENT PARTICLES SYSTEM
  * 
- * This file adds floating particles to show ocean current flow.
+ * This file adds floating particles to show ocean current flow. 
  * Includes plankton, sediment, debris, and organic matter.
  * 
  * REQUIREMENTS:
