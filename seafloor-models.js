@@ -69,11 +69,11 @@ const DISTRIBUTION_CONFIG = {
         allowTilt: true // Can rocks be tilted?
     },
     coral: {
-        count: 25,
+        count: 50,
         minScale: 10,
         maxScale: 20,
         minDistance: 1,
-        maxDistance: 200,
+        maxDistance: 50,
         clusterSize: 3, // Coral usually stands alone
         clusterRadius: 0,
         yPosition: 0,
