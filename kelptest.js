@@ -417,7 +417,7 @@ function loadGLTFKelp() {
                     
                     // Apply dark green-brown kelp material
                     const kelpMaterial = new THREE.MeshPhongMaterial({
-                        color: 0x210d05, // Dark green-brown
+                        color: 0x1c4709, // Dark green-brown
                         transparent: true,
                         opacity: 0.85,
                         shininess: 10
@@ -432,12 +432,12 @@ function loadGLTFKelp() {
             template.position.y = -1; // Place on seafloor level
 
             // Create 50 kelp instances
-            for(let i = 0; i < 50; i++) {
+            for(let i = 0; i < 200; i++) {
                 const kelpInstance = template.clone();
 
                 // Position kelp on the seafloor in tighter formation
-                kelpInstance.position.x = (Math.random() - 0.5) * 15; // Reduced from 40 to 15
-                kelpInstance.position.z = (Math.random() - 0.5) * 15; // Reduced from 40 to 15
+                kelpInstance.position.x = (Math.random() - 0.5) * 40; // Reduced from 40 to 15
+                kelpInstance.position.z = (Math.random() - 0.5) * 40; // Reduced from 40 to 15
                 kelpInstance.position.y = -1; // Place on seafloor level
 
                 // Scale between 0.75x and 1.5x the original size
