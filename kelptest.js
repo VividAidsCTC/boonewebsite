@@ -619,8 +619,16 @@ function setupControls() {
     if (currentDirectionSlider) {
         currentDirectionSlider.addEventListener('input', function(e) {
             currentDirection = parseFloat(e.target.value);
-        });
-    }
+        
+        // ALSO UPDATE PARTICLE DIRECTION
+            if (typeof OceanParticles !== 'undefined') {
+                const radians = (currentDirection * Math.PI) / 180;
+                const x = Math.cos(radians);
+                const z = Math.sin(radians);
+                OceanParticles.setDirection(x, 0.1, z);
+        }
+    });
+}
 
     // Fallback button (if it exists)
     const fallbackButton = document.getElementById('useFallback');
@@ -796,7 +804,7 @@ function animate() {
     });
 
         if (typeof OceanParticles !== 'undefined') {
-        OceanParticles.update(1 * waveSpeed); // Use your existing deltaTime
+        OceanParticles.update(.016 * waveSpeed); // Use your existing deltaTime
     }
 
 
