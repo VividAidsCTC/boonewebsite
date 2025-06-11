@@ -2,7 +2,7 @@ console.log('🌊 Simple Particle System with Current Direction Loaded');
 
 let simpleParticle;
 let minRange = 60;  // Distance before reset
-let origin = new THREE.Vector3(0, 1, 0);  // Reset origin
+let origin = new THREE.Vector3(-200, 1, 10);  // Reset origin
 
 // Initialize particle
 function initializeSimpleParticle() {
