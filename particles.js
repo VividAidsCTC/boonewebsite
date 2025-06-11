@@ -1,9 +1,9 @@
-console.log('🌊 Enhanced Multi-Type Particle System with Kelp Avoidance Loaded');
+xconsole.log('🌊 Enhanced Multi-Type Particle System with Kelp Avoidance Loaded');
 
 // Particle configuration
 const PARTICLE_CONFIG = {
   debris: {
-    count: 3000,
+    count: 4000,
     radius: 0.1,
     color: 0xffffff,
     opacity: 0.2,
@@ -85,7 +85,7 @@ function initializeParticleType(type, config) {
 function getInitialPosition(type) {
   const base = new THREE.Vector3(
     (Math.random() - 0.5) * 400,
-    Math.random() * 8 + 1,
+    Math.random() * 15 + 1,
     (Math.random() - 0.5) * 400
   );
   
@@ -111,8 +111,8 @@ function getTypeSpecificData(type) {
   switch(type) {
     case 'bubbles':
       return {
-        buoyancy: 8.0 + Math.random() * 1.5,
-        wobble: Math.random() * 0.3,
+        buoyancy: 12.0 + Math.random() * 1.5,
+        wobble: Math.random() * 0.6,
         expansionRate: 1 + Math.random() * 0.02
       };
     case 'plankton':
