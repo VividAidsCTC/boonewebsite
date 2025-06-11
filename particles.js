@@ -10,10 +10,10 @@ const PARTICLE_CONFIG = {
     avoidRadius: 5.0
   },
   bubbles: {
-    count: 300,
-    radius: 0.4,
+    count: 150,
+    radius: 0.25,
     color: 0x87ceeb,
-    opacity: 0.6,
+    opacity: 0.7,
     avoidRadius: 3.0
   },
   plankton: {
@@ -111,7 +111,7 @@ function getTypeSpecificData(type) {
   switch(type) {
     case 'bubbles':
       return {
-        buoyancy: 2.0 + Math.random() * 1.5,
+        buoyancy: 4.0 + Math.random() * 1.5,
         wobble: Math.random() * 0.3,
         expansionRate: 1 + Math.random() * 0.02
       };
