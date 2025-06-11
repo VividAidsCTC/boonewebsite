@@ -25,7 +25,7 @@ let textureLoader = new THREE.TextureLoader();
 function createTexturedFloor() {
     log('Creating textured seafloor...');
     
-    const floorGeometry = new THREE.PlaneGeometry(2000, 2000, 256, 256); // Higher resolution for displacement
+    const floorGeometry = new THREE.PlaneGeometry(1000, 1000, 256, 256); // Higher resolution for displacement
     
     // Default material (will be updated when textures load)
     let floorMaterial = new THREE.MeshPhongMaterial({ 
@@ -326,16 +326,16 @@ function initializeScene() {
 
     // Create blue gradient background
     const canvas = document.createElement('canvas');
-    canvas.width = 2000;
-    canvas.height = 2000;
+    canvas.width = 1000;
+    canvas.height = 1000;
     const context = canvas.getContext('2d');
 
-    const gradient = context.createLinearGradient(0, 0, 0, 2000);
+    const gradient = context.createLinearGradient(0, 0, 0, 1000);
     gradient.addColorStop(0, '#4499dd');
     gradient.addColorStop(1, '#001133');
 
     context.fillStyle = gradient;
-    context.fillRect(0, 0, 2000, 2000);
+    context.fillRect(0, 0, 1000, 1000);
 
     const gradientTexture = new THREE.CanvasTexture(canvas);
     scene.background = gradientTexture;
