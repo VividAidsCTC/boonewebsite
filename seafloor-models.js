@@ -76,7 +76,7 @@ const DISTRIBUTION_CONFIG = {
         maxDistance: 200,
         clusterSize: 3, // Coral usually stands alone
         clusterRadius: 0,
-        yPosition: -1,
+        yPosition: 0,
         allowTilt: false // Coral grows upright
     },
     plants: {
