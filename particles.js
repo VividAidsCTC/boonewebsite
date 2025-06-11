@@ -11,9 +11,9 @@ const PARTICLE_CONFIG = {
   },
   bubbles: {
     count: 300,
-    radius: 0.15,
+    radius: 0.4,
     color: 0x87ceeb,
-    opacity: 0.3,
+    opacity: 0.6,
     avoidRadius: 3.0
   },
   plankton: {
