@@ -305,11 +305,9 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Three.js not loaded');
         return;
     }
-
+    
     initializeScene();
-
     setupControls();
-
 
     // Try to load GLTF first, fallback to cylinders if it fails
     setTimeout(() => {
