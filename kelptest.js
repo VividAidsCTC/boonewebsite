@@ -211,10 +211,11 @@ function setTextureRepeat(repeatX, repeatY) {
 function loadSeafloorTextures() {
     // Example texture paths - replace with your actual texture URLs
     const texturePaths = {  
-        diffuse: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground055S_2K-JPG_Color.jpg', // Main color/albedo texture
-        normal: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground055S_2K-JPG_NormalGL.jpg', // Normal map for surface detail
-        roughness: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground055S_2K-JPG_Roughness.jpg', // Roughness map
-        displacement: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground055S_2K-JPG_Displacement.jpg' // Height/displacement map
+        diffuse: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_Color.jpg', // Main color/albedo texture
+        normal: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_NormalGL.jpg', // Normal map for surface detail
+        roughness: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_Roughness.jpg', // Roughness map
+        displacement: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_Displacement.jpg', // Height/displacement map
+        ao: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_AmbientOcclusion.jpg'
     };
     
     loadGroundTextures(texturePaths);
@@ -328,16 +329,16 @@ function initializeScene() {
 
     // Create blue gradient background
     const canvas = document.createElement('canvas');
-    canvas.width = 200;
-    canvas.height = 200;
+    canvas.width = 2000;
+    canvas.height = 2000;
     const context = canvas.getContext('2d');
 
-    const gradient = context.createLinearGradient(0, 0, 0, 200);
+    const gradient = context.createLinearGradient(0, 0, 0, 2000);
     gradient.addColorStop(0, '#4499dd');
     gradient.addColorStop(1, '#001133');
 
     context.fillStyle = gradient;
-    context.fillRect(0, 0, 200, 200);
+    context.fillRect(0, 0, 2000, 2000);
 
     const gradientTexture = new THREE.CanvasTexture(canvas);
     scene.background = gradientTexture;
@@ -362,7 +363,7 @@ function initializeScene() {
     scene.add(rimLight2);
 
     // Add a warm fill light specifically for the seafloor
-    const floorLight = new THREE.DirectionalLight(0xddbb88, 0.2); // Warm golden tone
+    const floorLight = new THREE.DirectionalLight(0x7aacbe, 0.8); // Warm golden tone
     floorLight.position.set(0, -30, 0); // From below to light the floor
     scene.add(floorLight);
 
