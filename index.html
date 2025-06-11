@@ -1,271 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kelp Forest</title>
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        /* Add fog controls styling */
-        #fog-controls {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 8px;
-            z-index: 100;
-            min-width: 200px;
-        }
-
-        #fog-controls h3 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
-        }
-
-        .fog-control-group {
-            margin-bottom: 10px;
-        }
-
-        .fog-control-group label {
-            display: block;
-            font-size: 12px;
-            margin-bottom: 3px;
-        }
-
-        .fog-button {
-            background: #4CAF50;
-            border: none;
-            color: white;
-            padding: 8px 12px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 12px;
-            margin: 2px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        .fog-button:hover {
-            background: #45a049;
-        }
-
-        .preset-button {
-            background: #2196F3;
-            padding: 6px 10px;
-            font-size: 11px;
-        }
-
-        .preset-button:hover {
-            background: #1976D2;
-        }
-
-        input[type="range"] {
-            width: 100%;
-            margin: 5px 0;
-        }
-
-        #debug {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            color: #00ff00;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 10px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 11px;
-            max-width: 300px;
-            max-height: 150px;
-            overflow-y: auto;
-            z-index: 100;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kelp Forest</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="container">
-        <div id="controls">
+<div id="container">
+<div id="controls">
+<div class="control-group">
+<label>Wave Speed</label>
+<input type="range" id="waveSpeed" min="0.1" max="3" step="0.1" value="1.5">
+</div>
+<div class="control-group">
+<label>Wave Intensity</label>
+<input type="range" id="waveIntensity" min="0.1" max="3" step="0.1" value="1.2">
+</div>
+<div class="control-group">
+<label>Current Direction</label>
+<input type="range" id="currentDirection" min="0" max="360" step="10" value="45">
+</div>
+            
+            <!-- NEW TEXTURE CONTROLS -->
             <div class="control-group">
-                <label>Wave Speed</label>
-                <input type="range" id="waveSpeed" min="0.1" max="3" step="0.1" value="1.5">
+                <label>Load Seafloor Texture</label>
+                <input type="file" id="textureInput" accept="image/*">
             </div>
             <div class="control-group">
-                <label>Wave Intensity</label>
-                <input type="range" id="waveIntensity" min="0.1" max="3" step="0.1" value="1.2">
+                <label>Texture Repeat X</label>
+                <input type="range" id="repeatX" min="1" max="32" value="8" step="1">
             </div>
             <div class="control-group">
-                <label>Current Direction</label>
-                <input type="range" id="currentDirection" min="0" max="360" step="10" value="45">
+                <label>Texture Repeat Y</label>
+                <input type="range" id="repeatY" min="1" max="32" value="8" step="1">
             </div>
-        </div>
+</div>
 
-        <!-- Add Fog Controls -->
-        <div id="fog-controls">
-            <h3>🌫️ Atmospheric Fog</h3>
-            
-            <div class="fog-control-group">
-                <button class="fog-button" id="toggleFog">Disable Fog</button>
-                <button class="fog-button" id="resetFog">Reset</button>
-            </div>
-            
-            <div class="fog-control-group">
-                <label>Fog Start Distance:</label>
-                <input type="range" id="fogNear" min="10" max="200" step="10" value="60">
-                <span id="fogNearValue">60</span>
-            </div>
-            
-            <div class="fog-control-group">
-                <label>Fog End Distance:</label>
-                <input type="range" id="fogFar" min="100" max="800" step="25" value="450">
-                <span id="fogFarValue">450</span>
-            </div>
-            
-            <div class="fog-control-group">
-                <label>Presets:</label><br>
-                <button class="preset-button" onclick="applyFogPreset('clear')">Clear</button>
-                <button class="preset-button" onclick="applyFogPreset('normal')">Normal</button>
-                <button class="preset-button" onclick="applyFogPreset('murky')">Murky</button>
-                <button class="preset-button" onclick="applyFogPreset('deep')">Deep</button>
-                <button class="preset-button" onclick="applyFogPreset('tropical')">Tropical</button>
-            </div>
-        </div>
+<div id="info">
+Mouse: Orbit camera | Scroll: Zoom<br>
+Kelp forest prototype
+</div>
+</div>
 
-        <!-- Debug output -->
-        <div id="debug">
-            Initializing kelp forest...<br>
-        </div>
-
-        <div id="info">
-            Mouse: Orbit camera | Scroll: Zoom<br>
-            Kelp forest prototype with atmospheric fog
-        </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="kelptest.js"></script>
-    <script src="fog.js"></script>
-
-    <script>
-        // Connect fog system to HTML controls
-        console.log('🌊 Connecting fog controls to HTML interface...');
-
-        // Wait for DOM and fog system to be ready
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📄 DOM loaded, setting up fog controls...');
-            
-            // Give systems time to initialize
-            setTimeout(setupFogControls, 2000);
-        });
-
-        function setupFogControls() {
-            const toggleButton = document.getElementById('toggleFog');
-            const resetButton = document.getElementById('resetFog');
-            const fogNearSlider = document.getElementById('fogNear');
-            const fogFarSlider = document.getElementById('fogFar');
-            const fogNearValue = document.getElementById('fogNearValue');
-            const fogFarValue = document.getElementById('fogFarValue');
-            
-            if (!toggleButton) {
-                console.warn('⚠️ Fog control elements not found');
-                return;
-            }
-            
-            console.log('🎛️ Setting up fog control handlers...');
-            
-            // Toggle fog button
-            toggleButton.addEventListener('click', function() {
-                if (window.FogSystem) {
-                    const isEnabled = window.FogSystem.toggle();
-                    this.textContent = isEnabled ? 'Disable Fog' : 'Enable Fog';
-                    this.style.background = isEnabled ? '#f44336' : '#4CAF50';
-                    console.log(`🌫️ Fog ${isEnabled ? 'enabled' : 'disabled'} by user`);
-                } else {
-                    console.warn('⚠️ FogSystem not available');
-                }
-            });
-            
-            // Reset fog button
-            resetButton.addEventListener('click', function() {
-                if (window.FogSystem) {
-                    window.FogSystem.reset();
-                    // Reset sliders to default values
-                    fogNearSlider.value = 60;
-                    fogFarSlider.value = 450;
-                    fogNearValue.textContent = '60';
-                    fogFarValue.textContent = '450';
-                    console.log('🔄 Fog reset to defaults by user');
-                } else {
-                    console.warn('⚠️ FogSystem not available');
-                }
-            });
-            
-            // Fog near distance slider
-            fogNearSlider.addEventListener('input', function() {
-                const nearValue = parseInt(this.value);
-                fogNearValue.textContent = nearValue;
-                
-                if (window.FogSystem) {
-                    const farValue = parseInt(fogFarSlider.value);
-                    window.FogSystem.setSettings(nearValue, farValue);
-                }
-            });
-            
-            // Fog far distance slider
-            fogFarSlider.addEventListener('input', function() {
-                const farValue = parseInt(this.value);
-                fogFarValue.textContent = farValue;
-                
-                if (window.FogSystem) {
-                    const nearValue = parseInt(fogNearSlider.value);
-                    window.FogSystem.setSettings(nearValue, farValue);
-                }
-            });
-            
-            console.log('✅ Fog controls connected successfully');
-        }
-
-        // Function to apply fog presets from buttons
-        function applyFogPreset(presetName) {
-            if (window.FogSystem) {
-                window.FogSystem.applyPreset(presetName);
-                
-                // Update sliders to match preset values
-                const status = window.FogSystem.getStatus();
-                if (status) {
-                    document.getElementById('fogNear').value = status.near;
-                    document.getElementById('fogFar').value = status.far;
-                    document.getElementById('fogNearValue').textContent = status.near;
-                    document.getElementById('fogFarValue').textContent = status.far;
-                }
-                
-                console.log(`🌫️ Applied fog preset: ${presetName}`);
-            } else {
-                console.warn('⚠️ FogSystem not available for preset:', presetName);
-            }
-        }
-        
-        // Console commands for debugging
-        window.debugFog = function() {
-            if (window.FogSystem) {
-                console.log('🌫️ Fog Status:', window.FogSystem.getStatus());
-            } else {
-                console.log('❌ FogSystem not available');
-            }
-        };
-        
-        // Quick fog presets accessible from console
-        window.setFogClear = () => applyFogPreset('clear');
-        window.setFogMurky = () => applyFogPreset('murky');
-        window.setFogDeep = () => applyFogPreset('deep');
-        
-        console.log('💡 Try these console commands:');
-        console.log('   debugFog() - show fog status');
-        console.log('   setFogClear() - crystal clear water');
-        console.log('   setFogMurky() - murky water');
-        console.log('   setFogDeep() - deep ocean');
-    </script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="kelptest.js"></script>
 </body>
 </html>
