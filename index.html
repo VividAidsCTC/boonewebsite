@@ -3,8 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kelp Forest</title>
+    <title>Kelp Forest with 3D Models</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Add missing styles for debug and model controls */
+        #debug {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #00ff00;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 11px;
+            max-width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        #model-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 100;
+        }
+
+        #model-controls h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+        }
+
+        .control-group {
+            margin-bottom: 10px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 3px;
+        }
+
+        button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 12px;
+            margin: 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
     <div id="container">
@@ -22,15 +89,136 @@
                 <input type="range" id="currentDirection" min="0" max="360" step="10" value="45">
             </div>
         </div>
+
+        <!-- Add Model Controls -->
+        <div id="model-controls">
+            <h3>Seafloor Models</h3>
+            
+            <div class="control-group">
+                <button id="loadModels">Load 3D Models</button>
+                <button id="clearModels" disabled>Clear Models</button>
+            </div>
+            
+            <div class="control-group">
+                <label>Model Count:</label>
+                <input type="number" id="rockCount" value="50" min="0" max="200" style="width: 60px;"> Rocks
+                <input type="number" id="coralCount" value="25" min="0" max="100" style="width: 60px;"> Coral
+                <input type="number" id="plantCount" value="10" min="0" max="100" style="width: 60px;"> Plants
+            </div>
+
+            <div class="control-group">
+                <button id="redistributeModels" disabled>Redistribute</button>
+            </div>
+        </div>
+
+        <!-- Add Debug Console -->
+        <div id="debug">
+            Initializing...<br>
+        </div>
+
         <div id="info">
             Mouse: Orbit camera | Scroll: Zoom<br>
             Kelp forest prototype
         </div>
     </div>
     
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <!-- Load Three.js and GLTF Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <!-- Load your scripts in correct order -->
     <script src="kelptest.js"></script>
     <script src="seafloor-models.js"></script>
+
+    <script>
+        // This script sets up the connections between your two systems
+        console.log('🌊 Kelp Forest Application Starting...');
+
+        // Wait for both systems to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 DOM loaded, setting up model controls...');
+            
+            // Set up model control buttons
+            setupModelControlButtons();
+        });
+
+        function setupModelControlButtons() {
+            const loadButton = document.getElementById('loadModels');
+            const clearButton = document.getElementById('clearModels');
+            const redistributeButton = document.getElementById('redistributeModels');
+            
+            // Load models button
+            loadButton.addEventListener('click', function() {
+                console.log('🔄 User requested model loading...');
+                
+                // Update counts from UI
+                updateModelCounts();
+                
+                // Start loading (this calls your seafloor-models.js system)
+                if (window.SeafloorModels) {
+                    window.SeafloorModels.init();
+                    
+                    // Update button states
+                    loadButton.disabled = true;
+                    loadButton.textContent = 'Loading...';
+                    clearButton.disabled = false;
+                    redistributeButton.disabled = false;
+                    
+                    // Reset button after delay
+                    setTimeout(() => {
+                        loadButton.disabled = false;
+                        loadButton.textContent = 'Reload Models';
+                    }, 3000);
+                } else {
+                    console.error('❌ SeafloorModels system not available');
+                    alert('Model system not loaded properly');
+                }
+            });
+
+            // Clear models button
+            clearButton.addEventListener('click', function() {
+                console.log('🗑️ User requested model clearing...');
+                
+                if (window.SeafloorModels) {
+                    window.SeafloorModels.clear();
+                    clearButton.disabled = true;
+                    redistributeButton.disabled = true;
+                }
+            });
+
+            // Redistribute button
+            redistributeButton.addEventListener('click', function() {
+                console.log('🔄 User requested model redistribution...');
+                
+                // Update counts and redistribute
+                updateModelCounts();
+                
+                if (window.SeafloorModels) {
+                    window.SeafloorModels.clear();
+                    setTimeout(() => {
+                        window.SeafloorModels.init();
+                    }, 500);
+                }
+            });
+        }
+
+        function updateModelCounts() {
+            // Get values from UI inputs
+            const rockCount = parseInt(document.getElementById('rockCount').value) || 0;
+            const coralCount = parseInt(document.getElementById('coralCount').value) || 0;
+            const plantCount = parseInt(document.getElementById('plantCount').value) || 0;
+
+            console.log(`📊 Updating model counts: ${rockCount} rocks, ${coralCount} coral, ${plantCount} plants`);
+
+            // Update the model system configuration
+            if (window.SeafloorModels) {
+                window.SeafloorModels.updateConfig({
+                    rocks: { count: rockCount },
+                    coral: { count: coralCount },
+                    plants: { count: plantCount }
+                });
+            }
+        }
+    </script>
 </body>
 </html>
