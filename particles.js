@@ -20,7 +20,7 @@ function initializeAdvancedParticles() {
 
     const startPos = new THREE.Vector3(
       (Math.random() - 0.5) * 400,
-      Math.random() * 20,
+      Math.random() * 20 + 1,,
       (Math.random() - 0.5) * 400
     );
 
