@@ -18,7 +18,7 @@ const PARTICLE_CONFIG = {
   },
   plankton: {
     count: 400,
-    radius: 0.1,
+    radius: 0.08,
     color: 0x90ee90,
     opacity: 0.6,
     avoidRadius: 2.0
@@ -85,7 +85,7 @@ function initializeParticleType(type, config) {
 function getInitialPosition(type) {
   const base = new THREE.Vector3(
     (Math.random() - 0.5) * 400,
-    Math.random() * 10 + 1,
+    Math.random() * 12 + 1,
     (Math.random() - 0.5) * 400
   );
   
@@ -111,8 +111,8 @@ function getTypeSpecificData(type) {
   switch(type) {
     case 'bubbles':
       return {
-        buoyancy: 8.0 + Math.random() * 1.5,
-        wobble: Math.random() * 0.3,
+        buoyancy: 12.0 + Math.random() * 1.5,
+        wobble: Math.random() * 0.6,
         expansionRate: 1 + Math.random() * 0.02
       };
     case 'plankton':
