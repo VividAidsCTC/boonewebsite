@@ -1,12 +1,10 @@
-console.log('🌊 Simple Particle System Loaded');
+console.log('🌊 Simple Particle System with Current Direction Loaded');
 
-// Create particle
 let simpleParticle;
-let speed = 0.5;
-let minX = -50;
-let maxX = 50;
+let minRange = 60;  // Distance before reset
+let origin = new THREE.Vector3(0, 1, 0);  // Reset origin
 
-// Initialize when scene is ready
+// Initialize particle
 function initializeSimpleParticle() {
   if (typeof scene === 'undefined') {
     console.error('❌ Scene not found. Load kelptest.js first.');
@@ -17,27 +15,38 @@ function initializeSimpleParticle() {
   const material = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
   simpleParticle = new THREE.Mesh(geometry, material);
 
-  simpleParticle.position.set(minX, 1, 0); // Start at left edge
+  simpleParticle.position.copy(origin);
   scene.add(simpleParticle);
 
-  console.log('✅ Simple particle added');
+  console.log('✅ Particle with current direction initialized');
 }
 
-// Update particle movement
+// Update function
 function updateSimpleParticle(deltaTime) {
-  if (!simpleParticle) return;
+  if (!simpleParticle || typeof waveSpeed === 'undefined' || typeof currentDirection === 'undefined') return;
 
-  simpleParticle.position.x += speed * deltaTime * 60; // 60 FPS scale
+  // Convert degrees to radians
+  const dirRad = THREE.MathUtils.degToRad(currentDirection);
 
-  if (simpleParticle.position.x > maxX) {
-    simpleParticle.position.x = minX; // Reset to start
+  // Direction vector in XZ plane
+  const dirX = Math.cos(dirRad);
+  const dirZ = Math.sin(dirRad);
+
+  // Move particle based on direction and waveSpeed
+  simpleParticle.position.x += dirX * waveSpeed * deltaTime * 60;
+  simpleParticle.position.z += dirZ * waveSpeed * deltaTime * 60;
+
+  // Reset if far from origin
+  const distanceFromOrigin = simpleParticle.position.distanceTo(origin);
+  if (distanceFromOrigin > minRange) {
+    simpleParticle.position.copy(origin);
   }
 }
 
-// Wait for scene
+// Delay to wait for scene load
 setTimeout(initializeSimpleParticle, 1000);
 
-// Provide global API (optional)
+// Global access
 window.OceanParticles = {
   update: updateSimpleParticle,
 };
