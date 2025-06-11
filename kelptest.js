@@ -1,8 +1,8 @@
 // Global variables
 let scene, camera, renderer;
 let kelp = [];
-let waveSpeed = .6;
-let waveIntensity = .8;
+let waveSpeed = 1.5;
+let waveIntensity = 1.2;
 let currentDirection = 45;
 let time = 0;
 
@@ -49,16 +49,16 @@ function initializeScene() {
 
     // Create blue gradient background
     const canvas = document.createElement('canvas');
-    canvas.width = 200;
-    canvas.height = 200;
+    canvas.width = 2000;
+    canvas.height = 2000;
     const context = canvas.getContext('2d');
 
-    const gradient = context.createLinearGradient(0, 0, 0, 200);
+    const gradient = context.createLinearGradient(0, 0, 0, 2000);
     gradient.addColorStop(0, '#4499dd');
     gradient.addColorStop(1, '#001133');
 
     context.fillStyle = gradient;
-    context.fillRect(0, 0, 200, 200);
+    context.fillRect(0, 0, 2000, 2000);
 
     const gradientTexture = new THREE.CanvasTexture(canvas);
     scene.background = gradientTexture;
@@ -83,16 +83,83 @@ function initializeScene() {
     scene.add(rimLight2);
 
     // Add a warm fill light specifically for the seafloor
-    const floorLight = new THREE.DirectionalLight(0xddbb88, 0.2); // Warm golden tone
+    const floorLight = new THREE.DirectionalLight(0xddbb88, 0.4); // Warm golden tone
     floorLight.position.set(0, -30, 0); // From below to light the floor
     scene.add(floorLight);
 
-    // Create richer brown seafloor with better material properties
-    const floorGeometry = new THREE.PlaneGeometry(200, 200);
+    // Create procedural seafloor texture
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    
+    // Create base sandy brown color
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(0, 0, 512, 512);
+    
+    // Add noise texture for sandy appearance
+    const imageData = ctx.getImageData(0, 0, 512, 512);
+    const data = imageData.data;
+    
+    for (let i = 0; i < data.length; i += 4) {
+        const noise = (Math.random() - 0.5) * 60; // Noise intensity
+        data[i] = Math.max(0, Math.min(255, data[i] + noise));     // Red
+        data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise * 0.8)); // Green
+        data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise * 0.6)); // Blue
+    }
+    
+    // Add some darker spots for rocks/debris
+    for (let i = 0; i < 50; i++) {
+        const x = Math.random() * 512;
+        const y = Math.random() * 512;
+        const size = 5 + Math.random() * 15;
+        
+        ctx.putImageData(imageData, 0, 0);
+        ctx.fillStyle = `rgba(${60 + Math.random() * 40}, ${40 + Math.random() * 30}, ${20 + Math.random() * 20}, 0.7)`;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Convert canvas to texture
+    const groundTexture = new THREE.CanvasTexture(canvas);
+    groundTexture.wrapS = THREE.RepeatWrapping;
+    groundTexture.wrapT = THREE.RepeatWrapping;
+    groundTexture.repeat.set(20, 20); // Tile the texture across the large plane
+    
+    // Create normal map for depth
+    const normalCanvas = document.createElement('canvas');
+    normalCanvas.width = 512;
+    normalCanvas.height = 512;
+    const normalCtx = normalCanvas.getContext('2d');
+    
+    // Create subtle normal map variations
+    const normalImageData = normalCtx.getImageData(0, 0, 512, 512);
+    const normalData = normalImageData.data;
+    
+    for (let i = 0; i < normalData.length; i += 4) {
+        const variation = Math.random() * 30;
+        normalData[i] = 128 + variation - 15;     // Red (X normal)
+        normalData[i + 1] = 128 + variation - 15; // Green (Y normal)  
+        normalData[i + 2] = 255;                  // Blue (Z normal - up)
+        normalData[i + 3] = 255;                  // Alpha
+    }
+    
+    normalCtx.putImageData(normalImageData, 0, 0);
+    const normalTexture = new THREE.CanvasTexture(normalCanvas);
+    normalTexture.wrapS = THREE.RepeatWrapping;
+    normalTexture.wrapT = THREE.RepeatWrapping;
+    normalTexture.repeat.set(20, 20);
+
+    // Create richer brown seafloor with texture
+    const floorGeometry = new THREE.PlaneGeometry(2000, 2000);
     const floorMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x302114, // Richer saddle brown
-        shininess: 2,    // Less shiny for more natural look
-        specular: 0x332211 // Warm specular highlights
+        map: groundTexture,        // Diffuse texture
+        normalMap: normalTexture,  // Normal map for surface detail
+        normalScale: new THREE.Vector2(0.5, 0.5), // Subtle normal effect
+        color: 0xffffff,          // White to show true texture colors
+        shininess: 1,             // Very low shine for sand
+        specular: 0x111111        // Dark specular highlights
     });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
@@ -176,7 +243,7 @@ function loadGLTFKelp() {
                 kelpInstance.position.y = -1; // Place on seafloor level
 
                 // Scale between 0.75x and 1.5x the original size
-                const scale = 3 + Math.random() * 10; // Random scale between 3x and 13x
+                const scale = 0.75 + Math.random() * 0.75; // Random scale between 0.75 and 1.5
                 kelpInstance.scale.setScalar(scale);
 
                 // Random rotation only
