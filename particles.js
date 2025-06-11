@@ -34,9 +34,9 @@ const PARTICLE_CONFIG = {
     opacity: 0.6,
     fadeDistance: 300,      // Distance at which particles fade out
     spawnArea: {            // Area where particles spawn
-        width: 400,
-        height: 200,
-        depth: 400
+        width: 100,
+        height: 100,
+        depth: 50
     },
     
     enabled: true
