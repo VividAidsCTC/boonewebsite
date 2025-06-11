@@ -25,7 +25,7 @@ let textureLoader = new THREE.TextureLoader();
 function createTexturedFloor() {
     log('Creating textured seafloor...');
     
-    const floorGeometry = new THREE.PlaneGeometry(200, 200, 256, 256); // Higher resolution for displacement
+    const floorGeometry = new THREE.PlaneGeometry(2000, 2000, 256, 256); // Higher resolution for displacement
     
     // Default material (will be updated when textures load)
     let floorMaterial = new THREE.MeshPhongMaterial({ 
@@ -363,7 +363,7 @@ function initializeScene() {
     scene.add(rimLight2);
 
     // Add a warm fill light specifically for the seafloor
-    const floorLight = new THREE.DirectionalLight(0x7aacbe, 0.8); // Warm golden tone
+    const floorLight = new THREE.DirectionalLight(0x7aacbe, 0.2); // Blue tone
     floorLight.position.set(0, -30, 0); // From below to light the floor
     scene.add(floorLight);
 
