@@ -85,7 +85,7 @@ function initializeParticleType(type, config) {
 function getInitialPosition(type) {
   const base = new THREE.Vector3(
     (Math.random() - 0.5) * 400,
-    Math.random() * 15 + 1,
+    Math.random() * 12 + 1,
     (Math.random() - 0.5) * 400
   );
   
