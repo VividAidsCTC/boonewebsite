@@ -1,4 +1,3 @@
-
 console.log('🌊 Enhanced Multi-Type Particle System with Kelp Avoidance Loaded');
 
 // Particle configuration
