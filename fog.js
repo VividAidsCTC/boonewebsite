@@ -16,7 +16,7 @@ console.log('🌫️ Fog System Loading...');
 const FOG_CONFIG = {
     // Default underwater fog settings
     color: 0x001133,        // Dark blue to match background gradient
-    near: 60,               // Distance where fog starts (units)
+    near: 30,               // Distance where fog starts (units)
     far: 450,               // Distance where fog is maximum (units)
     intensity: 1.0,         // Fog intensity multiplier
     enabled: true           // Whether fog is active
