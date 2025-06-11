@@ -1,6 +1,6 @@
 console.log('🌊 Advanced Particle System with Kelp Avoidance Loaded');
 
-const NUM_PARTICLES = 2000;
+const NUM_PARTICLES = 4000;
 const PARTICLE_RADIUS = 0.1;
 const AVOID_RADIUS = 5.0;
 
@@ -20,7 +20,7 @@ function initializeAdvancedParticles() {
 
     const startPos = new THREE.Vector3(
       (Math.random() - 0.5) * 400,
-      Math.random() * 8 + 1,
+      Math.random() * 200,
       (Math.random() - 0.5) * 400
     );
 
