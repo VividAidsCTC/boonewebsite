@@ -1,8 +1,8 @@
 // Global variables
 let scene, camera, renderer;
 let kelp = [];
-let waveSpeed = .6;
-let waveIntensity = .8;
+let waveSpeed = .8;
+let waveIntensity = .6;
 let currentDirection = 45;
 let time = 0;
 
@@ -347,7 +347,7 @@ function initializeScene() {
     const ambientLight = new THREE.AmbientLight(0x6699bb, 0.3); // Less blue, more neutral
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xaaccdd, 1.0); // Lighter blue-white
+    const sunLight = new THREE.DirectionalLight(0xaaccdd, 0.8); // Lighter blue-white
     sunLight.position.set(0, 50, 10);
     scene.add(sunLight);
 
@@ -432,11 +432,11 @@ function loadGLTFKelp() {
             template.position.y = -1; // Place on seafloor level
 
             // Create 500 kelp instances
-            for(let i = 0; i < 200; i++) {
+            for(let i = 0; i < 400; i++) {
                 const kelpInstance = template.clone();
 
                 // Position kelp on the seafloor in tighter formation
-                kelpInstance.position.x = (Math.random() - 0.5) * 200; // Reduced from 40 to 15
+                kelpInstance.position.x = (Math.random() - 0.5) * 400; // Reduced from 40 to 15
                 kelpInstance.position.z = (Math.random() - 0.5) * 200; // Reduced from 40 to 15
                 kelpInstance.position.y = -1; // Place on seafloor level
 
