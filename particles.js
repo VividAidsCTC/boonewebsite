@@ -1,7 +1,7 @@
 console.log('🌊 Advanced Particle System with Kelp Avoidance Loaded');
 
-const NUM_PARTICLES = 500;
-const PARTICLE_RADIUS = 0.3;
+const NUM_PARTICLES = 2000;
+const PARTICLE_RADIUS = 0.1;
 const AVOID_RADIUS = 5.0;
 
 let particles = [];
@@ -14,14 +14,14 @@ function initializeAdvancedParticles() {
   }
 
   for (let i = 0; i < NUM_PARTICLES; i++) {
-    const geometry = new THREE.SphereGeometry(PARTICLE_RADIUS, 1, 1);
-    const material = new THREE.MeshBasicMaterial({ color: 0xffffaa, opacity: 0.8, transparent: true });
+    const geometry = new THREE.SphereGeometry(PARTICLE_RADIUS, 3, 1);
+    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.2, transparent: true });
     const mesh = new THREE.Mesh(geometry, material);
 
     const startPos = new THREE.Vector3(
-      (Math.random() - 0.5) * 200,
+      (Math.random() - 0.5) * 400,
       Math.random() * 8 + 1,
-      (Math.random() - 0.5) * 200
+      (Math.random() - 0.5) * 400
     );
 
     mesh.position.copy(startPos);
