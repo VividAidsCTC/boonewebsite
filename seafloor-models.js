@@ -61,9 +61,9 @@ const DISTRIBUTION_CONFIG = {
         count: 50,
         minScale: 5.0,
         maxScale: 20.0,
-        minDistance: 1, // Distance from kelp center (0,0)
-        maxDistance: 40,
-        clusterSize: 5, // Number of rocks per cluster
+        minDistance: 5, // Distance from kelp center (0,0)
+        maxDistance: 200,
+        clusterSize: 3, // Number of rocks per cluster
         clusterRadius: 8, // Radius of each cluster
         yPosition: -1.2, // How deep to bury (negative = lower)
         allowTilt: true // Can rocks be tilted?
@@ -73,7 +73,7 @@ const DISTRIBUTION_CONFIG = {
         minScale: 10,
         maxScale: 20,
         minDistance: 1,
-        maxDistance: 35,
+        maxDistance: 200,
         clusterSize: 3, // Coral usually stands alone
         clusterRadius: 0,
         yPosition: -1,
@@ -84,10 +84,10 @@ const DISTRIBUTION_CONFIG = {
         minScale: 4,
         maxScale: 8,
         minDistance: 1,
-        maxDistance: 30,
+        maxDistance: 200,
         clusterSize: 2, // Small groups
         clusterRadius: 5,
-        yPosition: -1,
+        yPosition: -.2,
         allowTilt: true // Plants can lean slightly
     }
 };
