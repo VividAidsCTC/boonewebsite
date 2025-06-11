@@ -87,7 +87,7 @@ const DISTRIBUTION_CONFIG = {
         maxDistance: 200,
         clusterSize: 2, // Small groups
         clusterRadius: 5,
-        yPosition: -.2,
+        yPosition: -.5,
         allowTilt: true // Plants can lean slightly
     }
 };
