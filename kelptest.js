@@ -308,6 +308,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     initializeScene();
 
+    setupControls();
+
+
     // Try to load GLTF first, fallback to cylinders if it fails
     setTimeout(() => {
         loadGLTFKelp();
