@@ -3,7 +3,7 @@ console.log('🌊 Enhanced Multi-Type Particle System with Kelp Avoidance Loaded
 // Particle configuration
 const PARTICLE_CONFIG = {
   debris: {
-    count: 5000,
+    count: 4000,
     radius: 0.1,
     color: 0xffffff,
     opacity: 0.2,
@@ -85,7 +85,7 @@ function initializeParticleType(type, config) {
 function getInitialPosition(type) {
   const base = new THREE.Vector3(
     (Math.random() - 0.5) * 400,
-    Math.random() * 15 + 1,
+    Math.random() * 12 + 1,
     (Math.random() - 0.5) * 400
   );
   
