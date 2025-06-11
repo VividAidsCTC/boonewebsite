@@ -59,10 +59,10 @@ const MODEL_URLS = {
 const DISTRIBUTION_CONFIG = {
     rocks: {
         count: 50,
-        minScale: 3.0,
-        maxScale: 6.0,
+        minScale: 5.0,
+        maxScale: 20.0,
         minDistance: 1, // Distance from kelp center (0,0)
-        maxDistance: 400,
+        maxDistance: 40,
         clusterSize: 5, // Number of rocks per cluster
         clusterRadius: 8, // Radius of each cluster
         yPosition: -1.2, // How deep to bury (negative = lower)
@@ -70,10 +70,10 @@ const DISTRIBUTION_CONFIG = {
     },
     coral: {
         count: 25,
-        minScale: 4,
-        maxScale: 8,
+        minScale: 10,
+        maxScale: 20,
         minDistance: 1,
-        maxDistance: 350,
+        maxDistance: 35,
         clusterSize: 3, // Coral usually stands alone
         clusterRadius: 0,
         yPosition: -1,
@@ -81,10 +81,10 @@ const DISTRIBUTION_CONFIG = {
     },
     plants: {
         count: 50,
-        minScale: 1,
-        maxScale: 2,
+        minScale: 4,
+        maxScale: 8,
         minDistance: 1,
-        maxDistance: 300,
+        maxDistance: 30,
         clusterSize: 2, // Small groups
         clusterRadius: 5,
         yPosition: -1,
