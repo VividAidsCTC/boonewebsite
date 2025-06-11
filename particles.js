@@ -16,10 +16,10 @@ console.log('🌊 Ocean Particles System Loading...');
 const PARTICLE_CONFIG = {
     // Particle counts for different types
     counts: {
-        plankton: 200,      // Small floating organisms
-        sediment: 150,      // Tiny dirt/sand particles
-        debris: 50,         // Small organic debris
-        bubbles: 30         // Air bubbles rising up
+        plankton: 600,      // Small floating organisms
+        sediment: 450,      // Tiny dirt/sand particles
+        debris: 150,         // Small organic debris
+        bubbles: 90         // Air bubbles rising up
     },
     
     // Current flow settings
