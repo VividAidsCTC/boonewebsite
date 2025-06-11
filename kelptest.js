@@ -1,8 +1,8 @@
 // Global variables
 let scene, camera, renderer;
 let kelp = [];
-let waveSpeed = 1.5;
-let waveIntensity = 1.2;
+let waveSpeed = .6;
+let waveIntensity = .8;
 let currentDirection = 45;
 let time = 0;
 
@@ -11,6 +11,282 @@ let targetRotationX = 0, targetRotationY = 0;
 let rotationX = 0, rotationY = 0;
 let distance = 30;
 let isMouseDown = false;
+
+// Add these variables to your global variables section
+let floorTextures = {
+    diffuse: null,
+    normal: null,
+    roughness: null,
+    displacement: null
+};
+let textureLoader = new THREE.TextureLoader();
+
+// Replace your existing floor creation code in initializeScene() with this enhanced version
+function createTexturedFloor() {
+    log('Creating textured seafloor...');
+    
+    const floorGeometry = new THREE.PlaneGeometry(200, 200, 256, 256); // Higher resolution for displacement
+    
+    // Default material (will be updated when textures load)
+    let floorMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x302114, // Richer saddle brown
+        shininess: 2,
+        specular: 0x332211
+    });
+    
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -1;
+    floor.receiveShadow = true; // Enable shadow receiving
+    scene.add(floor);
+    
+    // Store reference for texture updates
+    window.seafloor = floor;
+    
+    return floor;
+}
+
+// Function to load and apply textures to the ground plane
+function loadGroundTextures(texturePaths) {
+    log('Loading ground textures...');
+    
+    const loadPromises = [];
+    
+    // Load diffuse/albedo texture
+    if (texturePaths.diffuse) {
+        const diffusePromise = new Promise((resolve, reject) => {
+            textureLoader.load(
+                texturePaths.diffuse,
+                (texture) => {
+                    // Configure texture settings
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(8, 8); // Adjust repetition as needed
+                    floorTextures.diffuse = texture;
+                    log('Diffuse texture loaded successfully');
+                    resolve(texture);
+                },
+                (progress) => log(`Diffuse texture loading: ${Math.round((progress.loaded/progress.total)*100)}%`),
+                (error) => {
+                    log('Error loading diffuse texture: ' + error);
+                    reject(error);
+                }
+            );
+        });
+        loadPromises.push(diffusePromise);
+    }
+    
+    // Load normal map
+    if (texturePaths.normal) {
+        const normalPromise = new Promise((resolve, reject) => {
+            textureLoader.load(
+                texturePaths.normal,
+                (texture) => {
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(8, 8);
+                    floorTextures.normal = texture;
+                    log('Normal map loaded successfully');
+                    resolve(texture);
+                },
+                (progress) => log(`Normal map loading: ${Math.round((progress.loaded/progress.total)*100)}%`),
+                (error) => {
+                    log('Error loading normal map: ' + error);
+                    reject(error);
+                }
+            );
+        });
+        loadPromises.push(normalPromise);
+    }
+    
+    // Load roughness map
+    if (texturePaths.roughness) {
+        const roughnessPromise = new Promise((resolve, reject) => {
+            textureLoader.load(
+                texturePaths.roughness,
+                (texture) => {
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(8, 8);
+                    floorTextures.roughness = texture;
+                    log('Roughness map loaded successfully');
+                    resolve(texture);
+                },
+                (progress) => log(`Roughness map loading: ${Math.round((progress.loaded/progress.total)*100)}%`),
+                (error) => {
+                    log('Error loading roughness map: ' + error);
+                    reject(error);
+                }
+            );
+        });
+        loadPromises.push(roughnessPromise);
+    }
+    
+    // Load displacement map
+    if (texturePaths.displacement) {
+        const displacementPromise = new Promise((resolve, reject) => {
+            textureLoader.load(
+                texturePaths.displacement,
+                (texture) => {
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(8, 8);
+                    floorTextures.displacement = texture;
+                    log('Displacement map loaded successfully');
+                    resolve(texture);
+                },
+                (progress) => log(`Displacement map loading: ${Math.round((progress.loaded/progress.total)*100)}%`),
+                (error) => {
+                    log('Error loading displacement map: ' + error);
+                    reject(error);
+                }
+            );
+        });
+        loadPromises.push(displacementPromise);
+    }
+    
+    // Wait for all textures to load, then update the material
+    Promise.allSettled(loadPromises).then(() => {
+        updateFloorMaterial();
+    });
+}
+
+// Function to update the floor material with loaded textures
+function updateFloorMaterial() {
+    if (!window.seafloor) {
+        log('Error: Seafloor mesh not found');
+        return;
+    }
+    
+    log('Updating floor material with textures...');
+    
+    // Create new material with textures
+    const materialProps = {
+        color: floorTextures.diffuse ? 0xffffff : 0x302114, // White if using diffuse texture, brown otherwise
+        shininess: 5,
+        specular: 0x333333
+    };
+    
+    // Apply textures if they exist
+    if (floorTextures.diffuse) {
+        materialProps.map = floorTextures.diffuse;
+    }
+    
+    if (floorTextures.normal) {
+        materialProps.normalMap = floorTextures.normal;
+        materialProps.normalScale = new THREE.Vector2(0.5, 0.5); // Adjust normal intensity
+    }
+    
+    if (floorTextures.roughness) {
+        // For MeshPhongMaterial, we can simulate roughness by adjusting shininess
+        materialProps.shininess = 1; // Lower shininess for rougher appearance
+    }
+    
+    if (floorTextures.displacement) {
+        materialProps.displacementMap = floorTextures.displacement;
+        materialProps.displacementScale = 0.5; // Adjust displacement intensity
+    }
+    
+    // Create new material
+    const newMaterial = new THREE.MeshPhongMaterial(materialProps);
+    
+    // Replace the old material
+    window.seafloor.material.dispose(); // Clean up old material
+    window.seafloor.material = newMaterial;
+    
+    log('Floor material updated with textures');
+}
+
+// Utility function to change texture repetition
+function setTextureRepeat(repeatX, repeatY) {
+    Object.values(floorTextures).forEach(texture => {
+        if (texture) {
+            texture.repeat.set(repeatX, repeatY);
+        }
+    });
+    log(`Texture repeat set to ${repeatX}x${repeatY}`);
+}
+
+// Example usage function - call this to load your textures
+function loadSeafloorTextures() {
+    // Example texture paths - replace with your actual texture URLs
+    const texturePaths = {  
+        diffuse: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground055S_2K-JPG_Color.jpg', // Main color/albedo texture
+        normal: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground055S_2K-JPG_NormalGL.jpg', // Normal map for surface detail
+        roughness: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground055S_2K-JPG_Roughness.jpg', // Roughness map
+        displacement: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground055S_2K-JPG_Displacement.jpg' // Height/displacement map
+    };
+    
+    loadGroundTextures(texturePaths);
+}
+
+// Modified initializeScene function - replace your floor creation section with this:
+function initializeSceneWithTextures() {
+    // ... (keep all your existing scene setup code until the floor creation part)
+    
+    // Replace the floor creation section with:
+    const floor = createTexturedFloor();
+    
+    // ... (keep the rest of your existing code)
+    
+    // Optionally load textures immediately
+    // loadSeafloorTextures(); // Uncomment and set proper paths
+}
+
+// Add this to your control setup if you want runtime texture loading controls
+function setupTextureControls() {
+    // Create file input for texture loading (add to your HTML)
+    const textureInput = document.getElementById('textureInput');
+    if (textureInput) {
+        textureInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const texture = textureLoader.load(e.target.result);
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(8, 8);
+                    
+                    // Apply as diffuse texture
+                    floorTextures.diffuse = texture;
+                    updateFloorMaterial();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Add repeat controls
+    const repeatXSlider = document.getElementById('repeatX');
+    const repeatYSlider = document.getElementById('repeatY');
+    
+    if (repeatXSlider && repeatYSlider) {
+        repeatXSlider.addEventListener('input', function() {
+            setTextureRepeat(parseFloat(this.value), parseFloat(repeatYSlider.value));
+        });
+        
+        repeatYSlider.addEventListener('input', function() {
+            setTextureRepeat(parseFloat(repeatXSlider.value), parseFloat(this.value));
+        });
+    }
+}
+
+
+
+
+
+
+// In your initializeScene() function, after creating the floor:
+setTimeout(() => {
+    loadSeafloorTextures(); // Load your textures
+}, 1000);
+
+
+
+
+
+
 
 // Debug logging function
 function log(message) {
@@ -49,16 +325,16 @@ function initializeScene() {
 
     // Create blue gradient background
     const canvas = document.createElement('canvas');
-    canvas.width = 2000;
-    canvas.height = 2000;
+    canvas.width = 200;
+    canvas.height = 200;
     const context = canvas.getContext('2d');
 
-    const gradient = context.createLinearGradient(0, 0, 0, 2000);
+    const gradient = context.createLinearGradient(0, 0, 0, 200);
     gradient.addColorStop(0, '#4499dd');
     gradient.addColorStop(1, '#001133');
 
     context.fillStyle = gradient;
-    context.fillRect(0, 0, 2000, 2000);
+    context.fillRect(0, 0, 200, 200);
 
     const gradientTexture = new THREE.CanvasTexture(canvas);
     scene.background = gradientTexture;
@@ -83,96 +359,14 @@ function initializeScene() {
     scene.add(rimLight2);
 
     // Add a warm fill light specifically for the seafloor
-    const floorLight = new THREE.DirectionalLight(0xddbb88, 0.4); // Warm golden tone
+    const floorLight = new THREE.DirectionalLight(0xddbb88, 0.2); // Warm golden tone
     floorLight.position.set(0, -30, 0); // From below to light the floor
     scene.add(floorLight);
 
-    // Create procedural seafloor texture
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    
-    // Create base sandy brown color
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(0, 0, 512, 512);
-    
-    // Add noise texture for sandy appearance
-    const imageData = ctx.getImageData(0, 0, 512, 512);
-    const data = imageData.data;
-    
-    for (let i = 0; i < data.length; i += 4) {
-        const noise = (Math.random() - 0.5) * 60; // Noise intensity
-        data[i] = Math.max(0, Math.min(255, data[i] + noise));     // Red
-        data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise * 0.8)); // Green
-        data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise * 0.6)); // Blue
-    }
-    
-    // Add some darker spots for rocks/debris
-    for (let i = 0; i < 50; i++) {
-        const x = Math.random() * 512;
-        const y = Math.random() * 512;
-        const size = 5 + Math.random() * 15;
-        
-        ctx.putImageData(imageData, 0, 0);
-        ctx.fillStyle = `rgba(${60 + Math.random() * 40}, ${40 + Math.random() * 30}, ${20 + Math.random() * 20}, 0.7)`;
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    
-    // Convert canvas to texture
-    const groundTexture = new THREE.CanvasTexture(canvas);
-    groundTexture.wrapS = THREE.RepeatWrapping;
-    groundTexture.wrapT = THREE.RepeatWrapping;
-    groundTexture.repeat.set(20, 20); // Tile the texture across the large plane
-    
-    // Create normal map for depth
-    const normalCanvas = document.createElement('canvas');
-    normalCanvas.width = 512;
-    normalCanvas.height = 512;
-    const normalCtx = normalCanvas.getContext('2d');
-    
-    // Create subtle normal map variations
-    const normalImageData = normalCtx.getImageData(0, 0, 512, 512);
-    const normalData = normalImageData.data;
-    
-    for (let i = 0; i < normalData.length; i += 4) {
-        const variation = Math.random() * 30;
-        normalData[i] = 128 + variation - 15;     // Red (X normal)
-        normalData[i + 1] = 128 + variation - 15; // Green (Y normal)  
-        normalData[i + 2] = 255;                  // Blue (Z normal - up)
-        normalData[i + 3] = 255;                  // Alpha
-    }
-    
-    normalCtx.putImageData(normalImageData, 0, 0);
-    const normalTexture = new THREE.CanvasTexture(normalCanvas);
-    normalTexture.wrapS = THREE.RepeatWrapping;
-    normalTexture.wrapT = THREE.RepeatWrapping;
-    normalTexture.repeat.set(20, 20);
-
-    // Create richer brown seafloor with texture
-    const floorGeometry = new THREE.PlaneGeometry(2000, 2000);
-    const floorMaterial = new THREE.MeshPhongMaterial({ 
-        map: groundTexture,        // Diffuse texture
-        normalMap: normalTexture,  // Normal map for surface detail
-        normalScale: new THREE.Vector2(0.5, 0.5), // Subtle normal effect
-        color: 0xffffff,          // White to show true texture colors
-        shininess: 1,             // Very low shine for sand
-        specular: 0x111111        // Dark specular highlights
-    });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -1;
-    scene.add(floor);
-
-    // Setup camera - much lower position
-    camera.position.set(0, 2, distance);
-    camera.lookAt(0, 3, 0);
-
-    setupControls();
-    log('Scene initialized successfully');
-}
+// In your initializeScene() function, after creating the floor:
+setTimeout(() => {
+    loadSeafloorTextures(); // Load your textures
+}, 1000);
 
 function loadGLTFKelp() {
     log('Attempting to load GLTF kelp model...');
@@ -243,7 +437,7 @@ function loadGLTFKelp() {
                 kelpInstance.position.y = -1; // Place on seafloor level
 
                 // Scale between 0.75x and 1.5x the original size
-                const scale = 0.75 + Math.random() * 0.75; // Random scale between 0.75 and 1.5
+                const scale = 3 + Math.random() * 10; // Random scale between 3x and 13x
                 kelpInstance.scale.setScalar(scale);
 
                 // Random rotation only
