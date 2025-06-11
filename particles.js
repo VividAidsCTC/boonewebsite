@@ -111,7 +111,7 @@ function getTypeSpecificData(type) {
   switch(type) {
     case 'bubbles':
       return {
-        buoyancy: 12.0 + Math.random() * 1.5,
+        buoyancy: 8.0 + Math.random() * 1.5,
         wobble: Math.random() * 0.6,
         expansionRate: 1 + Math.random() * 0.02
       };
