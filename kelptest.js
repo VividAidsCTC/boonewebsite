@@ -377,7 +377,7 @@ setTimeout(() => {
 
     setupControls();
     log('Scene initialized successfully');
-}
+
 
 // Function to create scattered seafloor features
 function createSeafloorFeatures() {
