@@ -1,52 +1,104 @@
-console.log('🌊 Simple Particle System with Current Direction Loaded');
+console.log('🌊 Advanced Particle System with Kelp Avoidance Loaded');
 
-let simpleParticle;
-let minRange = 100;  // Distance before reset
-let origin = new THREE.Vector3(0, 1, 0);  // Reset origin
+const NUM_PARTICLES = 500;
+const PARTICLE_RADIUS = 0.3;
+const AVOID_RADIUS = 5.0;
 
-// Initialize particle
-function initializeSimpleParticle() {
+let particles = [];
+
+// Initialize all particles
+function initializeAdvancedParticles() {
   if (typeof scene === 'undefined') {
     console.error('❌ Scene not found. Load kelptest.js first.');
     return;
   }
 
-  const geometry = new THREE.SphereGeometry(0.5, 8, 8);
-  const material = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
-  simpleParticle = new THREE.Mesh(geometry, material);
+  for (let i = 0; i < NUM_PARTICLES; i++) {
+    const geometry = new THREE.SphereGeometry(PARTICLE_RADIUS, 1, 1);
+    const material = new THREE.MeshBasicMaterial({ color: 0xffffaa, opacity: 0.8, transparent: true });
+    const mesh = new THREE.Mesh(geometry, material);
 
-  simpleParticle.position.copy(origin);
-  scene.add(simpleParticle);
+    const startPos = new THREE.Vector3(
+      (Math.random() - 0.5) * 200,
+      Math.random() * 8 + 1,
+      (Math.random() - 0.5) * 200
+    );
 
-  console.log('✅ Particle with current direction initialized');
-}
+    mesh.position.copy(startPos);
 
-// Update function
-function updateSimpleParticle(deltaTime) {
-  if (!simpleParticle || typeof waveSpeed === 'undefined' || typeof currentDirection === 'undefined') return;
+    mesh.userData = {
+      origin: startPos.clone(),
+      offset: Math.random() * Math.PI * 2,
+      verticalWiggle: 0.5 + Math.random(),
+      lateralWiggle: 0.5 + Math.random(),
+    };
 
-  // Convert degrees to radians
-  const dirRad = THREE.MathUtils.degToRad(currentDirection);
-
-  // Direction vector in XZ plane
-  const dirX = Math.cos(dirRad);
-  const dirZ = Math.sin(dirRad);
-
-  // Move particle based on direction and waveSpeed
-  simpleParticle.position.x += dirX * waveSpeed * deltaTime * 60;
-  simpleParticle.position.z += dirZ * waveSpeed * deltaTime * 60;
-
-  // Reset if far from origin
-  const distanceFromOrigin = simpleParticle.position.distanceTo(origin);
-  if (distanceFromOrigin > minRange) {
-    simpleParticle.position.copy(origin);
+    scene.add(mesh);
+    particles.push(mesh);
   }
+
+  console.log(`✅ Spawned ${particles.length} advanced particles`);
 }
 
-// Delay to wait for scene load
-setTimeout(initializeSimpleParticle, 1000);
+// Helper: Find nearest kelp and return avoidance vector
+function getAvoidanceVector(position) {
+  if (typeof kelp === 'undefined' || kelp.length === 0) return new THREE.Vector3();
 
-// Global access
+  let closest = null;
+  let closestDist = Infinity;
+
+  kelp.forEach(k => {
+    const dist = k.position.distanceTo(position);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closest = k;
+    }
+  });
+
+  if (closest && closestDist < AVOID_RADIUS) {
+    const away = position.clone().sub(closest.position).normalize();
+    return away.multiplyScalar((AVOID_RADIUS - closestDist) / AVOID_RADIUS);
+  }
+
+  return new THREE.Vector3();
+}
+
+// Update all particles
+function updateAdvancedParticles(deltaTime) {
+  const dirRad = THREE.MathUtils.degToRad(currentDirection);
+  const baseDir = new THREE.Vector3(Math.cos(dirRad), 0, Math.sin(dirRad));
+
+  particles.forEach(p => {
+    const t = performance.now() / 1000 + p.userData.offset;
+
+    // Base current movement
+    const move = baseDir.clone().multiplyScalar(waveSpeed * deltaTime * 20);
+
+    // Vertical wiggle (sine wave)
+    const vertical = Math.sin(t * 2) * p.userData.verticalWiggle * 0.1;
+
+    // Lateral wiggle (perpendicular to direction)
+    const lateral = new THREE.Vector3(-baseDir.z, 0, baseDir.x)
+      .multiplyScalar(Math.sin(t * 1.5) * p.userData.lateralWiggle * 0.1);
+
+    // Kelp avoidance
+    const avoid = getAvoidanceVector(p.position);
+
+    // Apply motion
+    p.position.add(move).add(lateral).add(avoid);
+    p.position.y += vertical;
+
+    // Reset if too far away
+    if (p.position.distanceTo(p.userData.origin) > 100) {
+      p.position.copy(p.userData.origin);
+    }
+  });
+}
+
+// Delay until scene is ready
+setTimeout(initializeAdvancedParticles, 1000);
+
+// Global hook
 window.OceanParticles = {
-  update: updateSimpleParticle,
+  update: updateAdvancedParticles,
 };
