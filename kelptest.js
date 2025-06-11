@@ -796,7 +796,7 @@ function animate() {
     });
 
         if (typeof OceanParticles !== 'undefined') {
-        OceanParticles.update(0.01 * waveSpeed); // Use your existing deltaTime
+        OceanParticles.update(1 * waveSpeed); // Use your existing deltaTime
     }
 
 
