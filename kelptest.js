@@ -332,8 +332,7 @@ function initializeScene() {
 
     const gradient = context.createLinearGradient(0, 0, 0, 1000);
     gradient.addColorStop(0, '#4499dd');
-    gradient.addColorStop(1, '#001133');
-    gradient.addColorStop(2, '#000000');
+    gradient.addColorStop(1, '#000540');
 
     context.fillStyle = gradient;
     context.fillRect(0, 0, 1000, 1000);
