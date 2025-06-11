@@ -368,9 +368,9 @@ function initializeScene() {
 }
 
 // In your initializeScene() function, after creating the floor:
-setTimeout(() => {
-        loadSeafloorTextures();
-}
+    setTimeout(() => {
+        loadSeafloorTextures(); // Load your textures
+    }, 1000);
 
 function loadGLTFKelp() {
     log('Attempting to load GLTF kelp model...');
