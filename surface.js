@@ -12,7 +12,7 @@ const PLANE_CONFIG = {
     frequency: 0.02,       // Wave frequency
     speed: 1.0,            // Animation speed
     opacity: 0.7,          // Transparency
-    color: 0x4499dd        // Ocean blue color
+    color: 0xFFFFFF        // Ocean blue color
 };
 
 function createOscillatingPlane() {
