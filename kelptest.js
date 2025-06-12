@@ -365,33 +365,138 @@ function initializeScene() {
         loadSeafloorTextures(); // Load your textures
     }, 1000);
 
-document.addEventListener('DOMContentLoaded', function() {
-    log('DOM loaded, initializing kelp forest...');
+function loadGLTFKelp() {
+    log('Attempting to load GLTF kelp model...');
 
-    if (typeof THREE === 'undefined') {
-        console.error('Three.js not loaded');
+    if (typeof THREE.GLTFLoader === 'undefined') {
+        log('ERROR: GLTFLoader not available');
+        createFallbackKelp();
         return;
     }
-    
-    initializeScene();
-    setupControls();
 
-    // REPLACE THIS:
-    // setTimeout(() => {
-    //     loadGLTFKelp();
-    // }, 500);
-    
-    // WITH THIS:
-    setTimeout(() => {
-        if (checkGPUCapabilities()) {
-            log('GPU instancing supported - using GPU kelp system');
-            loadGLTFKelpGPU();
-        } else {
-            log('GPU instancing not supported - using CPU fallback');
-            loadGLTFKelp(); // Your original function as fallback
+    const loader = new THREE.GLTFLoader();
+    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp2.glb';
+
+    loader.load(
+        kelpURL,
+        function(gltf) {
+            log('GLTF model loaded successfully');
+            const template = gltf.scene;
+
+            // Compute overall bounding box for the entire model
+            const box = new THREE.Box3().setFromObject(template);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+
+            log(`=== GLTF MODEL ANALYSIS ===`);
+            log(`Overall model size: X=${size.x.toFixed(3)}, Y=${size.y.toFixed(3)}, Z=${size.z.toFixed(3)}`);
+
+            // Apply dark green-brown kelp material to all meshes
+            template.traverse((child) => {
+                if (child.isMesh && child.geometry) {
+                    // Ensure geometry has position attributes we can modify
+                    child.geometry.computeBoundingBox();
+                    const geometry = child.geometry;
+                    
+                    // Store original positions for deformation
+                    const positions = geometry.attributes.position.array.slice();
+                    geometry.userData.originalPositions = positions;
+                    
+                    // Calculate bounding box for height calculations
+                    const bbox = geometry.boundingBox;
+                    geometry.userData.minY = bbox.min.y;
+                    geometry.userData.maxY = bbox.max.y;
+                    geometry.userData.height = bbox.max.y - bbox.min.y;
+                    
+                    // Apply dark green-brown kelp material
+                    const kelpMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x1c4709, // Dark green-brown
+                        transparent: true,
+                        opacity: 0.85,
+                        shininess: 10
+                    });
+                    child.material = kelpMaterial;
+                    
+                    log(`Prepared mesh for vertex deformation: height=${geometry.userData.height.toFixed(2)}`);
+                }
+            });
+
+            // Position template so bottom touches ground (Y=0)
+            template.position.y = -1; // Place on seafloor level
+
+            // Create 500 kelp instances
+            for(let i = 0; i < 100; i++) {
+                const kelpInstance = template.clone();
+
+                // Position kelp on the seafloor in tighter formation
+                kelpInstance.position.x = (Math.random() - 0.5) * 100; // Reduced from 40 to 15
+                kelpInstance.position.z = (Math.random() - 0.5) * 100; // Reduced from 40 to 15
+                kelpInstance.position.y = -1; // Place on seafloor level
+
+                // Scale between 0.75x and 1.5x the original size
+                const scale = 3 + Math.random() * 10; // Random scale between 3x and 13x
+                kelpInstance.scale.setScalar(scale);
+
+                // Random rotation only
+                kelpInstance.rotation.y = Math.random() * Math.PI * 2;
+
+                // Store animation data
+                kelpInstance.userData = {
+                    originalX: kelpInstance.position.x,
+                    originalZ: kelpInstance.position.z,
+                    originalY: kelpInstance.position.y,
+                    offset1: Math.random() * Math.PI * 2,
+                    offset2: Math.random() * Math.PI * 2,
+                    offset3: Math.random() * Math.PI * 2,
+                    freq1: 0.8 + Math.random() * 0.6,
+                    freq2: 1.1 + Math.random() * 0.8,
+                    freq3: 0.5 + Math.random() * 0.4,
+                    amplitude1: 0.8 + Math.random() * 0.6,
+                    amplitude2: 0.6 + Math.random() * 0.5,
+                    amplitude3: 0.4 + Math.random() * 0.3,
+                    isGLTF: true
+                };
+
+                // Prepare cloned geometries for vertex deformation
+                kelpInstance.traverse((child) => {
+                    if (child.isMesh && child.geometry) {
+                        // Clone geometry so each instance can be deformed independently
+                        child.geometry = child.geometry.clone();
+                        // Copy userData from the original template mesh
+                        template.traverse((originalChild) => {
+                            if (originalChild.isMesh && originalChild.geometry && 
+                                originalChild.geometry.userData.originalPositions &&
+                                originalChild.name === child.name) {
+                                child.geometry.userData.originalPositions = originalChild.geometry.userData.originalPositions.slice();
+                                child.geometry.userData.minY = originalChild.geometry.userData.minY;
+                                child.geometry.userData.maxY = originalChild.geometry.userData.maxY;
+                                child.geometry.userData.height = originalChild.geometry.userData.height;
+                                return; // Found match, exit traverse
+                            }
+                        });
+                    }
+                });
+
+                scene.add(kelpInstance);
+                kelp.push(kelpInstance);
+
+                log(`Instance ${i}: scale=${scale.toFixed(2)}`);
+            }
+
+            log(`Created ${kelp.length} GLTF kelp instances with vertex deformation`);
+            startAnimation();
+        },
+        function(progress) {
+            if (progress.total > 0) {
+                log(`Loading progress: ${Math.round((progress.loaded / progress.total) * 100)}%`);
+            }
+        },
+        function(error) {
+            log('ERROR loading GLTF: ' + error.message);
+            createFallbackKelp();
         }
-    }, 500);
-});
+    );
+}
 
 function createFallbackKelp() {
     log('Creating fallback cylinder kelp...');
@@ -486,67 +591,6 @@ function setupControls() {
     });
 
     log('Manual camera controls initialized successfully');
-
-        // Enhanced slider controls that update GPU uniforms
-    const waveSpeedSlider = document.getElementById('waveSpeed');
-    const waveIntensitySlider = document.getElementById('waveIntensity');
-    const currentDirectionSlider = document.getElementById('currentDirection');
-
-    if (waveSpeedSlider) {
-        waveSpeedSlider.addEventListener('input', function(e) {
-            waveSpeed = parseFloat(e.target.value);
-            // Update GPU uniform if available
-            if (kelpMaterial && kelpMaterial.uniforms) {
-                kelpMaterial.uniforms.waveSpeed.value = waveSpeed;
-            }
-        });
-    }
-
-    if (waveIntensitySlider) {
-        waveIntensitySlider.addEventListener('input', function(e) {
-            waveIntensity = parseFloat(e.target.value);
-            // Update GPU uniform if available
-            if (kelpMaterial && kelpMaterial.uniforms) {
-                kelpMaterial.uniforms.waveIntensity.value = waveIntensity;
-            }
-        });
-    }
-
-    if (currentDirectionSlider) {
-        currentDirectionSlider.addEventListener('input', function(e) {
-            currentDirection = parseFloat(e.target.value);
-            // Update GPU uniform if available
-            if (kelpMaterial && kelpMaterial.uniforms) {
-                kelpMaterial.uniforms.currentDirection.value = currentDirection;
-            }
-        
-            // Also update particle direction if available
-            if (typeof OceanParticles !== 'undefined') {
-                const radians = (currentDirection * Math.PI) / 180;
-                const x = Math.cos(radians);
-                const z = Math.sin(radians);
-                OceanParticles.setDirection(x, 0.1, z);
-            }
-        });
-    }
-
-    const toggleGPUButton = document.getElementById('toggleGPU');
-        if (toggleGPUButton) {
-            toggleGPUButton.addEventListener('click', function() {
-        if (instancedKelp) {
-            log('Switching to CPU kelp rendering...');
-            scene.remove(instancedKelp);
-            instancedKelp = null;
-            loadGLTFKelp(); // Switch back to CPU
-        } else {
-            log('Switching to GPU kelp rendering...');
-            // Clear CPU kelp
-            kelp.forEach(k => scene.remove(k));
-            kelp = [];
-            switchToGPUKelp(); // Switch to GPU
-        }
-    });
-    }
 
     // Slider controls
     const waveSpeedSlider = document.getElementById('waveSpeed');
@@ -744,36 +788,30 @@ function deformKelp(kelpMesh, time) {
 
 function animate() {
     requestAnimationFrame(animate);
-    
-    const deltaTime = 0.01 * waveSpeed;
-    time += deltaTime;
 
-    // Update GPU kelp if available, otherwise use CPU kelp
-    if (instancedKelp && kelpMaterial) {
-        updateGPUKelp(deltaTime);
-        
-        // Monitor performance occasionally
-        if (Math.random() < 0.01) { // 1% chance per frame
-            monitorPerformance();
-        }
-    } else {
-        // Original CPU kelp animation
-        kelp.forEach(function(k) {
-            deformKelp(k, time);
-        });
-    }
+    time += 0.01 * waveSpeed;
 
-    // Update oscillating plane
+    kelp.forEach(function(k) {
+        deformKelp(k, time);
+    });
+
+    // Update oscillating plane (now updates shader uniform)
     if (typeof OscillatingPlane !== 'undefined') {
-        OscillatingPlane.update(deltaTime); 
+        OscillatingPlane.update(0.01 * waveSpeed); 
     }
 
-    // Update particles
+    // Update particles (if applicable)
     if (typeof OceanParticles !== 'undefined') {
-        OceanParticles.update(deltaTime);
+        OceanParticles.update(.01 * waveSpeed);
     }
 
-    // Update camera position based on mouse controls
+    // Update ocean surface waves (if applicable - this is likely now handled by OscillatingPlane)
+    // You might remove this line if OscillatingPlane is your primary surface
+    if (typeof OceanSurface !== 'undefined') {
+        OceanSurface.update(.01 * waveSpeed);
+    }
+
+    // Update camera position based on mouse controls - lower Y position
     rotationX += (targetRotationX - rotationX) * 0.1;
     rotationY += (targetRotationY - rotationY) * 0.1;
 
