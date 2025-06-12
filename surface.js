@@ -6,8 +6,8 @@ let oscillatingTime = 0;
 const PLANE_CONFIG = {
     width: 2000,
     height: 2000,
-    segments: 512,
-    yPosition: 50,
+    segments: 256,
+    yPosition: 70,
     amplitude: 1.0,        // Reduced for smaller waves
     frequency: 0.05,       // Increased for more wave parts
     speed: 1.0,
@@ -114,16 +114,20 @@ const oceanFragmentShader = `
 `;
 
 function createOscillatingPlane() {
-    console.log('Creating oscillating plane with ShaderMaterial...');
+    console.log('Creating oscillating hemisphere with ShaderMaterial...');
 
-    const geometry = new THREE.PlaneGeometry(
-        PLANE_CONFIG.width,
-        PLANE_CONFIG.height,
-        PLANE_CONFIG.segments,
-        PLANE_CONFIG.segments
+    // Create a hemisphere using SphereGeometry
+    const geometry = new THREE.SphereGeometry(
+        PLANE_CONFIG.radius,
+        PLANE_CONFIG.widthSegments,
+        PLANE_CONFIG.heightSegments,
+        0,                    // phiStart (horizontal start angle)
+        Math.PI * 2,         // phiLength (horizontal sweep angle - full circle)
+        0,                    // thetaStart (vertical start angle)
+        Math.PI / 2          // thetaLength (vertical sweep angle - half sphere)
     );
 
-    // Manually curve the geometry vertices
+    // Flatten the hemisphere slightly to make it more water-like
     const positions = geometry.attributes.position.array;
     const vertexCount = positions.length / 3;
     
@@ -132,17 +136,9 @@ function createOscillatingPlane() {
         const y = positions[i * 3 + 1];
         const z = positions[i * 3 + 2];
         
-        // Calculate distance from center
-        const distanceFromCenter = Math.sqrt(x * x + y * y);
-        const maxDistance = PLANE_CONFIG.height / 2; // 2000
-        const curveStart = 1500;
-        
-        // Apply curve - push vertices down as they get further from center
-        if (distanceFromCenter > curveStart) {
-            const curveAmount = (distanceFromCenter - curveStart) / (maxDistance - curveStart);
-            const curveFactor = curveAmount * curveAmount * 150; // Quadratic curve
-            positions[i * 3 + 2] = z - curveFactor; // Lower the Z position
-        }
+        // Flatten the Y component to make it less dome-like and more water surface-like
+        const flatteningFactor = 0.15; // Adjust this to control how flat the surface is
+        positions[i * 3 + 1] = y * flatteningFactor;
     }
     
     // Update the geometry
@@ -165,13 +161,12 @@ function createOscillatingPlane() {
     });
 
     oscillatingPlane = new THREE.Mesh(geometry, material);
-    oscillatingPlane.rotation.x = -Math.PI / 2;
     oscillatingPlane.position.y = PLANE_CONFIG.yPosition;
 
     scene.add(oscillatingPlane);
 
-    console.log('Oscillating plane created at Y:', PLANE_CONFIG.yPosition);
-    console.log('Plane has', geometry.attributes.position.count, 'vertices');
+    console.log('Oscillating hemisphere created at Y:', PLANE_CONFIG.yPosition);
+    console.log('Hemisphere has', geometry.attributes.position.count, 'vertices');
 }
 
 function updateOscillatingPlane(deltaTime) {
