@@ -335,7 +335,7 @@ function cleanupParticles() {
 }
 
 // Delay until scene is ready
-setTimeout(initializeAllParticles, 1000);
+setTimeout(initializeAllParticles, 3000);
 
 // Global interface
 window.OceanParticles = {
