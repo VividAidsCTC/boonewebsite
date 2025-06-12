@@ -1,9 +1,9 @@
-// Fixed Kelp System - Solves shader material fog uniform issues
+// Safe Kelp System - No Custom Shaders to Avoid Fog Issues
 // Global variables
 let scene, camera, renderer;
 let kelp = [];
-let waveSpeed = .8;
-let waveIntensity = .6;
+let waveSpeed = 0.8;
+let waveIntensity = 0.6;
 let currentDirection = 45;
 let time = 0;
 
@@ -139,106 +139,6 @@ function loadSeafloorTextures() {
     loadGroundTextures(texturePaths);
 }
 
-// Fixed Kelp Shader Material with proper fog uniforms
-function createKelpShaderMaterial() {
-    const kelpUniforms = THREE.UniformsUtils.merge([
-        THREE.UniformsLib.common,
-        THREE.UniformsLib.fog,
-        THREE.UniformsLib.lights,
-        {
-            uTime: { value: 0 },
-            uWaveSpeed: { value: waveSpeed },
-            uWaveIntensity: { value: waveIntensity },
-            uDirection: { value: new THREE.Vector2(
-                Math.cos(currentDirection * Math.PI / 180), 
-                Math.sin(currentDirection * Math.PI / 180)
-            )}
-        }
-    ]);
-
-    const vertexShader = `
-        #include <common>
-        #include <fog_pars_vertex>
-        #include <shadowmap_pars_vertex>
-        #include <logdepthbuf_pars_vertex>
-
-        uniform float uTime;
-        uniform float uWaveSpeed;
-        uniform float uWaveIntensity;
-        uniform vec2 uDirection;
-
-        varying vec3 vNormal;
-        varying vec3 vPosition;
-        varying vec3 vViewPosition;
-
-        void main() {
-            vec3 pos = position;
-            
-            // Calculate height factor (0 at bottom, 1 at top)
-            float heightFactor = clamp((pos.y + 1.0) / 2.0, 0.0, 1.0);
-
-            // Create wave motion - keep it small and controlled
-            float wave1 = sin(heightFactor * 2.0 + uTime * 0.8) * 0.3;
-            float wave2 = cos(heightFactor * 4.0 + uTime * 1.2) * 0.15;
-            float wave3 = sin(heightFactor * 6.0 + uTime * 1.5) * 0.075;
-
-            float bendAmount = (wave1 + wave2 + wave3) * uWaveIntensity * heightFactor;
-
-            // Apply directional bending - very conservative
-            pos.x += uDirection.x * bendAmount * 0.5;
-            pos.z += uDirection.y * bendAmount * 0.5;
-
-            // Standard transformations
-            vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-            vViewPosition = -mvPosition.xyz;
-            vPosition = (modelMatrix * vec4(pos, 1.0)).xyz;
-            vNormal = normalize(normalMatrix * normal);
-
-            gl_Position = projectionMatrix * mvPosition;
-
-            #include <logdepthbuf_vertex>
-            #include <fog_vertex>
-            #include <shadowmap_vertex>
-        }
-    `;
-
-    const fragmentShader = `
-        #include <common>
-        #include <fog_pars_fragment>
-        #include <logdepthbuf_pars_fragment>
-
-        varying vec3 vNormal;
-        varying vec3 vPosition;
-        varying vec3 vViewPosition;
-
-        void main() {
-            #include <logdepthbuf_fragment>
-
-            // Simple lighting calculation
-            vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
-            float diff = max(dot(normalize(vNormal), lightDir), 0.0);
-
-            // Kelp color
-            vec3 baseColor = vec3(0.11, 0.28, 0.05);
-            vec3 color = baseColor * (0.4 + 0.6 * diff);
-
-            gl_FragColor = vec4(color, 0.85);
-
-            #include <fog_fragment>
-        }
-    `;
-
-    return new THREE.ShaderMaterial({
-        uniforms: kelpUniforms,
-        vertexShader: vertexShader,
-        fragmentShader: fragmentShader,
-        transparent: true,
-        side: THREE.DoubleSide,
-        fog: true, // Enable fog support
-        lights: false // Disable automatic lighting since we handle it manually
-    });
-}
-
 // Debug logging function
 function log(message) {
     console.log(message);
@@ -311,7 +211,153 @@ function initializeScene() {
     log('Scene initialized successfully');
 }
 
-// GLTF Kelp loading with fixed shader materials
+// CPU-based vertex deformation function for smooth kelp animation
+function deformKelp(kelpMesh, time) {
+    if (kelpMesh.userData.isGLTF) {
+        // Handle GLTF models - traverse and deform each mesh
+        const userData = kelpMesh.userData;
+        const dirRad = (currentDirection * Math.PI) / 180;
+        
+        // Keep base position fixed
+        kelpMesh.position.x = userData.originalX;
+        kelpMesh.position.z = userData.originalZ;
+        kelpMesh.position.y = userData.originalY;
+        
+        // Calculate wave values
+        const wave1 = Math.sin(time * userData.frequency + userData.offset) * userData.amplitude;
+        const wave2 = Math.cos(time * userData.frequency * 1.3 + userData.offset + Math.PI/3) * userData.amplitude * 0.7;
+        const wave3 = Math.sin(time * userData.frequency * 0.7 + userData.offset + Math.PI/2) * userData.amplitude * 0.5;
+        
+        // Deform each mesh in the GLTF model
+        kelpMesh.traverse((child) => {
+            if (child.isMesh && child.geometry && child.geometry.userData.originalPositions) {
+                const geometry = child.geometry;
+                const positions = geometry.attributes.position;
+                const originalPositions = geometry.userData.originalPositions;
+                const height = geometry.userData.height || 1;
+                const minY = geometry.userData.minY || -0.5;
+                
+                // Deform each vertex
+                for (let i = 0; i < positions.count; i++) {
+                    const i3 = i * 3;
+                    
+                    // Get original position
+                    const originalX = originalPositions[i3];
+                    const originalY = originalPositions[i3 + 1];
+                    const originalZ = originalPositions[i3 + 2];
+                    
+                    // Calculate height factor (0 at bottom, 1 at top)
+                    const heightFactor = Math.max(0, Math.min(1, (originalY - minY) / height));
+                    
+                    // Create undulating motion with multiple frequencies
+                    const undulationX = (
+                        Math.sin(heightFactor * 2.5 + time * userData.frequency + userData.offset) * 0.4 +
+                        Math.sin(heightFactor * 5.0 + time * userData.frequency * 1.2 + userData.offset) * 0.2 +
+                        Math.sin(heightFactor * 8.0 + time * userData.frequency * 0.8 + userData.offset) * 0.1
+                    ) * waveIntensity * heightFactor;
+                    
+                    const undulationZ = (
+                        Math.cos(heightFactor * 2.5 + time * userData.frequency + userData.offset + Math.PI/4) * 0.3 +
+                        Math.cos(heightFactor * 5.0 + time * userData.frequency * 1.2 + userData.offset + Math.PI/3) * 0.15 +
+                        Math.cos(heightFactor * 8.0 + time * userData.frequency * 0.8 + userData.offset + Math.PI/6) * 0.075
+                    ) * waveIntensity * heightFactor;
+                    
+                    // Apply directional current influence
+                    const currentInfluenceX = (wave1 + wave2 * 0.5) * waveIntensity * heightFactor * heightFactor * 0.3;
+                    const currentInfluenceZ = (wave2 + wave3 * 0.5) * waveIntensity * heightFactor * heightFactor * 0.3;
+                    
+                    // Combine undulation with current direction
+                    const finalBendX = (undulationX + currentInfluenceX) * Math.cos(dirRad) + 
+                                       (undulationZ + currentInfluenceZ) * Math.sin(dirRad) * 0.3;
+                    const finalBendZ = (undulationZ + currentInfluenceZ) * Math.sin(dirRad) + 
+                                       (undulationX + currentInfluenceX) * Math.cos(dirRad) * 0.3;
+                    
+                    // Apply deformation with bounds checking
+                    const newX = originalX + Math.max(-2, Math.min(2, finalBendX));
+                    const newZ = originalZ + Math.max(-2, Math.min(2, finalBendZ));
+                    
+                    positions.setX(i, newX);
+                    positions.setY(i, originalY);
+                    positions.setZ(i, newZ);
+                }
+                
+                // Mark for update
+                positions.needsUpdate = true;
+                geometry.computeVertexNormals();
+            }
+        });
+
+    } else {
+        // Handle cylinder geometry (fallback)
+        const geometry = kelpMesh.geometry;
+        const positions = geometry.attributes.position;
+        const originalPositions = geometry.userData.originalPositions;
+        const userData = kelpMesh.userData;
+
+        // Keep base fixed
+        kelpMesh.position.x = userData.originalX;
+        kelpMesh.position.z = userData.originalZ;
+        kelpMesh.position.y = userData.originalY;
+
+        // Convert direction to radians
+        const dirRad = (currentDirection * Math.PI) / 180;
+
+        // Calculate wave values
+        const wave1 = Math.sin(time * userData.frequency + userData.offset) * userData.amplitude;
+        const wave2 = Math.cos(time * userData.frequency * 1.3 + userData.offset) * userData.amplitude * 0.7;
+        const wave3 = Math.sin(time * userData.frequency * 0.7 + userData.offset) * userData.amplitude * 0.5;
+
+        // Deform each vertex
+        for (let i = 0; i < positions.count; i++) {
+            const i3 = i * 3;
+
+            // Get original position
+            const originalX = originalPositions[i3];
+            const originalY = originalPositions[i3 + 1];
+            const originalZ = originalPositions[i3 + 2];
+
+            // Calculate height factor (0 at bottom, 1 at top)
+            const heightFactor = (originalY + userData.height/2) / userData.height;
+            
+            // Create undulating displacement
+            const undulationX = (
+                Math.sin(heightFactor * 2.5 + time * userData.frequency + userData.offset) * 0.5 +
+                Math.sin(heightFactor * 5.0 + time * userData.frequency * 1.2 + userData.offset) * 0.25 +
+                Math.sin(heightFactor * 8.0 + time * userData.frequency * 0.8 + userData.offset) * 0.125
+            ) * waveIntensity * heightFactor;
+            
+            const undulationZ = (
+                Math.cos(heightFactor * 2.5 + time * userData.frequency + userData.offset + Math.PI/4) * 0.4 +
+                Math.cos(heightFactor * 5.0 + time * userData.frequency * 1.2 + userData.offset + Math.PI/3) * 0.2 +
+                Math.cos(heightFactor * 8.0 + time * userData.frequency * 0.8 + userData.offset + Math.PI/6) * 0.1
+            ) * waveIntensity * heightFactor;
+
+            // Apply directional current influence
+            const currentInfluenceX = (wave1 + wave2 * 0.7) * waveIntensity * heightFactor * heightFactor * 0.4;
+            const currentInfluenceZ = (wave2 + wave3 * 0.8) * waveIntensity * heightFactor * heightFactor * 0.4;
+
+            // Combine undulation with current direction
+            const finalBendX = (undulationX + currentInfluenceX) * Math.cos(dirRad) + 
+                               (undulationZ + currentInfluenceZ) * Math.sin(dirRad) * 0.3;
+            const finalBendZ = (undulationZ + currentInfluenceZ) * Math.sin(dirRad) + 
+                               (undulationX + currentInfluenceX) * Math.cos(dirRad) * 0.3;
+
+            // Apply deformation with bounds checking
+            const newX = originalX + Math.max(-3, Math.min(3, finalBendX));
+            const newZ = originalZ + Math.max(-3, Math.min(3, finalBendZ));
+
+            positions.setX(i, newX);
+            positions.setY(i, originalY);
+            positions.setZ(i, newZ);
+        }
+
+        // Mark for update
+        positions.needsUpdate = true;
+        geometry.computeVertexNormals();
+    }
+}
+
+// GLTF Kelp loading with standard materials only
 function loadGLTFKelp() {
     log('Attempting to load GLTF kelp model...');
 
@@ -337,15 +383,13 @@ function loadGLTFKelp() {
 
             log(`GLTF Model size: X=${size.x.toFixed(3)}, Y=${size.y.toFixed(3)}, Z=${size.z.toFixed(3)}`);
 
-            // Apply fixed shader material to all meshes
-            const sharedKelpMaterial = createKelpShaderMaterial();
-            
+            // Apply standard Phong material to all meshes - NO SHADERS
             template.traverse((child) => {
                 if (child.isMesh && child.geometry) {
                     child.geometry.computeBoundingBox();
                     const geometry = child.geometry;
                     
-                    // Store original positions for potential CPU fallback
+                    // Store original positions for CPU deformation
                     const positions = geometry.attributes.position.array.slice();
                     geometry.userData.originalPositions = positions;
                     
@@ -354,12 +398,20 @@ function loadGLTFKelp() {
                     geometry.userData.maxY = bbox.max.y;
                     geometry.userData.height = bbox.max.y - bbox.min.y;
                     
-                    // Apply the fixed shader material
-                    child.material = sharedKelpMaterial.clone();
+                    // Use ONLY standard MeshPhongMaterial - guaranteed to work with fog
+                    const kelpMaterial = new THREE.MeshPhongMaterial({
+                        color: 0x1c4709, // Dark green
+                        transparent: true,
+                        opacity: 0.85,
+                        shininess: 10,
+                        side: THREE.DoubleSide
+                    });
+                    
+                    child.material = kelpMaterial;
                     child.castShadow = true;
                     child.receiveShadow = true;
                     
-                    log(`Mesh prepared with fixed shader material`);
+                    log(`Mesh prepared with standard Phong material`);
                 }
             });
 
@@ -367,7 +419,7 @@ function loadGLTFKelp() {
             template.position.y = -1;
 
             // Create kelp instances
-            for(let i = 0; i < 50; i++) { // Reduced count for stability
+            for(let i = 0; i < 40; i++) {
                 const kelpInstance = template.clone();
 
                 // Position kelp
@@ -376,7 +428,7 @@ function loadGLTFKelp() {
                 kelpInstance.position.y = -1;
 
                 // Scale
-                const scale = 2 + Math.random() * 6; // Smaller scale for stability
+                const scale = 2 + Math.random() * 6;
                 kelpInstance.scale.setScalar(scale);
 
                 // Rotation
@@ -393,11 +445,30 @@ function loadGLTFKelp() {
                     isGLTF: true
                 };
 
+                // Prepare cloned geometries for independent deformation
+                kelpInstance.traverse((child) => {
+                    if (child.isMesh && child.geometry) {
+                        child.geometry = child.geometry.clone();
+                        // Copy userData from template
+                        template.traverse((originalChild) => {
+                            if (originalChild.isMesh && originalChild.geometry && 
+                                originalChild.geometry.userData.originalPositions &&
+                                originalChild.name === child.name) {
+                                child.geometry.userData.originalPositions = originalChild.geometry.userData.originalPositions.slice();
+                                child.geometry.userData.minY = originalChild.geometry.userData.minY;
+                                child.geometry.userData.maxY = originalChild.geometry.userData.maxY;
+                                child.geometry.userData.height = originalChild.geometry.userData.height;
+                                return;
+                            }
+                        });
+                    }
+                });
+
                 scene.add(kelpInstance);
                 kelp.push(kelpInstance);
             }
 
-            log(`Created ${kelp.length} GLTF kelp instances`);
+            log(`Created ${kelp.length} GLTF kelp instances with CPU vertex deformation`);
             startAnimation();
         },
         function(progress) {
@@ -416,11 +487,16 @@ function loadGLTFKelp() {
 function createFallbackKelp() {
     log('Creating fallback cylinder kelp...');
 
-    for(let i = 0; i < 25; i++) {
+    for(let i = 0; i < 30; i++) {
         const kelpHeight = 15;
         const geometry = new THREE.CylinderGeometry(0.15, 0.3, kelpHeight, 8, 15);
         
-        // Use MeshPhongMaterial instead of shader for fallback
+        // Store original positions for deformation
+        const positions = geometry.attributes.position.array.slice();
+        geometry.userData.originalPositions = positions;
+        geometry.userData.height = kelpHeight;
+        
+        // Standard MeshPhongMaterial only
         const kelpMaterial = new THREE.MeshPhongMaterial({
             color: 0x1c4709,
             transparent: true,
@@ -523,34 +599,15 @@ function setupControls() {
     }
 }
 
-// Animation loop
+// Animation loop with CPU-based kelp deformation
 function animate() {
     requestAnimationFrame(animate);
 
     time += 0.01 * waveSpeed;
 
-    // Update kelp shader uniforms
+    // CPU-based kelp deformation - no shader uniforms to cause fog errors
     kelp.forEach(function(k) {
-        k.traverse(child => {
-            if (child.material && child.material.uniforms) {
-                // Safely update uniforms
-                if (child.material.uniforms.uTime) {
-                    child.material.uniforms.uTime.value = time;
-                }
-                if (child.material.uniforms.uWaveSpeed) {
-                    child.material.uniforms.uWaveSpeed.value = waveSpeed;
-                }
-                if (child.material.uniforms.uWaveIntensity) {
-                    child.material.uniforms.uWaveIntensity.value = waveIntensity;
-                }
-                if (child.material.uniforms.uDirection) {
-                    child.material.uniforms.uDirection.value.set(
-                        Math.cos(currentDirection * Math.PI / 180),
-                        Math.sin(currentDirection * Math.PI / 180)
-                    );
-                }
-            }
-        });
+        deformKelp(k, time);
     });
 
     // Update other systems
@@ -575,14 +632,8 @@ function animate() {
     camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
     camera.lookAt(0, 3, 0);
 
-    // Safe render
-    try {
-        renderer.render(scene, camera);
-    } catch (error) {
-        console.error('Render error:', error);
-        // Stop animation if there's a persistent error
-        return;
-    }
+    // Safe render - no shader materials to cause fog issues
+    renderer.render(scene, camera);
 }
 
 function startAnimation() {
@@ -637,6 +688,7 @@ window.kelpDebug = {
         console.log('- Wave intensity:', waveIntensity);
         console.log('- Current direction:', currentDirection);
         console.log('- Time:', time);
+        console.log('- Using CPU vertex deformation (no shaders)');
     },
     resetCamera: () => {
         distance = 30;
@@ -650,5 +702,15 @@ window.kelpDebug = {
         kelp.forEach(k => scene.remove(k));
         kelp = [];
         loadGLTFKelp();
+    },
+    toggleWireframe: () => {
+        kelp.forEach(k => {
+            k.traverse(child => {
+                if (child.material) {
+                    child.material.wireframe = !child.material.wireframe;
+                }
+            });
+        });
+        console.log('Wireframe toggled');
     }
 };
