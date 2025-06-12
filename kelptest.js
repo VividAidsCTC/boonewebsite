@@ -280,9 +280,13 @@ function setupTextureControls() {
 // In your initializeScene() function, after creating the floor:
 setTimeout(() => {
     loadSeafloorTextures(); // Load your textures
+    
+    // Initialize ocean surface
+    if (typeof OceanSurface !== 'undefined') {
+        OceanSurface.initialize();
+        console.log('Ocean surface initialized');
+    }
 }, 1000);
-
-
 
 
 
