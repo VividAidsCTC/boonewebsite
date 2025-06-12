@@ -280,15 +280,7 @@ function setupTextureControls() {
 // In your initializeScene() function, after creating the floor:
 setTimeout(() => {
     loadSeafloorTextures(); // Load your textures
-    
-    // Initialize ocean surface with the scene variable
-    if (typeof OceanSurface !== 'undefined') {
-        OceanSurface.initializeWithScene(scene);
-        console.log('Ocean surface initialized with scene');
-    } else {
-        console.error('OceanSurface not found - check if wave.js is loaded');
-    }
-}, 1000);
+
 
 
 
