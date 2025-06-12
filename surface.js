@@ -6,10 +6,10 @@ let oscillatingTime = 0;
 const PLANE_CONFIG = {
     width: 2000,
     height: 2000,
-    segments: 512,
-    yPosition: 55,
-    amplitude: 3.0,        // Reduced for smaller waves
-    frequency: 0.08,       // Increased for more wave parts
+    segments: 256,
+    yPosition: 70,
+    amplitude: 1.0,        // Reduced for smaller waves
+    frequency: 0.05,       // Increased for more wave parts
     speed: 1.0,
     opacity: 0.7,
     color: new THREE.Color(0x4499dd)
@@ -32,15 +32,24 @@ const oceanVertexShader = `
         vUv = uv;
         vec3 newPosition = position;
 
-        // Calculate multiple wave patterns with higher frequencies
-        float wave1 = sin(newPosition.x * frequency + time * speed) * amplitude;
-        float wave2 = cos(newPosition.y * frequency * 1.2 + time * speed * 1.3) * amplitude * 0.7;
-        float wave3 = sin((newPosition.x + newPosition.y) * frequency * 0.8 + time * speed * 0.9) * amplitude * 0.5;
-        float wave4 = cos(newPosition.x * frequency * 1.5 + time * speed * 1.1) * amplitude * 0.4;
-        float wave5 = sin(newPosition.y * frequency * 1.8 + time * speed * 0.7) * amplitude * 0.3;
+        // Add noise for randomization
+        float noise1 = sin(newPosition.x * 0.003 + newPosition.y * 0.002) * 0.3;
+        float noise2 = cos(newPosition.x * 0.007 - newPosition.y * 0.005) * 0.2;
+        float randomOffset = noise1 + noise2;
+        
+        // Calculate multiple wave patterns with randomized frequencies
+        float wave1 = sin(newPosition.x * frequency * (1.0 + randomOffset * 0.5) + time * speed) * amplitude;
+        float wave2 = cos(newPosition.y * frequency * (1.2 + randomOffset * 0.3) + time * speed * 1.3) * amplitude * 0.7;
+        float wave3 = sin((newPosition.x + newPosition.y) * frequency * (0.8 + randomOffset * 0.4) + time * speed * 0.9) * amplitude * 0.5;
+        float wave4 = cos((newPosition.x * 1.3 - newPosition.y * 0.7) * frequency * (1.5 + randomOffset * 0.2) + time * speed * 1.1) * amplitude * 0.4;
+        float wave5 = sin((newPosition.y * 1.1 + newPosition.x * 0.6) * frequency * (1.8 + randomOffset * 0.6) + time * speed * 0.7) * amplitude * 0.3;
+        
+        // Add some diagonal and circular wave patterns
+        float wave6 = cos((newPosition.x - newPosition.y) * frequency * 2.1 + time * speed * 0.8) * amplitude * 0.25;
+        float wave7 = sin(sqrt(newPosition.x * newPosition.x + newPosition.y * newPosition.y) * frequency * 0.3 + time * speed * 1.2) * amplitude * 0.35;
 
         // Combine waves for more interesting motion
-        float totalWave = wave1 + wave2 + wave3 + wave4 + wave5;
+        float totalWave = wave1 + wave2 + wave3 + wave4 + wave5 + wave6 + wave7;
 
         // Pass the wave displacement to fragment shader
         vWaveHeight = totalWave;
@@ -75,14 +84,16 @@ const oceanFragmentShader = `
         // Create foam based on wave displacement relative to amplitude
         float waveRatio = vWaveHeight / amplitude;
         
-        // Create foam pattern using UV coordinates for consistent distribution
-        float foamNoise = sin(vUv.x * 80.0 + time * 3.0) * 
-                         cos(vUv.y * 70.0 + time * 2.5) * 
-                         sin((vUv.x + vUv.y) * 60.0 + time * 2.0);
+        // Create randomized foam pattern
+        float foamRandomness = sin(vUv.x * 127.0) * cos(vUv.y * 113.0) * 0.5 + 0.5;
+        float foamNoise = sin(vUv.x * (80.0 + foamRandomness * 40.0) + time * 3.0) * 
+                         cos(vUv.y * (70.0 + foamRandomness * 30.0) + time * 2.5) * 
+                         sin((vUv.x + vUv.y) * (60.0 + foamRandomness * 20.0) + time * 2.0) *
+                         cos(vUv.x * vUv.y * 200.0 + time * 1.8); // Extra detail layer
         
-        // Foam appears on wave crests - using relative wave height
-        float foamThreshold = 0.6; // 60% of max wave height
-        float foamFactor = smoothstep(foamThreshold - 0.2, foamThreshold + 0.2, waveRatio + foamNoise * 0.1);
+        // Foam appears on wave crests - using relative wave height with randomness
+        float foamThreshold = 0.5 + foamRandomness * 0.2; // Varying threshold
+        float foamFactor = smoothstep(foamThreshold - 0.3, foamThreshold + 0.2, waveRatio + foamNoise * 0.15);
         
         // Mix ocean color with white foam
         vec3 foamColor = vec3(0.95, 0.98, 1.0); // Slightly blue-tinted white
