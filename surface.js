@@ -6,10 +6,10 @@ let oscillatingTime = 0;
 const PLANE_CONFIG = {
     width: 2000,
     height: 2000,
-    segments: 256,
+    segments: 512,
     yPosition: 55,
-    amplitude: 1.0,        // Reduced for smaller waves
-    frequency: 0.05,       // Increased for more wave parts
+    amplitude: 3.0,        // Reduced for smaller waves
+    frequency: 0.08,       // Increased for more wave parts
     speed: 1.0,
     opacity: 0.7,
     color: new THREE.Color(0x4499dd)
