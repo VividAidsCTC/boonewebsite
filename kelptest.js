@@ -408,14 +408,64 @@ function loadGLTFKelp() {
                     geometry.userData.maxY = bbox.max.y;
                     geometry.userData.height = bbox.max.y - bbox.min.y;
                     
-                    // Apply dark green-brown kelp material
-                    const kelpMaterial = new THREE.MeshPhongMaterial({
-                        color: 0x1c4709, // Dark green-brown
+                    const kelpUniforms = {
+                        uTime: { value: 0 },
+                        uWaveSpeed: { value: waveSpeed },
+                        uWaveIntensity: { value: waveIntensity },
+                        uDirection: { value: new THREE.Vector2(Math.cos(currentDirection * Math.PI / 180), Math.sin(currentDirection * Math.PI / 180)) }
+                    };
+                    
+                    const kelpMaterial = new THREE.ShaderMaterial({
+                        uniforms: kelpUniforms,
+                        vertexShader: `
+                            uniform float uTime;
+                            uniform float uWaveSpeed;
+                            uniform float uWaveIntensity;
+                            uniform vec2 uDirection;
+                    
+                            varying vec3 vNormal;
+                            varying vec3 vPosition;
+                    
+                            void main() {
+                                vec3 pos = position;
+                                
+                                float heightFactor = (pos.y + 1.0) / 2.0; // normalize Y height (assumes kelp starts at -1)
+                    
+                                // Bend X and Z using waves
+                                float wave1 = sin(heightFactor * 3.0 + uTime * 0.8) * 0.6;
+                                float wave2 = cos(heightFactor * 6.0 + uTime * 1.2) * 0.3;
+                                float wave3 = sin(heightFactor * 9.0 + uTime * 1.5) * 0.15;
+                    
+                                float bendAmount = (wave1 + wave2 + wave3) * uWaveIntensity * heightFactor;
+                    
+                                pos.x += uDirection.x * bendAmount;
+                                pos.z += uDirection.y * bendAmount;
+                    
+                                vNormal = normalMatrix * normal;
+                                vPosition = (modelMatrix * vec4(pos, 1.0)).xyz;
+                    
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                            }
+                        `,
+                        fragmentShader: `
+                            varying vec3 vNormal;
+                            varying vec3 vPosition;
+                    
+                            void main() {
+                                vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
+                                float diff = max(dot(normalize(vNormal), lightDir), 0.0);
+                    
+                                vec3 baseColor = vec3(0.11, 0.28, 0.05);
+                                vec3 color = baseColor * (0.5 + 0.5 * diff);
+                    
+                                gl_FragColor = vec4(color, 0.85);
+                            }
+                        `,
                         transparent: true,
-                        opacity: 0.85,
-                        shininess: 10
+                        side: THREE.DoubleSide
                     });
                     child.material = kelpMaterial;
+
                     
                     log(`Prepared mesh for vertex deformation: height=${geometry.userData.height.toFixed(2)}`);
                 }
@@ -792,7 +842,7 @@ function animate() {
     time += 0.01 * waveSpeed;
 
     kelp.forEach(function(k) {
-        deformKelp(k, time);
+        // deformKelp(k, time);
     });
 
     // Update oscillating plane (now updates shader uniform)
@@ -819,6 +869,20 @@ function animate() {
     camera.position.y = Math.sin(rotationX) * distance + 3;
     camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
     camera.lookAt(0, 3, 0);
+
+    kelp.forEach(k => {
+    k.traverse(child => {
+        if (child.material && child.material.uniforms && child.material.uniforms.uTime) {
+            child.material.uniforms.uTime.value = time;
+            child.material.uniforms.uWaveSpeed.value = waveSpeed;
+            child.material.uniforms.uWaveIntensity.value = waveIntensity;
+            child.material.uniforms.uDirection.value.set(
+                Math.cos(currentDirection * Math.PI / 180),
+                Math.sin(currentDirection * Math.PI / 180)
+                );
+            }
+        });
+    });
 
     renderer.render(scene, camera);
 }
