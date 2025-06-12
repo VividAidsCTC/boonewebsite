@@ -329,8 +329,8 @@ function initializeScene() {
     const context = canvas.getContext('2d');
 
     const gradient = context.createLinearGradient(0, 0, 0, 1000);
-    gradient.addColorStop(0, '#4499dd');
-    gradient.addColorStop(1, '#4499dd');
+    gradient.addColorStop(0, '#2f9264');
+    gradient.addColorStop(1, '#2f9264');
 
     context.fillStyle = gradient;
     context.fillRect(0, 0, 1000, 1000);
@@ -430,7 +430,7 @@ function loadGLTFKelp() {
             template.position.y = -1; // Place on seafloor level
 
             // Create 500 kelp instances
-            for(let i = 0; i < 100; i++) {
+            for(let i = 0; i < 300; i++) {
                 const kelpInstance = template.clone();
 
                 // Position kelp on the seafloor in tighter formation
