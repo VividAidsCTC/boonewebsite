@@ -809,9 +809,14 @@ function animate() {
         OceanParticles.update(.01 * waveSpeed); // Use your existing deltaTime
     }
 
-    // Update ocean surface waves - ADD THIS LINE
+    // Update ocean surface waves 
     if (typeof OceanSurface !== 'undefined') {
         OceanSurface.update(.01 * waveSpeed); // Same deltaTime as particles
+    }
+
+        // Update oscillating plane
+    if (typeof OscillatingPlane !== 'undefined') {
+        OscillatingPlane.update(0.01 * waveSpeed);
     }
 
     // Update camera position based on mouse controls - lower Y position
