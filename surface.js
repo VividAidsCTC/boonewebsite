@@ -4,7 +4,7 @@ let oscillatingTime = 0;
 
 // Configuration for the oscillating sphere
 const SPHERE_CONFIG = {
-    radius: 500,           // Large radius to cover the scene
+    radius: 100,           // Large radius to cover the scene
     widthSegments: 128,    // More segments for smoother waves
     heightSegments: 64,    // Fewer height segments since it's flattened
     yPosition: 70,         // Position above ground (ground is at y = -1)
