@@ -798,25 +798,22 @@ function animate() {
 
     kelp.forEach(function(k) {
         deformKelp(k, time);
-
-    if (typeof OscillatingPlane !== 'undefined') {
-        OscillatingPlane.update(0.01 * waveSpeed);
-    }
     });
 
-    // Update particles
-    if (typeof OceanParticles !== 'undefined') {
-        OceanParticles.update(.01 * waveSpeed); // Use your existing deltaTime
-    }
-
-    // Update ocean surface waves 
-    if (typeof OceanSurface !== 'undefined') {
-        OceanSurface.update(.01 * waveSpeed); // Same deltaTime as particles
-    }
-
-        // Update oscillating plane
+    // Update oscillating plane (now updates shader uniform)
     if (typeof OscillatingPlane !== 'undefined') {
-        OscillatingPlane.update(0.01 * waveSpeed);
+        OscillatingPlane.update(0.01 * waveSpeed); 
+    }
+
+    // Update particles (if applicable)
+    if (typeof OceanParticles !== 'undefined') {
+        OceanParticles.update(.01 * waveSpeed);
+    }
+
+    // Update ocean surface waves (if applicable - this is likely now handled by OscillatingPlane)
+    // You might remove this line if OscillatingPlane is your primary surface
+    if (typeof OceanSurface !== 'undefined') {
+        OceanSurface.update(.01 * waveSpeed);
     }
 
     // Update camera position based on mouse controls - lower Y position
@@ -824,12 +821,13 @@ function animate() {
     rotationY += (targetRotationY - rotationY) * 0.1;
 
     camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
-    camera.position.y = Math.sin(rotationX) * distance + 3; // Changed from +10 to +3
+    camera.position.y = Math.sin(rotationX) * distance + 3;
     camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
-    camera.lookAt(0, 3, 0); // Changed from (0, 10, 0) to (0, 3, 0)
+    camera.lookAt(0, 3, 0);
 
     renderer.render(scene, camera);
 }
+
 
 function startAnimation() {
     log('Starting animation...');
