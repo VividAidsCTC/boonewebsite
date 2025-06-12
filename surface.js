@@ -1,244 +1,185 @@
-// Oscillating plane above the seafloor
-let oscillatingPlane;
+// Oscillating flattened sphere above the seafloor
+let oscillatingSphere;
 let oscillatingTime = 0;
 
-// Configuration for the oscillating plane
-const PLANE_CONFIG = {
-    width: 2000,
-    height: 2000,
-    segments: 256,
-    yPosition: 70,
-    amplitude: 1.0,        // Reduced for smaller waves
-    frequency: 0.05,       // Increased for more wave parts
-    speed: 1.0,
-    opacity: 0.7,
-    color: new THREE.Color(0x4499dd)
+// Configuration for the oscillating sphere
+const SPHERE_CONFIG = {
+    radius: 500,           // Large radius to cover the scene
+    widthSegments: 128,    // More segments for smoother waves
+    heightSegments: 64,    // Fewer height segments since it's flattened
+    yPosition: 70,         // Position above ground (ground is at y = -1)
+    flattenFactor: 0.1,    // How much to flatten (0.1 = very flat, 1.0 = normal sphere)
+    amplitude: 2.0,        // Wave height for visibility
+    frequency: 0.01,       // Lower frequency for larger waves
+    speed: 1.0,            // Animation speed
+    opacity: 0.6,          // Transparency
+    color: 0x4499dd        // Ocean blue color
 };
 
-// Vertex Shader for the ocean surface
-const oceanVertexShader = `
-    uniform float time;
-    uniform float amplitude;
-    uniform float frequency;
-    uniform float speed;
-
-    varying vec3 vNormal;
-    varying vec3 vViewPosition;
-    varying float vWaveHeight;
-    varying vec2 vUv;
-
-    void main() {
-        vNormal = normal;
-        vUv = uv;
-        vec3 newPosition = position;
-
-        // Calculate distance from center for wave scaling
-        float distanceFromCenter = length(newPosition.xy);
-        float maxDistance = 2000.0; // Half the width/height
-        
-        // Add noise for randomization
-        float noise1 = sin(newPosition.x * 0.003 + newPosition.y * 0.002) * 0.3;
-        float noise2 = cos(newPosition.x * 0.007 - newPosition.y * 0.005) * 0.2;
-        float randomOffset = noise1 + noise2;
-        
-        // Calculate multiple wave patterns with randomized frequencies
-        // Reduce wave amplitude as we get further from center for more realistic distant water
-        float waveScale = 1.0 - (distanceFromCenter / maxDistance) * 0.5;
-        float wave1 = sin(newPosition.x * frequency * (1.0 + randomOffset * 0.5) + time * speed) * amplitude * waveScale;
-        float wave2 = cos(newPosition.y * frequency * (1.2 + randomOffset * 0.3) + time * speed * 1.3) * amplitude * 0.7 * waveScale;
-        float wave3 = sin((newPosition.x + newPosition.y) * frequency * (0.8 + randomOffset * 0.4) + time * speed * 0.9) * amplitude * 0.5 * waveScale;
-        float wave4 = cos((newPosition.x * 1.3 - newPosition.y * 0.7) * frequency * (1.5 + randomOffset * 0.2) + time * speed * 1.1) * amplitude * 0.4 * waveScale;
-        float wave5 = sin((newPosition.y * 1.1 + newPosition.x * 0.6) * frequency * (1.8 + randomOffset * 0.6) + time * speed * 0.7) * amplitude * 0.3 * waveScale;
-        
-        // Add some diagonal and circular wave patterns
-        float wave6 = cos((newPosition.x - newPosition.y) * frequency * 2.1 + time * speed * 0.8) * amplitude * 0.25 * waveScale;
-        float wave7 = sin(sqrt(newPosition.x * newPosition.x + newPosition.y * newPosition.y) * frequency * 0.3 + time * speed * 1.2) * amplitude * 0.35 * waveScale;
-
-        // Combine waves for more interesting motion
-        float totalWave = wave1 + wave2 + wave3 + wave4 + wave5 + wave6 + wave7;
-
-        // Pass the wave displacement to fragment shader
-        vWaveHeight = totalWave;
-
-        // Apply wave displacement along the Z-axis
-        newPosition.z += totalWave;
-
-        vec4 mvPosition = modelViewMatrix * vec4(newPosition, 1.0);
-        vViewPosition = -mvPosition.xyz;
-
-        gl_Position = projectionMatrix * mvPosition;
-    }
-`;
-
-// Fragment Shader for the ocean surface
-const oceanFragmentShader = `
-    uniform vec3 color;
-    uniform float opacity;
-    uniform float time;
-    uniform float amplitude;
-
-    varying vec3 vNormal;
-    varying vec3 vViewPosition;
-    varying float vWaveHeight;
-    varying vec2 vUv;
-
-    void main() {
-        vec3 normal = normalize(vNormal);
-        vec3 lightDirection = normalize(vec3(0.0, 1.0, 0.0));
-        float lightIntensity = max(0.0, dot(normal, lightDirection));
-
-        // Create foam based on wave displacement relative to amplitude
-        float waveRatio = vWaveHeight / amplitude;
-        
-        // Create randomized foam pattern
-        float foamRandomness = sin(vUv.x * 127.0) * cos(vUv.y * 113.0) * 0.5 + 0.5;
-        float foamNoise = sin(vUv.x * (80.0 + foamRandomness * 40.0) + time * 3.0) * 
-                         cos(vUv.y * (70.0 + foamRandomness * 30.0) + time * 2.5) * 
-                         sin((vUv.x + vUv.y) * (60.0 + foamRandomness * 20.0) + time * 2.0) *
-                         cos(vUv.x * vUv.y * 200.0 + time * 1.8); // Extra detail layer
-        
-        // Foam appears on wave crests - using relative wave height with randomness
-        float foamThreshold = 0.5 + foamRandomness * 0.2; // Varying threshold
-        float foamFactor = smoothstep(foamThreshold - 0.3, foamThreshold + 0.2, waveRatio + foamNoise * 0.15);
-        
-        // Mix ocean color with white foam
-        vec3 foamColor = vec3(0.95, 0.98, 1.0); // Slightly blue-tinted white
-        vec3 baseColor = color * (0.5 + lightIntensity * 0.5);
-        vec3 finalColor = mix(baseColor, foamColor, foamFactor * 0.7);
-        
-        // Slightly increase opacity where there's foam
-        float finalOpacity = opacity + foamFactor * 0.2;
-
-        gl_FragColor = vec4(finalColor, finalOpacity);
-    }
-`;
-
-function createOscillatingPlane() {
-    console.log('Creating oscillating hemisphere with ShaderMaterial...');
-
-    // Create a hemisphere using SphereGeometry - flipped to face up
-    const geometry = new THREE.SphereGeometry(
-        PLANE_CONFIG.radius,
-        PLANE_CONFIG.widthSegments,
-        PLANE_CONFIG.heightSegments,
-        0,                    // phiStart (horizontal start angle)
-        Math.PI * 2,         // phiLength (horizontal sweep angle - full circle)
-        Math.PI / 2,         // thetaStart (vertical start angle - start from equator)
-        Math.PI / 2          // thetaLength (vertical sweep angle - half sphere upward)
-    );
-
-    // Flatten the hemisphere to make it more water-like
-    const positions = geometry.attributes.position.array;
-    const vertexCount = positions.length / 3;
+function createOscillatingSphere() {
+    console.log('Creating oscillating flattened sphere...');
     
-    for (let i = 0; i < vertexCount; i++) {
-        const x = positions[i * 3];
-        const y = positions[i * 3 + 1];
-        const z = positions[i * 3 + 2];
+    // Create sphere geometry with segments for vertex manipulation
+    const geometry = new THREE.SphereGeometry(
+        SPHERE_CONFIG.radius,
+        SPHERE_CONFIG.widthSegments,
+        SPHERE_CONFIG.heightSegments
+    );
+    
+    // Store original positions and flatten the sphere
+    const positions = geometry.attributes.position.array;
+    const originalPositions = positions.slice();
+    
+    // Flatten the sphere by reducing Y coordinates
+    for (let i = 0; i < positions.length; i += 3) {
+        const x = positions[i];
+        const y = positions[i + 1];
+        const z = positions[i + 2];
         
-        // Flatten the Y component to make it less dome-like
-        const flatteningFactor = 0.2; // Slightly more flattening
-        positions[i * 3 + 1] = y * flatteningFactor;
+        // Flatten by reducing Y coordinate
+        positions[i + 1] = y * SPHERE_CONFIG.flattenFactor;
     }
     
     // Update the geometry
     geometry.attributes.position.needsUpdate = true;
     geometry.computeVertexNormals();
-
-    const material = new THREE.ShaderMaterial({
-        uniforms: {
-            time: { value: oscillatingTime },
-            amplitude: { value: PLANE_CONFIG.amplitude },
-            frequency: { value: PLANE_CONFIG.frequency },
-            speed: { value: PLANE_CONFIG.speed * 5 },
-            color: { value: PLANE_CONFIG.color },
-            opacity: { value: PLANE_CONFIG.opacity }
-        },
-        vertexShader: oceanVertexShader,
-        fragmentShader: oceanFragmentShader,
+    
+    // Store flattened positions as original for wave calculations
+    geometry.userData.originalPositions = positions.slice();
+    
+    // Create material with transparency
+    const material = new THREE.MeshPhongMaterial({
+        color: SPHERE_CONFIG.color,
         transparent: true,
+        opacity: SPHERE_CONFIG.opacity,
         side: THREE.DoubleSide,
-        depthWrite: false    // This helps with transparency
+        shininess: 50,
+        specular: 0x888888
     });
-
-    oscillatingPlane = new THREE.Mesh(geometry, material);
-    oscillatingPlane.position.y = PLANE_CONFIG.yPosition;
     
-    // Add some debugging
-    console.log('Hemisphere position:', oscillatingPlane.position);
-    console.log('Hemisphere radius:', PLANE_CONFIG.radius);
-    console.log('Material color:', PLANE_CONFIG.color);
-
-    scene.add(oscillatingPlane);
-
-    console.log('Oscillating hemisphere created at Y:', PLANE_CONFIG.yPosition);
-    console.log('Hemisphere has', geometry.attributes.position.count, 'vertices');
+    // Create the mesh
+    oscillatingSphere = new THREE.Mesh(geometry, material);
     
-    // Create a simple test sphere to verify positioning
-    const testGeometry = new THREE.SphereGeometry(50, 16, 16);
-    const testMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
-    const testSphere = new THREE.Mesh(testGeometry, testMaterial);
-    testSphere.position.set(0, PLANE_CONFIG.yPosition + 100, 0);
-    scene.add(testSphere);
-    console.log('Added red test sphere at:', testSphere.position);
+    // Position the sphere
+    oscillatingSphere.position.y = SPHERE_CONFIG.yPosition;
+    
+    // Add to scene
+    scene.add(oscillatingSphere);
+    
+    console.log('Oscillating flattened sphere created and added to scene at Y:', SPHERE_CONFIG.yPosition);
+    console.log('Sphere has', positions.length / 3, 'vertices');
 }
 
-function updateOscillatingPlane(deltaTime) {
-    if (!oscillatingPlane || !oscillatingPlane.material.uniforms) return;
-    oscillatingTime += deltaTime;
-    oscillatingPlane.material.uniforms.time.value = oscillatingTime;
+function updateOscillatingSphere(deltaTime) {
+    if (!oscillatingSphere) return;
+    
+    // Update time with more dramatic speed
+    oscillatingTime += deltaTime * SPHERE_CONFIG.speed * 5;
+    
+    const geometry = oscillatingSphere.geometry;
+    const positions = geometry.attributes.position;
+    const originalPositions = geometry.userData.originalPositions;
+    
+    // Update each vertex to create wave pattern
+    for (let i = 0; i < positions.count; i++) {
+        const i3 = i * 3;
+        
+        // Get original coordinates
+        const originalX = originalPositions[i3];
+        const originalY = originalPositions[i3 + 1];
+        const originalZ = originalPositions[i3 + 2];
+        
+        // Calculate distance from center for radial waves
+        const distanceFromCenter = Math.sqrt(originalX * originalX + originalZ * originalZ);
+        
+        // Calculate multiple wave patterns
+        const wave1 = Math.sin(distanceFromCenter * SPHERE_CONFIG.frequency + oscillatingTime) * SPHERE_CONFIG.amplitude;
+        const wave2 = Math.cos(originalX * SPHERE_CONFIG.frequency * 0.7 + oscillatingTime * 1.3) * SPHERE_CONFIG.amplitude * 0.6;
+        const wave3 = Math.sin(originalZ * SPHERE_CONFIG.frequency * 0.5 + oscillatingTime * 0.8) * SPHERE_CONFIG.amplitude * 0.4;
+        const wave4 = Math.cos((originalX + originalZ) * SPHERE_CONFIG.frequency * 0.3 + oscillatingTime * 1.1) * SPHERE_CONFIG.amplitude * 0.3;
+        
+        // Combine waves for more interesting motion
+        const totalWave = wave1 + wave2 + wave3 + wave4;
+        
+        // Only apply waves to vertices that are close to the flattened surface (low Y values)
+        const waveIntensity = Math.max(0, 1 - Math.abs(originalY) / (SPHERE_CONFIG.radius * SPHERE_CONFIG.flattenFactor * 2));
+        
+        // Set new position - apply wave displacement primarily in Y direction
+        positions.setX(i, originalX);
+        positions.setY(i, originalY + totalWave * waveIntensity);
+        positions.setZ(i, originalZ);
+    }
+    
+    // Mark positions for update
+    positions.needsUpdate = true;
+    
+    // Recalculate normals for proper lighting
+    geometry.computeVertexNormals();
 }
 
-function initializeOscillatingPlane() {
+// Function to initialize the oscillating sphere (call this after your scene is set up)
+function initializeOscillatingSphere() {
     if (typeof scene !== 'undefined') {
-        createOscillatingPlane();
+        createOscillatingSphere();
     } else {
-        console.error('Scene not available for oscillating plane');
+        console.error('Scene not available for oscillating sphere');
     }
 }
 
-// Update functions
-function setPlaneAmplitude(amplitude) {
-    PLANE_CONFIG.amplitude = amplitude;
-    if (oscillatingPlane?.material?.uniforms) {
-        oscillatingPlane.material.uniforms.amplitude.value = amplitude;
+// Function to update sphere settings
+function setSphereAmplitude(amplitude) {
+    SPHERE_CONFIG.amplitude = amplitude;
+}
+
+function setSphereFrequency(frequency) {
+    SPHERE_CONFIG.frequency = frequency;
+}
+
+function setSphereSpeed(speed) {
+    SPHERE_CONFIG.speed = speed;
+}
+
+function setSphereOpacity(opacity) {
+    if (oscillatingSphere) {
+        oscillatingSphere.material.opacity = opacity;
+        SPHERE_CONFIG.opacity = opacity;
     }
 }
 
-function setPlaneFrequency(frequency) {
-    PLANE_CONFIG.frequency = frequency;
-    if (oscillatingPlane?.material?.uniforms) {
-        oscillatingPlane.material.uniforms.frequency.value = frequency;
+function setSphereFlattenFactor(factor) {
+    SPHERE_CONFIG.flattenFactor = Math.max(0.01, Math.min(1.0, factor));
+    // You would need to recreate the sphere to apply this change
+    if (oscillatingSphere) {
+        scene.remove(oscillatingSphere);
+        createOscillatingSphere();
     }
 }
 
-function setPlaneSpeed(speed) {
-    PLANE_CONFIG.speed = speed;
-    if (oscillatingPlane?.material?.uniforms) {
-        oscillatingPlane.material.uniforms.speed.value = speed * 5;
+function setSphereRadius(radius) {
+    SPHERE_CONFIG.radius = radius;
+    // You would need to recreate the sphere to apply this change
+    if (oscillatingSphere) {
+        scene.remove(oscillatingSphere);
+        createOscillatingSphere();
     }
 }
 
-function setPlaneOpacity(opacity) {
-    PLANE_CONFIG.opacity = opacity;
-    if (oscillatingPlane?.material?.uniforms) {
-        oscillatingPlane.material.uniforms.opacity.value = opacity;
-    }
-}
-
-// Auto-initialize after DOM loads
-document.addEventListener('DOMContentLoaded', function () {
+// Auto-initialize when DOM is loaded (after your main script)
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit for the main scene to be set up
     setTimeout(() => {
-        initializeOscillatingPlane();
+        initializeOscillatingSphere();
     }, 1500);
 });
 
-// Export for external control
+// Export for global access (keeping the same name for compatibility)
 window.OscillatingPlane = {
-    update: updateOscillatingPlane,
-    setAmplitude: setPlaneAmplitude,
-    setFrequency: setPlaneFrequency,
-    setSpeed: setPlaneSpeed,
-    setOpacity: setPlaneOpacity,
-    initialize: initializeOscillatingPlane
+    update: updateOscillatingSphere,
+    setAmplitude: setSphereAmplitude,
+    setFrequency: setSphereFrequency,
+    setSpeed: setSphereSpeed,
+    setOpacity: setSphereOpacity,
+    setFlattenFactor: setSphereFlattenFactor,
+    setRadius: setSphereRadius,
+    initialize: initializeOscillatingSphere
 };
