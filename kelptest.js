@@ -432,7 +432,7 @@ function loadGLTFKelp() {
             template.position.y = -1; // Place on seafloor level
 
             // Create 500 kelp instances
-            for(let i = 0; i < 1000; i++) {
+            for(let i = 0; i < 500; i++) {
                 const kelpInstance = template.clone();
 
                 // Position kelp on the seafloor in tighter formation
