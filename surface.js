@@ -105,109 +105,91 @@ function initializeWhitePatches() {
 
 function updateOscillatingSphere(deltaTime) {
     if (!oscillatingSphere) return;
-    
-    // Update time
-    oscillatingTime += deltaTime * SPHERE_CONFIG.speed * 3;
-    
+
+    // Advance global time
+    oscillatingTime += deltaTime * SPHERE_CONFIG.speed;
+
     const geometry = oscillatingSphere.geometry;
     const positions = geometry.attributes.position;
     const originalPositions = geometry.userData.originalPositions;
-    
-    // Initialize white patches if not done yet
+
+    // Init white patches if not done
     if (whitePatchData.length === 0) {
         initializeWhitePatches();
     }
-    
-    // Create color attribute if it doesn't exist
+
+    // Create color buffer if needed
     if (!geometry.attributes.color) {
         const colors = new Float32Array(positions.count * 3);
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     }
-    
+
     const colors = geometry.attributes.color;
-    
+
     // Update each vertex
     for (let i = 0; i < positions.count; i++) {
         const i3 = i * 3;
-        
-        // Get original coordinates
+
         const originalX = originalPositions[i3];
         const originalY = originalPositions[i3 + 1];
         const originalZ = originalPositions[i3 + 2];
-        
-        // Reset color to base ocean color
-        let finalRed = 0.3;   // Base ocean color
-        let finalGreen = 0.6;
-        let finalBlue = 0.9;
-        
-        // Check if this vertex should be affected by any white patches
+
+        // Reset to base water color
+        let r = 0.3;
+        let g = 0.6;
+        let b = 0.9;
+
         for (let p = 0; p < whitePatchData.length; p++) {
             const patch = whitePatchData[p];
-            
-            // Update patch orbit position
-            const currentAngle = patch.orbitAngle + oscillatingTime * patch.orbitSpeed;
+
+            const angle = patch.orbitAngle + oscillatingTime * patch.orbitSpeed;
             const wobble = Math.sin(oscillatingTime * patch.wobbleSpeed) * patch.wobbleAmount;
-            
-            // Calculate patch center position
-            const patchCenterX = Math.cos(currentAngle) * (patch.orbitRadius + wobble);
-            const patchCenterZ = Math.sin(currentAngle) * (patch.orbitRadius + wobble);
-            const patchCenterY = patch.orbitHeight + Math.sin(oscillatingTime * patch.wobbleSpeed * 0.7) * 5;
-            
-            // Calculate distance from vertex to patch center
-            const dx = originalX - patchCenterX;
-            const dy = originalY - patchCenterY;
-            const dz = originalZ - patchCenterZ;
-            
-            // Create streak effect by using different distances for width vs length
-            const streakDx = dx * Math.cos(patch.streakAngle) + dz * Math.sin(patch.streakAngle);
-            const streakDz = -dx * Math.sin(patch.streakAngle) + dz * Math.cos(patch.streakAngle);
-            
-            // Calculate elliptical distance for streak shape
-            const normalizedWidth = (streakDz * streakDz) / (patch.patchWidth * patch.patchWidth);
-            const normalizedLength = (streakDx * streakDx) / (patch.patchLength * patch.patchLength);
-            const normalizedHeight = (dy * dy) / (20 * 20); // Height tolerance
-            
-            const ellipticalDistance = normalizedWidth + normalizedLength + normalizedHeight;
-            
-            // If vertex is within the streak patch
-            if (ellipticalDistance < 1.0) {
-                // Calculate intensity based on distance from center
-                const intensity = (1.0 - ellipticalDistance) * patch.intensity;
-                
-                // Add some noise/variation to the patch
-                const noiseX = Math.sin(originalX * 0.02 + oscillatingTime * 2) * 0.3;
-                const noiseZ = Math.cos(originalZ * 0.02 + oscillatingTime * 1.5) * 0.3;
-                const finalIntensity = intensity * (0.7 + noiseX + noiseZ);
-                
-                // Blend white color based on intensity
-                if (finalIntensity > 0) {
-                    finalRed = Math.min(1.0, finalRed + finalIntensity * 0.8);
-                    finalGreen = Math.min(1.0, finalGreen + finalIntensity * 0.9);
-                    finalBlue = Math.min(1.0, finalBlue + finalIntensity * 1.0);
-                }
+
+            const centerX = Math.cos(angle) * (patch.orbitRadius + wobble);
+            const centerZ = Math.sin(angle) * (patch.orbitRadius + wobble);
+            const centerY = patch.orbitHeight + Math.sin(oscillatingTime * patch.wobbleSpeed * 0.7) * 3;
+
+            const dx = originalX - centerX;
+            const dy = originalY - centerY;
+            const dz = originalZ - centerZ;
+
+            // Elliptical falloff
+            const rotatedX = dx * Math.cos(patch.streakAngle) + dz * Math.sin(patch.streakAngle);
+            const rotatedZ = -dx * Math.sin(patch.streakAngle) + dz * Math.cos(patch.streakAngle);
+
+            const dWidth = (rotatedZ ** 2) / (patch.patchWidth ** 2);
+            const dLength = (rotatedX ** 2) / (patch.patchLength ** 2);
+            const dHeight = (dy ** 2) / (25 ** 2);
+
+            const influence = dWidth + dLength + dHeight;
+
+            if (influence < 1.0) {
+                const intensity = (1.0 - influence) * patch.intensity;
+                const flicker = 0.8 + 0.2 * Math.sin(originalX * 0.05 + oscillatingTime * 3);
+                const glow = intensity * flicker;
+
+                r = Math.min(1.0, r + glow * 0.8);
+                g = Math.min(1.0, g + glow * 0.9);
+                b = Math.min(1.0, b + glow * 1.0);
             }
         }
-        
-        // Apply the color to the vertex
-        colors.setXYZ(i, finalRed, finalGreen, finalBlue);
-        
-        // Apply small wave displacement (much subtler now)
-        const waveIntensity = Math.max(0, 1 - Math.abs(originalY) / (SPHERE_CONFIG.radius * SPHERE_CONFIG.flattenFactor * 2));
-        const smallWave = Math.sin(originalX * 0.01 + oscillatingTime) * 0.5 + 
-                         Math.cos(originalZ * 0.01 + oscillatingTime * 0.8) * 0.3;
-        
+
+        colors.setXYZ(i, r, g, b);
+
+        // Small wave motion
+        const waveFactor = Math.max(0, 1 - Math.abs(originalY) / (SPHERE_CONFIG.radius * SPHERE_CONFIG.flattenFactor));
+        const waveY = Math.sin(originalX * 0.01 + oscillatingTime) * 0.5 + Math.cos(originalZ * 0.01 + oscillatingTime * 0.8) * 0.3;
+
         positions.setX(i, originalX);
-        positions.setY(i, originalY + smallWave * waveIntensity * SPHERE_CONFIG.amplitude * 0.2);
+        positions.setY(i, originalY + waveY * waveFactor * SPHERE_CONFIG.amplitude * 0.2);
         positions.setZ(i, originalZ);
     }
-    
-    // Mark for updates
+
     positions.needsUpdate = true;
     colors.needsUpdate = true;
-    
-    // Recalculate normals
     geometry.computeVertexNormals();
 }
+
 
 // Function to initialize the oscillating sphere (call this after your scene is set up)
 function initializeOscillatingSphere() {
