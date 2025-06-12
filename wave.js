@@ -5,7 +5,7 @@ const SURFACE_CONFIG = {
   width: 1000,
   height: 1000,
   segments: 128,
-  surfaceHeight: 40,        // Height above ground plane
+  surfaceHeight: 70,        // Height above ground plane
   waveAmplitude: 0.8,       // Maximum wave height
   waveSpeed: 1.2,           // Speed of wave animation
   color: 0x006994,          // Deep ocean blue
