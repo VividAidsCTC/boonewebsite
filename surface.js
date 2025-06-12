@@ -4,10 +4,10 @@ let oscillatingTime = 0;
 
 // Configuration for the oscillating sphere
 const SPHERE_CONFIG = {
-    radius: 100,           // Large radius to cover the scene
+    radius: 500,           // Large radius to cover the scene
     widthSegments: 128,    // More segments for smoother waves
     heightSegments: 64,    // Fewer height segments since it's flattened
-    yPosition: 70,         // Position above ground (ground is at y = -1)
+    yPosition: 1,         // Position above ground (ground is at y = -1)
     flattenFactor: 0.1,    // How much to flatten (0.1 = very flat, 1.0 = normal sphere)
     amplitude: 2.0,        // Wave height for visibility
     frequency: 0.01,       // Lower frequency for larger waves
