@@ -66,7 +66,7 @@ function initializeOceanSurface() {
     });
   }
 
-  window.scene.add(oceanSurface);
+  sceneRef.add(oceanSurface);
   console.log('✅ Ocean surface created with', positions.count, 'vertices');
 }
 
