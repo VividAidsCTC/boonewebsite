@@ -4,10 +4,10 @@ let oscillatingTime = 0;
 
 // Configuration for the oscillating sphere
 const SPHERE_CONFIG = {
-    radius: 500,           // Large radius to cover the scene
+    radius: 1000,           // Large radius to cover the scene
     widthSegments: 128,    // More segments for smoother waves
     heightSegments: 64,    // Fewer height segments since it's flattened
-    yPosition: 70,         // Position above ground (ground is at y = -1)
+    yPosition: 0,         // Position above ground (ground is at y = -1)
     flattenFactor: 0.1,    // How much to flatten (0.1 = very flat, 1.0 = normal sphere)
     amplitude: 3.0,        // Increased wave height for more visibility
     frequency: 0.01,       // Lower frequency for larger waves
@@ -47,16 +47,16 @@ function createOscillatingSphere() {
     // Store flattened positions as original for wave calculations
     geometry.userData.originalPositions = positions.slice();
     
-    // Create material that supports vertex colors for white patches
+    // Create material with transparency and better wave visibility
     const material = new THREE.MeshPhongMaterial({
+        color: SPHERE_CONFIG.color,
         transparent: true,
         opacity: SPHERE_CONFIG.opacity,
         side: THREE.DoubleSide,
-        shininess: 100,
-        specular: 0xffffff,
-        emissive: 0x001122,
-        vertexColors: true,    // Enable vertex colors for white patches
-        wireframe: false
+        shininess: 100,        // Increased shininess for more reflective waves
+        specular: 0xffffff,    // White specular highlights (the "white waves")
+        emissive: 0x001122,    // Slight blue glow
+        wireframe: false       // Set to true for debugging wave structure
     });
     
     // Create the mesh
