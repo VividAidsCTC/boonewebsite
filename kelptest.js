@@ -280,7 +280,7 @@ function setupTextureControls() {
 // In your initializeScene() function, after creating the floor:
 setTimeout(() => {
     loadSeafloorTextures(); // Load your textures
-
+}
 
 
 
