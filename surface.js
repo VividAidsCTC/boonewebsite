@@ -7,9 +7,9 @@ const PLANE_CONFIG = {
     width: 2000,
     height: 2000,
     segments: 256,
-    yPosition: 70,
-    amplitude: 2.0,
-    frequency: 0.01,
+    yPosition: 55,
+    amplitude: 1.0,        // Reduced for smaller waves
+    frequency: 0.05,       // Increased for more wave parts
     speed: 1.0,
     opacity: 0.7,
     color: new THREE.Color(0x4499dd)
@@ -32,13 +32,15 @@ const oceanVertexShader = `
         vUv = uv;
         vec3 newPosition = position;
 
-        // Calculate multiple wave patterns
+        // Calculate multiple wave patterns with higher frequencies
         float wave1 = sin(newPosition.x * frequency + time * speed) * amplitude;
-        float wave2 = cos(newPosition.y * frequency * 0.7 + time * speed * 1.3) * amplitude * 0.6;
-        float wave3 = sin((newPosition.x + newPosition.y) * frequency * 0.5 + time * speed * 0.8) * amplitude * 0.4;
+        float wave2 = cos(newPosition.y * frequency * 1.2 + time * speed * 1.3) * amplitude * 0.7;
+        float wave3 = sin((newPosition.x + newPosition.y) * frequency * 0.8 + time * speed * 0.9) * amplitude * 0.5;
+        float wave4 = cos(newPosition.x * frequency * 1.5 + time * speed * 1.1) * amplitude * 0.4;
+        float wave5 = sin(newPosition.y * frequency * 1.8 + time * speed * 0.7) * amplitude * 0.3;
 
         // Combine waves for more interesting motion
-        float totalWave = wave1 + wave2 + wave3;
+        float totalWave = wave1 + wave2 + wave3 + wave4 + wave5;
 
         // Pass the wave displacement to fragment shader
         vWaveHeight = totalWave;
@@ -74,9 +76,9 @@ const oceanFragmentShader = `
         float waveRatio = vWaveHeight / amplitude;
         
         // Create foam pattern using UV coordinates for consistent distribution
-        float foamNoise = sin(vUv.x * 50.0 + time * 3.0) * 
-                         cos(vUv.y * 40.0 + time * 2.5) * 
-                         sin((vUv.x + vUv.y) * 30.0 + time * 2.0);
+        float foamNoise = sin(vUv.x * 80.0 + time * 3.0) * 
+                         cos(vUv.y * 70.0 + time * 2.5) * 
+                         sin((vUv.x + vUv.y) * 60.0 + time * 2.0);
         
         // Foam appears on wave crests - using relative wave height
         float foamThreshold = 0.6; // 60% of max wave height
