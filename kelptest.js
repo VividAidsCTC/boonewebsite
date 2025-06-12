@@ -201,8 +201,8 @@ function init() {
         const kelpModel = gltf.scene;
 
         // Clone and position kelp instances
-        const numKelp = 500;
-        const scatterRadius = 400; // Increased scatter area
+        const numKelp = 300;
+        const scatterRadius = 200; // Increased scatter area
 
         // Prepare the mesh for vertex deformation
         let meshToDeform = null;
