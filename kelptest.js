@@ -34,7 +34,7 @@ let textureLoader = new THREE.TextureLoader();
 let lastFrameTime = performance.now();
 let frameCount = 0;
 
-// GPU Kelp Vertex Shader
+// GPU Kelp Vertex Shader - Safer version
 const kelpVertexShader = `
     attribute vec3 originalPosition;
     attribute float instanceId;
@@ -66,55 +66,55 @@ const kelpVertexShader = `
     }
     
     void main() {
-        // Get animation parameters
-        float freq1 = animationData1.x;
-        float freq2 = animationData1.y;
-        float freq3 = animationData1.z;
-        float amplitude1 = animationData1.w;
-        float amplitude2 = animationData2.x;
-        float amplitude3 = animationData2.y;
+        // Get animation parameters and clamp them
+        float freq1 = clamp(animationData1.x, 0.1, 2.0);
+        float freq2 = clamp(animationData1.y, 0.1, 2.0);
+        float freq3 = clamp(animationData1.z, 0.1, 2.0);
+        float amplitude1 = clamp(animationData1.w, 0.0, 1.0);
+        float amplitude2 = clamp(animationData2.x, 0.0, 1.0);
+        float amplitude3 = clamp(animationData2.y, 0.0, 1.0);
         float offset1 = animationData2.z;
         float offset2 = animationData2.w;
         float offset3 = animationData3.x;
         
-        // Calculate height factor (0 at bottom, 1 at top)
-        // Fix the height calculation to work with cylinder geometry
+        // Calculate height factor and clamp it
         float heightFactor = clamp((originalPosition.y + 0.5) / 1.0, 0.0, 1.0);
         vHeightFactor = heightFactor;
         
-        // Calculate wave values - keep them reasonable
-        float wave1 = sin(time * freq1 + offset1) * amplitude1 * 0.5;
-        float wave2 = cos(time * freq2 + offset2) * amplitude2 * 0.5;
-        float wave3 = sin(time * freq3 + offset3) * amplitude3 * 0.5;
+        // Clamp time and wave intensity to prevent explosions
+        float safeTime = mod(time, 6.28318); // Keep time within 0-2π
+        float safeWaveIntensity = clamp(waveIntensity, 0.0, 2.0);
         
-        // Convert current direction to radians
-        float dirRad = radians(currentDirection);
+        // Calculate wave values - keep them very small
+        float wave1 = sin(safeTime * freq1 + offset1) * amplitude1 * 0.1;
+        float wave2 = cos(safeTime * freq2 + offset2) * amplitude2 * 0.1;
+        float wave3 = sin(safeTime * freq3 + offset3) * amplitude3 * 0.1;
         
-        // Create smaller, more controlled undulation
-        float undulationFreq1 = 2.0;
-        float undulationFreq2 = 4.0;
+        // Convert current direction to radians and clamp
+        float dirRad = radians(clamp(currentDirection, -360.0, 360.0));
         
-        float undulationX = sin(heightFactor * undulationFreq1 + time * freq1 + offset1) * 0.3 * waveIntensity * heightFactor;
-        float undulationZ = cos(heightFactor * undulationFreq1 + time * freq1 + offset1 + 0.5) * 0.2 * waveIntensity * heightFactor;
+        // Create very small, controlled undulation
+        float undulationX = sin(heightFactor * 2.0 + safeTime * freq1 + offset1) * 0.1 * safeWaveIntensity * heightFactor;
+        float undulationZ = cos(heightFactor * 2.0 + safeTime * freq1 + offset1 + 1.0) * 0.1 * safeWaveIntensity * heightFactor;
         
-        // Apply directional current influence - much smaller values
-        float currentInfluenceX = (wave1 + wave2 * 0.5) * waveIntensity * heightFactor * 0.3;
-        float currentInfluenceZ = (wave2 + wave3 * 0.5) * waveIntensity * heightFactor * 0.3;
+        // Apply directional current influence - very small values
+        float currentInfluenceX = wave1 * safeWaveIntensity * heightFactor * 0.1;
+        float currentInfluenceZ = wave2 * safeWaveIntensity * heightFactor * 0.1;
         
-        // Combine undulation with current direction
-        float finalBendX = (undulationX + currentInfluenceX) * cos(dirRad);
-        float finalBendZ = (undulationZ + currentInfluenceZ) * sin(dirRad);
+        // Combine and clamp the final bending
+        float finalBendX = clamp((undulationX + currentInfluenceX) * cos(dirRad), -1.0, 1.0);
+        float finalBendZ = clamp((undulationZ + currentInfluenceZ) * sin(dirRad), -1.0, 1.0);
         
-        // Apply bending to position - keep it small
-        vec3 bentPosition = originalPosition + vec3(finalBendX, 0.0, finalBendZ);
+        // Apply bending to position - very conservative
+        vec3 bentPosition = originalPosition + vec3(finalBendX * 0.5, 0.0, finalBendZ * 0.5);
         
         // Apply instance transformations
         vec3 scaledPosition = bentPosition * instanceScale;
         vec3 rotatedPosition = rotateY(instanceRotation.y) * scaledPosition;
         vec3 finalPosition = rotatedPosition + instancePosition;
         
-        // Ensure we're not moving the kelp too far from its base
-        finalPosition.y = max(finalPosition.y, instancePosition.y - 1.0);
+        // Safety check - ensure Y position is reasonable
+        finalPosition.y = clamp(finalPosition.y, instancePosition.y - 5.0, instancePosition.y + instanceScale.y + 5.0);
         
         // Transform to world space
         vec4 worldPosition = modelMatrix * vec4(finalPosition, 1.0);
@@ -389,11 +389,22 @@ function initializeKelpInstances() {
 function updateGPUKelp(deltaTime) {
     if (!instancedKelp || !kelpMaterial) return;
     
-    // Update shader uniforms
-    kelpMaterial.uniforms.time.value += deltaTime;
+    // Update shader uniforms - clamp time to prevent overflow
+    kelpMaterial.uniforms.time.value = (kelpMaterial.uniforms.time.value + deltaTime) % (Math.PI * 4);
     kelpMaterial.uniforms.waveSpeed.value = waveSpeed;
     kelpMaterial.uniforms.waveIntensity.value = waveIntensity;
     kelpMaterial.uniforms.currentDirection.value = currentDirection;
+    
+    // Debug output occasionally
+    if (Math.random() < 0.001) { // Very rarely
+        console.log('GPU Kelp Debug:', {
+            time: kelpMaterial.uniforms.time.value,
+            waveSpeed: waveSpeed,
+            waveIntensity: waveIntensity,
+            kelpVisible: instancedKelp.visible,
+            instanceCount: instancedKelp.count
+        });
+    }
 }
 
 function checkGPUCapabilities() {
@@ -917,8 +928,21 @@ window.kelpDebug = {
             console.log('- Material exists:', !!kelpMaterial);
             console.log('- Geometry exists:', !!kelpTemplateGeometry);
             console.log('- Instance count:', instancedKelp.count);
-            console.log('- Time uniform:', kelpMaterial.uniforms.time.value);
-            console.log('- Wave intensity:', kelpMaterial.uniforms.waveIntensity.value);
+            console.log('- Visible:', instancedKelp.visible);
+            console.log('- Position:', instancedKelp.position);
+            console.log('- Scale:', instancedKelp.scale);
+            if (kelpMaterial && kelpMaterial.uniforms) {
+                console.log('- Time uniform:', kelpMaterial.uniforms.time.value);
+                console.log('- Wave intensity:', kelpMaterial.uniforms.waveIntensity.value);
+                console.log('- Wave speed:', kelpMaterial.uniforms.waveSpeed.value);
+            }
+            
+            // Check if kelp is in camera view
+            const cameraPos = camera.position;
+            const kelpBounds = new THREE.Box3().setFromObject(instancedKelp);
+            console.log('- Camera position:', cameraPos);
+            console.log('- Kelp bounds:', kelpBounds);
+            
         } else {
             console.log('CPU Kelp Status:');
             console.log('- Kelp array length:', kelp.length);
