@@ -2,8 +2,8 @@ console.log('🌊 Ocean Surface Wave System Loading...');
 
 // Surface wave configuration
 const SURFACE_CONFIG = {
-  width: 400,
-  height: 400,
+  width: 1000,
+  height: 1000,
   segments: 128,
   surfaceHeight: 40,        // Height above ground plane
   waveAmplitude: 0.8,       // Maximum wave height
@@ -43,7 +43,8 @@ function initializeOceanSurface() {
     opacity: SURFACE_CONFIG.opacity,
     shininess: 100,
     specular: 0x222222,
-    wireframe: SURFACE_CONFIG.wireframe
+    wireframe: SURFACE_CONFIG.wireframe,
+    side: THREE.DoubleSide  // Make visible from both sides
   });
 
   // Create the mesh
@@ -51,7 +52,7 @@ function initializeOceanSurface() {
   
   // Position the surface above the ground
   oceanSurface.position.y = SURFACE_CONFIG.surfaceHeight;
-  oceanSurface.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+  oceanSurface.rotation.x = Math.PI / 2; // Rotate to face downward (view from below)
   
   // Store original vertex positions for wave calculations
   const positions = surfaceGeometry.attributes.position;
