@@ -7,7 +7,7 @@ const PLANE_CONFIG = {
     width: 2000,
     height: 2000,
     segments: 256,
-    yPosition: 50,
+    yPosition: 70,
     amplitude: 1.0,        // Reduced for smaller waves
     frequency: 0.05,       // Increased for more wave parts
     speed: 1.0,
@@ -32,14 +32,26 @@ const oceanVertexShader = `
         vUv = uv;
         vec3 newPosition = position;
 
+        // Calculate distance from center for horizon curve effect
+        float distanceFromCenter = sqrt(newPosition.x * newPosition.x + newPosition.y * newPosition.y);
+        float maxDistance = 2000.0; // Start curving after this distance
+        float horizonCurve = 0.0;
+        
+        if (distanceFromCenter > maxDistance) {
+            float excessDistance = distanceFromCenter - maxDistance;
+            // Quadratic curve down toward the ground
+            horizonCurve = -pow(excessDistance * 0.001, 2.0) * 50.0;
+        }
+        
         // Add noise for randomization
         float noise1 = sin(newPosition.x * 0.003 + newPosition.y * 0.002) * 0.3;
         float noise2 = cos(newPosition.x * 0.007 - newPosition.y * 0.005) * 0.2;
         float randomOffset = noise1 + noise2;
         
         // Calculate multiple wave patterns with randomized frequencies
-        float wave1 = sin(newPosition.x * frequency * (1.0 + randomOffset * 0.7) + time * speed) * amplitude;
-        float wave2 = cos(newPosition.y * frequency * (1.2 + randomOffset * 0.2) + time * speed * 1.3) * amplitude * 0.7;
+        // TODO: Add directional bias here once we know the particle/kelp direction
+        float wave1 = sin(newPosition.x * frequency * (1.0 + randomOffset * 0.5) + time * speed) * amplitude;
+        float wave2 = cos(newPosition.y * frequency * (1.2 + randomOffset * 0.3) + time * speed * 1.3) * amplitude * 0.7;
         float wave3 = sin((newPosition.x + newPosition.y) * frequency * (0.8 + randomOffset * 0.4) + time * speed * 0.9) * amplitude * 0.5;
         float wave4 = cos((newPosition.x * 1.3 - newPosition.y * 0.7) * frequency * (1.5 + randomOffset * 0.2) + time * speed * 1.1) * amplitude * 0.4;
         float wave5 = sin((newPosition.y * 1.1 + newPosition.x * 0.6) * frequency * (1.8 + randomOffset * 0.6) + time * speed * 0.7) * amplitude * 0.3;
@@ -51,11 +63,11 @@ const oceanVertexShader = `
         // Combine waves for more interesting motion
         float totalWave = wave1 + wave2 + wave3 + wave4 + wave5 + wave6 + wave7;
 
+        // Apply wave displacement and horizon curve
+        newPosition.z += totalWave + horizonCurve;
+        
         // Pass the wave displacement to fragment shader
         vWaveHeight = totalWave;
-
-        // Apply wave displacement along the Z-axis
-        newPosition.z += totalWave;
 
         vec4 mvPosition = modelViewMatrix * vec4(newPosition, 1.0);
         vViewPosition = -mvPosition.xyz;
