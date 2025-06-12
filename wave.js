@@ -1,3 +1,5 @@
+console.log('🌊 Wave.js loaded - VERSION 2.0');
+
 // Also allow passing scene as parameter
 function initializeOceanSurfaceWithScene(sceneParam) {
   const sceneRef = sceneParam;
