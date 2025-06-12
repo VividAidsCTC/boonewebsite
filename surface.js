@@ -6,8 +6,8 @@ let oscillatingTime = 0;
 const PLANE_CONFIG = {
     width: 2000,
     height: 2000,
-    segments: 256,
-    yPosition: 70,
+    segments: 512,
+    yPosition: 50,
     amplitude: 1.0,        // Reduced for smaller waves
     frequency: 0.05,       // Increased for more wave parts
     speed: 1.0,
@@ -32,18 +32,10 @@ const oceanVertexShader = `
         vUv = uv;
         vec3 newPosition = position;
 
-        // Calculate distance from center for curving effect
+        // Calculate distance from center for wave scaling
         float distanceFromCenter = length(newPosition.xy);
         float maxDistance = 2000.0; // Half the width/height
-        float curveStart = 1500.0;   // Start curving at this distance
         
-        // Calculate curve factor - more curve as we get further from center
-        float curveFactor = 0.0;
-        if (distanceFromCenter > curveStart) {
-            float curveAmount = (distanceFromCenter - curveStart) / (maxDistance - curveStart);
-            curveFactor = curveAmount * curveAmount * 150.0; // Quadratic curve downward
-        }
-
         // Add noise for randomization
         float noise1 = sin(newPosition.x * 0.003 + newPosition.y * 0.002) * 0.3;
         float noise2 = cos(newPosition.x * 0.007 - newPosition.y * 0.005) * 0.2;
@@ -68,8 +60,8 @@ const oceanVertexShader = `
         // Pass the wave displacement to fragment shader
         vWaveHeight = totalWave;
 
-        // Apply wave displacement along the Z-axis, then add curve
-        newPosition.z += totalWave - curveFactor;
+        // Apply wave displacement along the Z-axis
+        newPosition.z += totalWave;
 
         vec4 mvPosition = modelViewMatrix * vec4(newPosition, 1.0);
         vViewPosition = -mvPosition.xyz;
@@ -130,6 +122,32 @@ function createOscillatingPlane() {
         PLANE_CONFIG.segments,
         PLANE_CONFIG.segments
     );
+
+    // Manually curve the geometry vertices
+    const positions = geometry.attributes.position.array;
+    const vertexCount = positions.length / 3;
+    
+    for (let i = 0; i < vertexCount; i++) {
+        const x = positions[i * 3];
+        const y = positions[i * 3 + 1];
+        const z = positions[i * 3 + 2];
+        
+        // Calculate distance from center
+        const distanceFromCenter = Math.sqrt(x * x + y * y);
+        const maxDistance = PLANE_CONFIG.height / 2; // 2000
+        const curveStart = 1500;
+        
+        // Apply curve - push vertices down as they get further from center
+        if (distanceFromCenter > curveStart) {
+            const curveAmount = (distanceFromCenter - curveStart) / (maxDistance - curveStart);
+            const curveFactor = curveAmount * curveAmount * 150; // Quadratic curve
+            positions[i * 3 + 2] = z - curveFactor; // Lower the Z position
+        }
+    }
+    
+    // Update the geometry
+    geometry.attributes.position.needsUpdate = true;
+    geometry.computeVertexNormals(); // Recalculate normals for proper lighting
 
     const material = new THREE.ShaderMaterial({
         uniforms: {
