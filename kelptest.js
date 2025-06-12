@@ -463,6 +463,8 @@ function loadGLTFKelp() {
                         `,
                         transparent: true,
                         side: THREE.DoubleSide
+                        fog: false,
+                        lights: false
                     });
                     child.material = kelpMaterial;
 
