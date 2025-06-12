@@ -7,7 +7,7 @@ const PLANE_CONFIG = {
     width: 1000,           // Same as your ground plane
     height: 1000,          // Same as your ground plane
     segments: 128,         // More segments for smoother waves
-    yPosition: 9,          // 10 units above ground (ground is at y = -1)
+    yPosition: 70,          // 10 units above ground (ground is at y = -1)
     amplitude: 2.0,        // Larger wave height for visibility
     frequency: 0.01,       // Lower frequency for larger waves
     speed: 1.0,            // Animation speed
