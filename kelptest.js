@@ -281,10 +281,12 @@ function setupTextureControls() {
 setTimeout(() => {
     loadSeafloorTextures(); // Load your textures
     
-    // Initialize ocean surface
+    // Initialize ocean surface with the scene variable
     if (typeof OceanSurface !== 'undefined') {
-        OceanSurface.initialize();
-        console.log('Ocean surface initialized');
+        OceanSurface.initializeWithScene(scene);
+        console.log('Ocean surface initialized with scene');
+    } else {
+        console.error('OceanSurface not found - check if wave.js is loaded');
     }
 }, 1000);
 
