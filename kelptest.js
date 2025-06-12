@@ -78,51 +78,43 @@ const kelpVertexShader = `
         float offset3 = animationData3.x;
         
         // Calculate height factor (0 at bottom, 1 at top)
-        float heightFactor = (originalPosition.y + 0.5) / 1.0; // Normalized kelp height
+        // Fix the height calculation to work with cylinder geometry
+        float heightFactor = clamp((originalPosition.y + 0.5) / 1.0, 0.0, 1.0);
         vHeightFactor = heightFactor;
         
-        // Calculate wave values
-        float wave1 = sin(time * freq1 + offset1) * amplitude1;
-        float wave2 = cos(time * freq2 + offset2) * amplitude2;
-        float wave3 = sin(time * freq3 + offset3) * amplitude3;
+        // Calculate wave values - keep them reasonable
+        float wave1 = sin(time * freq1 + offset1) * amplitude1 * 0.5;
+        float wave2 = cos(time * freq2 + offset2) * amplitude2 * 0.5;
+        float wave3 = sin(time * freq3 + offset3) * amplitude3 * 0.5;
         
         // Convert current direction to radians
-        float dirRad = currentDirection * 3.14159265 / 180.0;
+        float dirRad = radians(currentDirection);
         
-        // Create undulation along the kelp height
-        float undulationFreq1 = 3.0;
-        float undulationFreq2 = 6.0;
-        float undulationFreq3 = 9.0;
+        // Create smaller, more controlled undulation
+        float undulationFreq1 = 2.0;
+        float undulationFreq2 = 4.0;
         
-        float undulationX = (
-            sin(heightFactor * undulationFreq1 + time * freq1 + offset1) * 0.8 +
-            sin(heightFactor * undulationFreq2 + time * freq2 + offset2) * 0.4 +
-            sin(heightFactor * undulationFreq3 + time * freq3 + offset3) * 0.2
-        ) * waveIntensity * heightFactor;
+        float undulationX = sin(heightFactor * undulationFreq1 + time * freq1 + offset1) * 0.3 * waveIntensity * heightFactor;
+        float undulationZ = cos(heightFactor * undulationFreq1 + time * freq1 + offset1 + 0.5) * 0.2 * waveIntensity * heightFactor;
         
-        float undulationZ = (
-            cos(heightFactor * undulationFreq1 + time * freq1 + offset1 + 0.785) * 0.6 +
-            cos(heightFactor * undulationFreq2 + time * freq2 + offset2 + 1.047) * 0.3 +
-            cos(heightFactor * undulationFreq3 + time * freq3 + offset3 + 0.524) * 0.15
-        ) * waveIntensity * heightFactor;
-        
-        // Apply directional current influence
-        float currentInfluenceX = (wave1 + wave2 * 0.5) * waveIntensity * heightFactor * heightFactor;
-        float currentInfluenceZ = (wave2 + wave3 * 0.5) * waveIntensity * heightFactor * heightFactor;
+        // Apply directional current influence - much smaller values
+        float currentInfluenceX = (wave1 + wave2 * 0.5) * waveIntensity * heightFactor * 0.3;
+        float currentInfluenceZ = (wave2 + wave3 * 0.5) * waveIntensity * heightFactor * 0.3;
         
         // Combine undulation with current direction
-        float finalBendX = (undulationX + currentInfluenceX) * cos(dirRad) + 
-                           (undulationZ + currentInfluenceZ) * sin(dirRad) * 0.3;
-        float finalBendZ = (undulationZ + currentInfluenceZ) * sin(dirRad) + 
-                           (undulationX + currentInfluenceX) * cos(dirRad) * 0.3;
+        float finalBendX = (undulationX + currentInfluenceX) * cos(dirRad);
+        float finalBendZ = (undulationZ + currentInfluenceZ) * sin(dirRad);
         
-        // Apply bending to position
+        // Apply bending to position - keep it small
         vec3 bentPosition = originalPosition + vec3(finalBendX, 0.0, finalBendZ);
         
         // Apply instance transformations
         vec3 scaledPosition = bentPosition * instanceScale;
         vec3 rotatedPosition = rotateY(instanceRotation.y) * scaledPosition;
         vec3 finalPosition = rotatedPosition + instancePosition;
+        
+        // Ensure we're not moving the kelp too far from its base
+        finalPosition.y = max(finalPosition.y, instancePosition.y - 1.0);
         
         // Transform to world space
         vec4 worldPosition = modelMatrix * vec4(finalPosition, 1.0);
@@ -349,30 +341,30 @@ function initializeKelpInstances() {
         const i4 = i * 4;
         const i2 = i * 2;
         
-        // Position (spread across seafloor)
-        instancePositions[i3] = (Math.random() - 0.5) * 200;     // x
+        // Position (spread across seafloor) - more reasonable distribution
+        instancePositions[i3] = (Math.random() - 0.5) * 150;     // x
         instancePositions[i3 + 1] = -1;                          // y (seafloor level)
-        instancePositions[i3 + 2] = (Math.random() - 0.5) * 200; // z
+        instancePositions[i3 + 2] = (Math.random() - 0.5) * 150; // z
         
         // Rotation (random Y rotation)
         instanceRotations[i3] = 0;                               // x
         instanceRotations[i3 + 1] = Math.random() * Math.PI * 2; // y
         instanceRotations[i3 + 2] = 0;                           // z
         
-        // Scale (random size)
-        const scale = 3 + Math.random() * 15;
+        // Scale (more reasonable random size)
+        const scale = 5 + Math.random() * 10; // Smaller scale range
         instanceScales[i3] = scale;     // x
         instanceScales[i3 + 1] = scale; // y
         instanceScales[i3 + 2] = scale; // z
         
-        // Animation data
-        animationData1[i4] = 0.8 + Math.random() * 0.6;     // freq1
-        animationData1[i4 + 1] = 1.1 + Math.random() * 0.8; // freq2
-        animationData1[i4 + 2] = 0.5 + Math.random() * 0.4; // freq3
-        animationData1[i4 + 3] = 0.8 + Math.random() * 0.6; // amplitude1
+        // Animation data - smaller, more controlled values
+        animationData1[i4] = 0.5 + Math.random() * 0.3;     // freq1 (slower)
+        animationData1[i4 + 1] = 0.7 + Math.random() * 0.4; // freq2 (slower)
+        animationData1[i4 + 2] = 0.3 + Math.random() * 0.2; // freq3 (slower)
+        animationData1[i4 + 3] = 0.2 + Math.random() * 0.3; // amplitude1 (smaller)
         
-        animationData2[i4] = 0.6 + Math.random() * 0.5;     // amplitude2
-        animationData2[i4 + 1] = 0.4 + Math.random() * 0.3; // amplitude3
+        animationData2[i4] = 0.1 + Math.random() * 0.2;     // amplitude2 (smaller)
+        animationData2[i4 + 1] = 0.05 + Math.random() * 0.1; // amplitude3 (smaller)
         animationData2[i4 + 2] = Math.random() * Math.PI * 2; // offset1
         animationData2[i4 + 3] = Math.random() * Math.PI * 2; // offset2
         
@@ -917,5 +909,50 @@ window.kelpDebug = {
         const count = isGPUMode ? KELP_COUNT : kelp.length;
         console.log(`Current mode: ${mode}, Kelp count: ${count}`);
         console.log(`Wave speed: ${waveSpeed}, Wave intensity: ${waveIntensity}, Direction: ${currentDirection}`);
+    },
+    testKelp: () => {
+        if (isGPUMode && instancedKelp) {
+            console.log('GPU Kelp Status:');
+            console.log('- InstancedMesh exists:', !!instancedKelp);
+            console.log('- Material exists:', !!kelpMaterial);
+            console.log('- Geometry exists:', !!kelpTemplateGeometry);
+            console.log('- Instance count:', instancedKelp.count);
+            console.log('- Time uniform:', kelpMaterial.uniforms.time.value);
+            console.log('- Wave intensity:', kelpMaterial.uniforms.waveIntensity.value);
+        } else {
+            console.log('CPU Kelp Status:');
+            console.log('- Kelp array length:', kelp.length);
+            console.log('- First kelp position:', kelp[0] ? kelp[0].position : 'None');
+        }
+    },
+    resetCamera: () => {
+        distance = 30;
+        targetRotationX = 0;
+        targetRotationY = 0;
+        rotationX = 0;
+        rotationY = 0;
+        console.log('Camera reset to default position');
+    },
+    showBounds: () => {
+        // Add wireframe boxes around kelp areas to visualize bounds
+        const boxGeometry = new THREE.BoxGeometry(150, 2, 150);
+        const boxMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0xff0000, 
+            wireframe: true,
+            transparent: true,
+            opacity: 0.3
+        });
+        const boundingBox = new THREE.Mesh(boxGeometry, boxMaterial);
+        boundingBox.position.set(0, 0, 0);
+        scene.add(boundingBox);
+        console.log('Added bounding box visualization');
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            scene.remove(boundingBox);
+            boxGeometry.dispose();
+            boxMaterial.dispose();
+            console.log('Removed bounding box visualization');
+        }, 5000);
     }
 };
