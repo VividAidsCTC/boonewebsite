@@ -1,9 +1,8 @@
-// Safe Kelp System - No Custom Shaders to Avoid Fog Issues
-// Global variables
+    // Global variables
 let scene, camera, renderer;
 let kelp = [];
-let waveSpeed = 0.8;
-let waveIntensity = 0.6;
+let waveSpeed = .8;
+let waveIntensity = .6;
 let currentDirection = 45;
 let time = 0;
 
@@ -13,7 +12,7 @@ let rotationX = 0, rotationY = 0;
 let distance = 30;
 let isMouseDown = false;
 
-// Floor texture variables
+// Add these variables to your global variables section
 let floorTextures = {
     diffuse: null,
     normal: null,
@@ -22,14 +21,15 @@ let floorTextures = {
 };
 let textureLoader = new THREE.TextureLoader();
 
-// Floor creation functions
+// Replace your existing floor creation code in initializeScene() with this enhanced version
 function createTexturedFloor() {
     log('Creating textured seafloor...');
     
-    const floorGeometry = new THREE.PlaneGeometry(1000, 1000, 256, 256);
+    const floorGeometry = new THREE.PlaneGeometry(1000, 1000, 256, 256); // Higher resolution for displacement
     
+    // Default material (will be updated when textures load)
     let floorMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x302114,
+        color: 0x302114, // Richer saddle brown
         shininess: 2,
         specular: 0x332211
     });
@@ -37,26 +37,31 @@ function createTexturedFloor() {
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -1;
-    floor.receiveShadow = true;
+    floor.receiveShadow = true; // Enable shadow receiving
     scene.add(floor);
     
+    // Store reference for texture updates
     window.seafloor = floor;
+    
     return floor;
 }
 
+// Function to load and apply textures to the ground plane
 function loadGroundTextures(texturePaths) {
     log('Loading ground textures...');
     
     const loadPromises = [];
     
+    // Load diffuse/albedo texture
     if (texturePaths.diffuse) {
         const diffusePromise = new Promise((resolve, reject) => {
             textureLoader.load(
                 texturePaths.diffuse,
                 (texture) => {
+                    // Configure texture settings
                     texture.wrapS = THREE.RepeatWrapping;
                     texture.wrapT = THREE.RepeatWrapping;
-                    texture.repeat.set(8, 8);
+                    texture.repeat.set(8, 8); // Adjust repetition as needed
                     floorTextures.diffuse = texture;
                     log('Diffuse texture loaded successfully');
                     resolve(texture);
@@ -71,6 +76,7 @@ function loadGroundTextures(texturePaths) {
         loadPromises.push(diffusePromise);
     }
     
+    // Load normal map
     if (texturePaths.normal) {
         const normalPromise = new Promise((resolve, reject) => {
             textureLoader.load(
@@ -93,11 +99,59 @@ function loadGroundTextures(texturePaths) {
         loadPromises.push(normalPromise);
     }
     
+    // Load roughness map
+    if (texturePaths.roughness) {
+        const roughnessPromise = new Promise((resolve, reject) => {
+            textureLoader.load(
+                texturePaths.roughness,
+                (texture) => {
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(8, 8);
+                    floorTextures.roughness = texture;
+                    log('Roughness map loaded successfully');
+                    resolve(texture);
+                },
+                (progress) => log(`Roughness map loading: ${Math.round((progress.loaded/progress.total)*100)}%`),
+                (error) => {
+                    log('Error loading roughness map: ' + error);
+                    reject(error);
+                }
+            );
+        });
+        loadPromises.push(roughnessPromise);
+    }
+    
+    // Load displacement map
+    if (texturePaths.displacement) {
+        const displacementPromise = new Promise((resolve, reject) => {
+            textureLoader.load(
+                texturePaths.displacement,
+                (texture) => {
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(8, 8);
+                    floorTextures.displacement = texture;
+                    log('Displacement map loaded successfully');
+                    resolve(texture);
+                },
+                (progress) => log(`Displacement map loading: ${Math.round((progress.loaded/progress.total)*100)}%`),
+                (error) => {
+                    log('Error loading displacement map: ' + error);
+                    reject(error);
+                }
+            );
+        });
+        loadPromises.push(displacementPromise);
+    }
+    
+    // Wait for all textures to load, then update the material
     Promise.allSettled(loadPromises).then(() => {
         updateFloorMaterial();
     });
 }
 
+// Function to update the floor material with loaded textures
 function updateFloorMaterial() {
     if (!window.seafloor) {
         log('Error: Seafloor mesh not found');
@@ -106,38 +160,131 @@ function updateFloorMaterial() {
     
     log('Updating floor material with textures...');
     
+    // Create new material with textures
     const materialProps = {
-        color: floorTextures.diffuse ? 0xffffff : 0x302114,
+        color: floorTextures.diffuse ? 0xffffff : 0x302114, // White if using diffuse texture, brown otherwise
         shininess: 5,
         specular: 0x333333
     };
     
+    // Apply textures if they exist
     if (floorTextures.diffuse) {
         materialProps.map = floorTextures.diffuse;
     }
     
     if (floorTextures.normal) {
         materialProps.normalMap = floorTextures.normal;
-        materialProps.normalScale = new THREE.Vector2(0.5, 0.5);
+        materialProps.normalScale = new THREE.Vector2(0.5, 0.5); // Adjust normal intensity
     }
     
+    if (floorTextures.roughness) {
+        // For MeshPhongMaterial, we can simulate roughness by adjusting shininess
+        materialProps.shininess = 1; // Lower shininess for rougher appearance
+    }
+    
+    if (floorTextures.displacement) {
+        materialProps.displacementMap = floorTextures.displacement;
+        materialProps.displacementScale = 0.5; // Adjust displacement intensity
+    }
+    
+    // Create new material
     const newMaterial = new THREE.MeshPhongMaterial(materialProps);
-    window.seafloor.material.dispose();
+    
+    // Replace the old material
+    window.seafloor.material.dispose(); // Clean up old material
     window.seafloor.material = newMaterial;
     
     log('Floor material updated with textures');
 }
 
+// Utility function to change texture repetition
+function setTextureRepeat(repeatX, repeatY) {
+    Object.values(floorTextures).forEach(texture => {
+        if (texture) {
+            texture.repeat.set(repeatX, repeatY);
+        }
+    });
+    log(`Texture repeat set to ${repeatX}x${repeatY}`);
+}
+
+// Example usage function - call this to load your textures
 function loadSeafloorTextures() {
+    // Example texture paths - replace with your actual texture URLs
     const texturePaths = {  
-        diffuse: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_Color.jpg',
-        normal: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_NormalGL.jpg',
-        roughness: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_Roughness.jpg',
-        displacement: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_Displacement.jpg'
+        diffuse: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_Color.jpg', // Main color/albedo texture
+        normal: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_NormalGL.jpg', // Normal map for surface detail
+        roughness: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_Roughness.jpg', // Roughness map
+        displacement: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_Displacement.jpg', // Height/displacement map
+        ao: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/textures/Ground059_1K-JPG_AmbientOcclusion.jpg'
     };
     
     loadGroundTextures(texturePaths);
 }
+
+// Modified initializeScene function - replace your floor creation section with this:
+function initializeSceneWithTextures() {
+    // ... (keep all your existing scene setup code until the floor creation part)
+    
+    // Replace the floor creation section with:
+    const floor = createTexturedFloor();
+    
+    
+
+    
+}
+
+// Add this to your control setup if you want runtime texture loading controls
+function setupTextureControls() {
+    // Create file input for texture loading (add to your HTML)
+    const textureInput = document.getElementById('textureInput');
+    if (textureInput) {
+        textureInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const texture = textureLoader.load(e.target.result);
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(8, 8);
+                    
+                    // Apply as diffuse texture
+                    floorTextures.diffuse = texture;
+                    updateFloorMaterial();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Add repeat controls
+    const repeatXSlider = document.getElementById('repeatX');
+    const repeatYSlider = document.getElementById('repeatY');
+    
+    if (repeatXSlider && repeatYSlider) {
+        repeatXSlider.addEventListener('input', function() {
+            setTextureRepeat(parseFloat(this.value), parseFloat(repeatYSlider.value));
+        });
+        
+        repeatYSlider.addEventListener('input', function() {
+            setTextureRepeat(parseFloat(repeatXSlider.value), parseFloat(this.value));
+        });
+    }
+}
+
+
+
+
+
+
+// In your initializeScene() function, after creating the floor:
+setTimeout(() => {
+    loadSeafloorTextures(); // Load your textures
+}, 1000);
+
+
+
+
 
 // Debug logging function
 function log(message) {
@@ -145,219 +292,79 @@ function log(message) {
     const debugDiv = document.getElementById('debug');
     if (debugDiv) {
         debugDiv.innerHTML += message + '<br>';
-        debugDiv.scrollTop = debugDiv.scrollHeight;
     }
 }
 
-// Scene initialization
+// Wait for DOM and start the application
+document.addEventListener('DOMContentLoaded', function() {
+    log('DOM loaded, initializing kelp forest...');
+
+    if (typeof THREE === 'undefined') {
+        console.error('Three.js not loaded');
+        return;
+    }
+    
+    initializeScene();
+    setupControls();
+
+    // Try to load GLTF first, fallback to cylinders if it fails
+    setTimeout(() => {
+        loadGLTFKelp();
+    }, 500);
+});
+
 function initializeScene() {
     log('Initializing Three.js scene...');
 
+    // Scene setup
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    // Background
+    // Create blue gradient background
     const canvas = document.createElement('canvas');
     canvas.width = 1000;
     const context = canvas.getContext('2d');
     context.fillStyle = '#2f6992';
     context.fillRect(0, 0, 1000, 1000);
+
+
     const gradientTexture = new THREE.CanvasTexture(canvas);
     scene.background = gradientTexture;
 
-    // Add to DOM
     const container = document.getElementById('container');
-    if (!container) {
-        log('ERROR: Container element not found');
-        return;
-    }
     container.appendChild(renderer.domElement);
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0x6699bb, 0.3);
+    // Brighter ocean lighting - warmer tones to preserve brown seafloor
+    const ambientLight = new THREE.AmbientLight(0x6699bb, 0.3); // Less blue, more neutral
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xaaccdd, 0.8);
+    const sunLight = new THREE.DirectionalLight(0xaaccdd, 0.8); // Lighter blue-white
     sunLight.position.set(0, 50, 10);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
     scene.add(sunLight);
 
-    const rimLight1 = new THREE.DirectionalLight(0x7799cc, 0.3);
+    const rimLight1 = new THREE.DirectionalLight(0x7799cc, 0.3); // Warmer blue
     rimLight1.position.set(20, 20, 0);
     scene.add(rimLight1);
 
-    const rimLight2 = new THREE.DirectionalLight(0x6688bb, 0.25);
+    const rimLight2 = new THREE.DirectionalLight(0x6688bb, 0.25); // Even warmer
     rimLight2.position.set(-20, 15, 0);
     scene.add(rimLight2);
 
-    const floorLight = new THREE.DirectionalLight(0x7aacbe, 0.2);
-    floorLight.position.set(0, -30, 0);
+    // Add a warm fill light specifically for the seafloor
+    const floorLight = new THREE.DirectionalLight(0x7aacbe, 0.2); // Blue tone
+    floorLight.position.set(0, -30, 0); // From below to light the floor
     scene.add(floorLight);
 
-    // Create floor
     const floor = createTexturedFloor();
-    
-    // Load textures after delay
+}
+
+// In your initializeScene() function, after creating the floor:
     setTimeout(() => {
-        loadSeafloorTextures();
+        loadSeafloorTextures(); // Load your textures
     }, 1000);
 
-    log('Scene initialized successfully');
-}
-
-// CPU-based vertex deformation function for smooth kelp animation
-function deformKelp(kelpMesh, time) {
-    if (kelpMesh.userData.isGLTF) {
-        // Handle GLTF models - traverse and deform each mesh
-        const userData = kelpMesh.userData;
-        const dirRad = (currentDirection * Math.PI) / 180;
-        
-        // Keep base position fixed
-        kelpMesh.position.x = userData.originalX;
-        kelpMesh.position.z = userData.originalZ;
-        kelpMesh.position.y = userData.originalY;
-        
-        // Calculate wave values
-        const wave1 = Math.sin(time * userData.frequency + userData.offset) * userData.amplitude;
-        const wave2 = Math.cos(time * userData.frequency * 1.3 + userData.offset + Math.PI/3) * userData.amplitude * 0.7;
-        const wave3 = Math.sin(time * userData.frequency * 0.7 + userData.offset + Math.PI/2) * userData.amplitude * 0.5;
-        
-        // Deform each mesh in the GLTF model
-        kelpMesh.traverse((child) => {
-            if (child.isMesh && child.geometry && child.geometry.userData.originalPositions) {
-                const geometry = child.geometry;
-                const positions = geometry.attributes.position;
-                const originalPositions = geometry.userData.originalPositions;
-                const height = geometry.userData.height || 1;
-                const minY = geometry.userData.minY || -0.5;
-                
-                // Deform each vertex
-                for (let i = 0; i < positions.count; i++) {
-                    const i3 = i * 3;
-                    
-                    // Get original position
-                    const originalX = originalPositions[i3];
-                    const originalY = originalPositions[i3 + 1];
-                    const originalZ = originalPositions[i3 + 2];
-                    
-                    // Calculate height factor (0 at bottom, 1 at top)
-                    const heightFactor = Math.max(0, Math.min(1, (originalY - minY) / height));
-                    
-                    // Create undulating motion with multiple frequencies
-                    const undulationX = (
-                        Math.sin(heightFactor * 2.5 + time * userData.frequency + userData.offset) * 0.4 +
-                        Math.sin(heightFactor * 5.0 + time * userData.frequency * 1.2 + userData.offset) * 0.2 +
-                        Math.sin(heightFactor * 8.0 + time * userData.frequency * 0.8 + userData.offset) * 0.1
-                    ) * waveIntensity * heightFactor;
-                    
-                    const undulationZ = (
-                        Math.cos(heightFactor * 2.5 + time * userData.frequency + userData.offset + Math.PI/4) * 0.3 +
-                        Math.cos(heightFactor * 5.0 + time * userData.frequency * 1.2 + userData.offset + Math.PI/3) * 0.15 +
-                        Math.cos(heightFactor * 8.0 + time * userData.frequency * 0.8 + userData.offset + Math.PI/6) * 0.075
-                    ) * waveIntensity * heightFactor;
-                    
-                    // Apply directional current influence
-                    const currentInfluenceX = (wave1 + wave2 * 0.5) * waveIntensity * heightFactor * heightFactor * 0.3;
-                    const currentInfluenceZ = (wave2 + wave3 * 0.5) * waveIntensity * heightFactor * heightFactor * 0.3;
-                    
-                    // Combine undulation with current direction
-                    const finalBendX = (undulationX + currentInfluenceX) * Math.cos(dirRad) + 
-                                       (undulationZ + currentInfluenceZ) * Math.sin(dirRad) * 0.3;
-                    const finalBendZ = (undulationZ + currentInfluenceZ) * Math.sin(dirRad) + 
-                                       (undulationX + currentInfluenceX) * Math.cos(dirRad) * 0.3;
-                    
-                    // Apply deformation with bounds checking
-                    const newX = originalX + Math.max(-2, Math.min(2, finalBendX));
-                    const newZ = originalZ + Math.max(-2, Math.min(2, finalBendZ));
-                    
-                    positions.setX(i, newX);
-                    positions.setY(i, originalY);
-                    positions.setZ(i, newZ);
-                }
-                
-                // Mark for update
-                positions.needsUpdate = true;
-                geometry.computeVertexNormals();
-            }
-        });
-
-    } else {
-        // Handle cylinder geometry (fallback)
-        const geometry = kelpMesh.geometry;
-        const positions = geometry.attributes.position;
-        const originalPositions = geometry.userData.originalPositions;
-        const userData = kelpMesh.userData;
-
-        // Keep base fixed
-        kelpMesh.position.x = userData.originalX;
-        kelpMesh.position.z = userData.originalZ;
-        kelpMesh.position.y = userData.originalY;
-
-        // Convert direction to radians
-        const dirRad = (currentDirection * Math.PI) / 180;
-
-        // Calculate wave values
-        const wave1 = Math.sin(time * userData.frequency + userData.offset) * userData.amplitude;
-        const wave2 = Math.cos(time * userData.frequency * 1.3 + userData.offset) * userData.amplitude * 0.7;
-        const wave3 = Math.sin(time * userData.frequency * 0.7 + userData.offset) * userData.amplitude * 0.5;
-
-        // Deform each vertex
-        for (let i = 0; i < positions.count; i++) {
-            const i3 = i * 3;
-
-            // Get original position
-            const originalX = originalPositions[i3];
-            const originalY = originalPositions[i3 + 1];
-            const originalZ = originalPositions[i3 + 2];
-
-            // Calculate height factor (0 at bottom, 1 at top)
-            const heightFactor = (originalY + userData.height/2) / userData.height;
-            
-            // Create undulating displacement
-            const undulationX = (
-                Math.sin(heightFactor * 2.5 + time * userData.frequency + userData.offset) * 0.5 +
-                Math.sin(heightFactor * 5.0 + time * userData.frequency * 1.2 + userData.offset) * 0.25 +
-                Math.sin(heightFactor * 8.0 + time * userData.frequency * 0.8 + userData.offset) * 0.125
-            ) * waveIntensity * heightFactor;
-            
-            const undulationZ = (
-                Math.cos(heightFactor * 2.5 + time * userData.frequency + userData.offset + Math.PI/4) * 0.4 +
-                Math.cos(heightFactor * 5.0 + time * userData.frequency * 1.2 + userData.offset + Math.PI/3) * 0.2 +
-                Math.cos(heightFactor * 8.0 + time * userData.frequency * 0.8 + userData.offset + Math.PI/6) * 0.1
-            ) * waveIntensity * heightFactor;
-
-            // Apply directional current influence
-            const currentInfluenceX = (wave1 + wave2 * 0.7) * waveIntensity * heightFactor * heightFactor * 0.4;
-            const currentInfluenceZ = (wave2 + wave3 * 0.8) * waveIntensity * heightFactor * heightFactor * 0.4;
-
-            // Combine undulation with current direction
-            const finalBendX = (undulationX + currentInfluenceX) * Math.cos(dirRad) + 
-                               (undulationZ + currentInfluenceZ) * Math.sin(dirRad) * 0.3;
-            const finalBendZ = (undulationZ + currentInfluenceZ) * Math.sin(dirRad) + 
-                               (undulationX + currentInfluenceX) * Math.cos(dirRad) * 0.3;
-
-            // Apply deformation with bounds checking
-            const newX = originalX + Math.max(-3, Math.min(3, finalBendX));
-            const newZ = originalZ + Math.max(-3, Math.min(3, finalBendZ));
-
-            positions.setX(i, newX);
-            positions.setY(i, originalY);
-            positions.setZ(i, newZ);
-        }
-
-        // Mark for update
-        positions.needsUpdate = true;
-        geometry.computeVertexNormals();
-    }
-}
-
-// GLTF Kelp loading with standard materials only
 function loadGLTFKelp() {
     log('Attempting to load GLTF kelp model...');
 
@@ -376,62 +383,61 @@ function loadGLTFKelp() {
             log('GLTF model loaded successfully');
             const template = gltf.scene;
 
-            // Compute bounding box
+            // Compute overall bounding box for the entire model
             const box = new THREE.Box3().setFromObject(template);
             const size = new THREE.Vector3();
             box.getSize(size);
 
-            log(`GLTF Model size: X=${size.x.toFixed(3)}, Y=${size.y.toFixed(3)}, Z=${size.z.toFixed(3)}`);
+            log(`=== GLTF MODEL ANALYSIS ===`);
+            log(`Overall model size: X=${size.x.toFixed(3)}, Y=${size.y.toFixed(3)}, Z=${size.z.toFixed(3)}`);
 
-            // Apply standard Phong material to all meshes - NO SHADERS
+            // Apply dark green-brown kelp material to all meshes
             template.traverse((child) => {
                 if (child.isMesh && child.geometry) {
+                    // Ensure geometry has position attributes we can modify
                     child.geometry.computeBoundingBox();
                     const geometry = child.geometry;
                     
-                    // Store original positions for CPU deformation
+                    // Store original positions for deformation
                     const positions = geometry.attributes.position.array.slice();
                     geometry.userData.originalPositions = positions;
                     
+                    // Calculate bounding box for height calculations
                     const bbox = geometry.boundingBox;
                     geometry.userData.minY = bbox.min.y;
                     geometry.userData.maxY = bbox.max.y;
                     geometry.userData.height = bbox.max.y - bbox.min.y;
                     
-                    // Use ONLY standard MeshPhongMaterial - guaranteed to work with fog
+                    // Apply dark green-brown kelp material
                     const kelpMaterial = new THREE.MeshPhongMaterial({
-                        color: 0x1c4709, // Dark green
+                        color: 0x1c4709, // Dark green-brown
                         transparent: true,
                         opacity: 0.85,
-                        shininess: 10,
-                        side: THREE.DoubleSide
+                        shininess: 10
                     });
-                    
                     child.material = kelpMaterial;
-                    child.castShadow = true;
-                    child.receiveShadow = true;
                     
-                    log(`Mesh prepared with standard Phong material`);
+                    log(`Prepared mesh for vertex deformation: height=${geometry.userData.height.toFixed(2)}`);
                 }
             });
 
-            // Position template on seafloor
-            template.position.y = -1;
+            // Position template so bottom touches ground (Y=0)
+            template.position.y = -1; // Place on seafloor level
 
-            // Create kelp instances
-            for(let i = 0; i < 40; i++) {
+            // Create 500 kelp instances
+            for(let i = 0; i < 100; i++) {
                 const kelpInstance = template.clone();
 
-                // Position kelp
-                kelpInstance.position.x = (Math.random() - 0.5) * 80;
-                kelpInstance.position.z = (Math.random() - 0.5) * 80;
-                kelpInstance.position.y = -1;
+                // Position kelp on the seafloor in tighter formation
+                kelpInstance.position.x = (Math.random() - 0.5) * 100; // Reduced from 40 to 15
+                kelpInstance.position.z = (Math.random() - 0.5) * 100; // Reduced from 40 to 15
+                kelpInstance.position.y = -1; // Place on seafloor level
 
-                // Scale
-                const scale = 2 + Math.random() * 6;
+                // Scale between 0.75x and 1.5x the original size
+                const scale = 3 + Math.random() * 10; // Random scale between 3x and 13x
                 kelpInstance.scale.setScalar(scale);
 
-                // Rotation
+                // Random rotation only
                 kelpInstance.rotation.y = Math.random() * Math.PI * 2;
 
                 // Store animation data
@@ -439,17 +445,24 @@ function loadGLTFKelp() {
                     originalX: kelpInstance.position.x,
                     originalZ: kelpInstance.position.z,
                     originalY: kelpInstance.position.y,
-                    offset: Math.random() * Math.PI * 2,
-                    frequency: 0.5 + Math.random() * 0.5,
-                    amplitude: 0.3 + Math.random() * 0.4,
+                    offset1: Math.random() * Math.PI * 2,
+                    offset2: Math.random() * Math.PI * 2,
+                    offset3: Math.random() * Math.PI * 2,
+                    freq1: 0.8 + Math.random() * 0.6,
+                    freq2: 1.1 + Math.random() * 0.8,
+                    freq3: 0.5 + Math.random() * 0.4,
+                    amplitude1: 0.8 + Math.random() * 0.6,
+                    amplitude2: 0.6 + Math.random() * 0.5,
+                    amplitude3: 0.4 + Math.random() * 0.3,
                     isGLTF: true
                 };
 
-                // Prepare cloned geometries for independent deformation
+                // Prepare cloned geometries for vertex deformation
                 kelpInstance.traverse((child) => {
                     if (child.isMesh && child.geometry) {
+                        // Clone geometry so each instance can be deformed independently
                         child.geometry = child.geometry.clone();
-                        // Copy userData from template
+                        // Copy userData from the original template mesh
                         template.traverse((originalChild) => {
                             if (originalChild.isMesh && originalChild.geometry && 
                                 originalChild.geometry.userData.originalPositions &&
@@ -458,7 +471,7 @@ function loadGLTFKelp() {
                                 child.geometry.userData.minY = originalChild.geometry.userData.minY;
                                 child.geometry.userData.maxY = originalChild.geometry.userData.maxY;
                                 child.geometry.userData.height = originalChild.geometry.userData.height;
-                                return;
+                                return; // Found match, exit traverse
                             }
                         });
                     }
@@ -466,9 +479,11 @@ function loadGLTFKelp() {
 
                 scene.add(kelpInstance);
                 kelp.push(kelpInstance);
+
+                log(`Instance ${i}: scale=${scale.toFixed(2)}`);
             }
 
-            log(`Created ${kelp.length} GLTF kelp instances with CPU vertex deformation`);
+            log(`Created ${kelp.length} GLTF kelp instances with vertex deformation`);
             startAnimation();
         },
         function(progress) {
@@ -483,42 +498,64 @@ function loadGLTFKelp() {
     );
 }
 
-// Fallback kelp creation
 function createFallbackKelp() {
     log('Creating fallback cylinder kelp...');
 
-    for(let i = 0; i < 30; i++) {
-        const kelpHeight = 15;
-        const geometry = new THREE.CylinderGeometry(0.15, 0.3, kelpHeight, 8, 15);
-        
+    for(let i = 0; i < 35; i++) {
+        // Base kelp dimensions
+        const baseKelpHeight = 20;
+        const baseBottomRadius = 0.4;
+        const baseTopRadius = 0.2;
+
+        // Scale between 0.75x and 1.5x the original size
+        const scale = 0.75 + Math.random() * 0.75;
+        const kelpHeight = baseKelpHeight * scale;
+        const bottomRadius = baseBottomRadius * scale;
+        const topRadius = baseTopRadius * scale;
+
+        // Create custom geometry for bending kelp
+        const segments = 20;
+        const radialSegments = 8;
+
+        const geometry = new THREE.CylinderGeometry(topRadius, bottomRadius, kelpHeight, radialSegments, segments);
+
         // Store original positions for deformation
         const positions = geometry.attributes.position.array.slice();
         geometry.userData.originalPositions = positions;
         geometry.userData.height = kelpHeight;
-        
-        // Standard MeshPhongMaterial only
+
+        // Brighter, less transparent kelp material
+        const greenVariation = 0.7 + Math.random() * 0.5;
         const kelpMaterial = new THREE.MeshPhongMaterial({
-            color: 0x1c4709,
+            color: new THREE.Color(0.15 * greenVariation, 0.6 * greenVariation, 0.25 * greenVariation),
             transparent: true,
-            opacity: 0.85,
-            shininess: 10
+            opacity: 0.95,
+            shininess: 15
         });
 
         const kelpMesh = new THREE.Mesh(geometry, kelpMaterial);
-        kelpMesh.position.x = (Math.random() - 0.5) * 60;
-        kelpMesh.position.z = (Math.random() - 0.5) * 60;
-        kelpMesh.position.y = kelpHeight / 2;
-        kelpMesh.castShadow = true;
-        kelpMesh.receiveShadow = true;
 
+        // Position kelp in tighter formation
+        kelpMesh.position.x = (Math.random() - 0.5) * 15; // Reduced from 40 to 15
+        kelpMesh.position.z = (Math.random() - 0.5) * 15; // Reduced from 40 to 15
+        kelpMesh.position.y = kelpHeight / 2;
+
+        // Store animation data
         kelpMesh.userData = {
             originalX: kelpMesh.position.x,
             originalZ: kelpMesh.position.z,
             originalY: kelpMesh.position.y,
             height: kelpHeight,
-            offset: Math.random() * Math.PI * 2,
-            frequency: 0.5 + Math.random() * 0.5,
-            amplitude: 0.3 + Math.random() * 0.4,
+            segments: segments,
+            offset1: Math.random() * Math.PI * 2,
+            offset2: Math.random() * Math.PI * 2,
+            offset3: Math.random() * Math.PI * 2,
+            freq1: 0.8 + Math.random() * 0.6,
+            freq2: 1.1 + Math.random() * 0.8,
+            freq3: 0.5 + Math.random() * 0.4,
+            amplitude1: 0.8 + Math.random() * 0.6,
+            amplitude2: 0.6 + Math.random() * 0.5,
+            amplitude3: 0.4 + Math.random() * 0.3,
             isGLTF: false
         };
 
@@ -526,11 +563,10 @@ function createFallbackKelp() {
         kelp.push(kelpMesh);
     }
 
-    log(`Created ${kelp.length} fallback kelp plants`);
+    log(`Created ${kelp.length} cylinder kelp plants`);
     startAnimation();
 }
 
-// Controls setup
 function setupControls() {
     // Mouse controls
     document.addEventListener('mousedown', function() {
@@ -554,7 +590,7 @@ function setupControls() {
         distance = Math.max(8, Math.min(60, distance));
     });
 
-    log('Camera controls initialized');
+    log('Manual camera controls initialized successfully');
 
     // Slider controls
     const waveSpeedSlider = document.getElementById('waveSpeed');
@@ -577,21 +613,22 @@ function setupControls() {
         currentDirectionSlider.addEventListener('input', function(e) {
             currentDirection = parseFloat(e.target.value);
         
-            // Update particle direction if available
+        // ALSO UPDATE PARTICLE DIRECTION
             if (typeof OceanParticles !== 'undefined') {
                 const radians = (currentDirection * Math.PI) / 180;
                 const x = Math.cos(radians);
                 const z = Math.sin(radians);
                 OceanParticles.setDirection(x, 0.1, z);
-            }
-        });
-    }
+        }
+    });
+}
 
-    // Fallback button
+    // Fallback button (if it exists)
     const fallbackButton = document.getElementById('useFallback');
     if (fallbackButton) {
         fallbackButton.addEventListener('click', function() {
             log('User requested fallback kelp');
+            // Clear existing kelp
             kelp.forEach(k => scene.remove(k));
             kelp = [];
             createFallbackKelp();
@@ -599,31 +636,182 @@ function setupControls() {
     }
 }
 
-// Animation loop with CPU-based kelp deformation
+// Function to deform kelp geometry using vertex manipulation with undulating motion
+function deformKelp(kelpMesh, time) {
+    if (kelpMesh.userData.isGLTF) {
+        // Vertex-level deformation for GLTF models with undulation
+        const userData = kelpMesh.userData;
+        const dirRad = (currentDirection * Math.PI) / 180;
+        
+        // Keep base completely fixed
+        kelpMesh.position.x = userData.originalX;
+        kelpMesh.position.z = userData.originalZ;
+        kelpMesh.position.y = userData.originalY;
+        
+        // Calculate wave values for undulation
+        const wave1 = Math.sin(time * userData.freq1 + userData.offset1) * userData.amplitude1;
+        const wave2 = Math.cos(time * userData.freq2 + userData.offset2) * userData.amplitude2;
+        const wave3 = Math.sin(time * userData.freq3 + userData.offset3) * userData.amplitude3;
+        
+        // Deform each mesh in the GLTF model
+        kelpMesh.traverse((child) => {
+            if (child.isMesh && child.geometry && child.geometry.userData.originalPositions) {
+                const geometry = child.geometry;
+                const positions = geometry.attributes.position;
+                const originalPositions = geometry.userData.originalPositions;
+                const height = geometry.userData.height;
+                const minY = geometry.userData.minY;
+                
+                // Deform each vertex
+                for (let i = 0; i < positions.count; i++) {
+                    const i3 = i * 3;
+                    
+                    // Get original position
+                    const originalX = originalPositions[i3];
+                    const originalY = originalPositions[i3 + 1];
+                    const originalZ = originalPositions[i3 + 2];
+                    
+                    // Calculate height factor (0 at bottom, 1 at top)
+                    const heightFactor = Math.max(0, (originalY - minY) / height);
+                    
+                    // Create multiple undulation points along the height
+                    const undulationFreq1 = 3.0; // Low frequency wave (big curves)
+                    const undulationFreq2 = 6.0; // Medium frequency wave
+                    const undulationFreq3 = 9.0; // High frequency wave (small ripples)
+                    
+                    // Calculate undulating displacement with multiple sine waves
+                    const undulationX = (
+                        Math.sin(heightFactor * undulationFreq1 + time * userData.freq1 + userData.offset1) * 0.8 +
+                        Math.sin(heightFactor * undulationFreq2 + time * userData.freq2 + userData.offset2) * 0.4 +
+                        Math.sin(heightFactor * undulationFreq3 + time * userData.freq3 + userData.offset3) * 0.2
+                    ) * waveIntensity * heightFactor;
+                    
+                    const undulationZ = (
+                        Math.cos(heightFactor * undulationFreq1 + time * userData.freq1 + userData.offset1 + Math.PI/4) * 0.6 +
+                        Math.cos(heightFactor * undulationFreq2 + time * userData.freq2 + userData.offset2 + Math.PI/3) * 0.3 +
+                        Math.cos(heightFactor * undulationFreq3 + time * userData.freq3 + userData.offset3 + Math.PI/6) * 0.15
+                    ) * waveIntensity * heightFactor;
+                    
+                    // Apply directional current influence
+                    const currentInfluenceX = (wave1 + wave2 * 0.5) * waveIntensity * heightFactor * heightFactor;
+                    const currentInfluenceZ = (wave2 + wave3 * 0.5) * waveIntensity * heightFactor * heightFactor;
+                    
+                    // Combine undulation with current direction
+                    const finalBendX = (undulationX + currentInfluenceX) * Math.cos(dirRad) + 
+                                       (undulationZ + currentInfluenceZ) * Math.sin(dirRad) * 0.3;
+                    const finalBendZ = (undulationZ + currentInfluenceZ) * Math.sin(dirRad) + 
+                                       (undulationX + currentInfluenceX) * Math.cos(dirRad) * 0.3;
+                    
+                    // Set new position - bottom stays fixed, creates snake-like motion
+                    positions.setX(i, originalX + finalBendX);
+                    positions.setY(i, originalY);
+                    positions.setZ(i, originalZ + finalBendZ);
+                }
+                
+                // Mark for update
+                positions.needsUpdate = true;
+                geometry.computeVertexNormals();
+            }
+        });
+
+    } else {
+        // Vertex deformation for cylinder geometry (fallback) with undulation
+        const geometry = kelpMesh.geometry;
+        const positions = geometry.attributes.position;
+        const originalPositions = geometry.userData.originalPositions;
+        const userData = kelpMesh.userData;
+
+        // Keep base fixed
+        kelpMesh.position.x = userData.originalX;
+        kelpMesh.position.z = userData.originalZ;
+        kelpMesh.position.y = userData.originalY;
+
+        // Convert direction to radians
+        const dirRad = (currentDirection * Math.PI) / 180;
+
+        // Calculate wave values
+        const wave1 = Math.sin(time * userData.freq1 + userData.offset1) * userData.amplitude1;
+        const wave2 = Math.cos(time * userData.freq2 + userData.offset2) * userData.amplitude2;
+        const wave3 = Math.sin(time * userData.freq3 + userData.offset3) * userData.amplitude3;
+
+        // Deform each vertex
+        for (let i = 0; i < positions.count; i++) {
+            const i3 = i * 3;
+
+            // Get original position
+            const originalX = originalPositions[i3];
+            const originalY = originalPositions[i3 + 1];
+            const originalZ = originalPositions[i3 + 2];
+
+            // Calculate height factor (0 at bottom, 1 at top)
+            const heightFactor = (originalY + userData.height/2) / userData.height;
+            
+            // Create multiple undulation points along the height
+            const undulationFreq1 = 2.5; // Low frequency wave (big curves)
+            const undulationFreq2 = 5.0; // Medium frequency wave
+            const undulationFreq3 = 8.0; // High frequency wave (small ripples)
+            
+            // Calculate undulating displacement with multiple sine waves
+            const undulationX = (
+                Math.sin(heightFactor * undulationFreq1 + time * userData.freq1 + userData.offset1) * 1.0 +
+                Math.sin(heightFactor * undulationFreq2 + time * userData.freq2 + userData.offset2) * 0.5 +
+                Math.sin(heightFactor * undulationFreq3 + time * userData.freq3 + userData.offset3) * 0.25
+            ) * waveIntensity * heightFactor;
+            
+            const undulationZ = (
+                Math.cos(heightFactor * undulationFreq1 + time * userData.freq1 + userData.offset1 + Math.PI/4) * 0.8 +
+                Math.cos(heightFactor * undulationFreq2 + time * userData.freq2 + userData.offset2 + Math.PI/3) * 0.4 +
+                Math.cos(heightFactor * undulationFreq3 + time * userData.freq3 + userData.offset3 + Math.PI/6) * 0.2
+            ) * waveIntensity * heightFactor;
+
+            // Apply directional current influence
+            const currentInfluenceX = (wave1 + wave2 * 0.7) * waveIntensity * heightFactor * heightFactor;
+            const currentInfluenceZ = (wave2 + wave3 * 0.8) * waveIntensity * heightFactor * heightFactor;
+
+            // Combine undulation with current direction
+            const finalBendX = (undulationX + currentInfluenceX) * Math.cos(dirRad) + 
+                               (undulationZ + currentInfluenceZ) * Math.sin(dirRad) * 0.3;
+            const finalBendZ = (undulationZ + currentInfluenceZ) * Math.sin(dirRad) + 
+                               (undulationX + currentInfluenceX) * Math.cos(dirRad) * 0.3;
+
+            // Set new position
+            positions.setX(i, originalX + finalBendX);
+            positions.setY(i, originalY);
+            positions.setZ(i, originalZ + finalBendZ);
+        }
+
+        // Mark for update
+        positions.needsUpdate = true;
+        geometry.computeVertexNormals();
+    }
+}
+
 function animate() {
     requestAnimationFrame(animate);
 
     time += 0.01 * waveSpeed;
 
-    // CPU-based kelp deformation - no shader uniforms to cause fog errors
     kelp.forEach(function(k) {
         deformKelp(k, time);
     });
 
-    // Update other systems
+    // Update oscillating plane (now updates shader uniform)
     if (typeof OscillatingPlane !== 'undefined') {
         OscillatingPlane.update(0.01 * waveSpeed); 
     }
 
+    // Update particles (if applicable)
     if (typeof OceanParticles !== 'undefined') {
-        OceanParticles.update(0.01 * waveSpeed);
+        OceanParticles.update(.01 * waveSpeed);
     }
 
+    // Update ocean surface waves (if applicable - this is likely now handled by OscillatingPlane)
+    // You might remove this line if OscillatingPlane is your primary surface
     if (typeof OceanSurface !== 'undefined') {
-        OceanSurface.update(0.01 * waveSpeed);
+        OceanSurface.update(.01 * waveSpeed);
     }
 
-    // Update camera
+    // Update camera position based on mouse controls - lower Y position
     rotationX += (targetRotationX - rotationX) * 0.1;
     rotationY += (targetRotationY - rotationY) * 0.1;
 
@@ -632,9 +820,9 @@ function animate() {
     camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
     camera.lookAt(0, 3, 0);
 
-    // Safe render - no shader materials to cause fog issues
     renderer.render(scene, camera);
 }
+
 
 function startAnimation() {
     log('Starting animation...');
@@ -650,26 +838,6 @@ function startAnimation() {
     animate();
 }
 
-// Initialize application
-document.addEventListener('DOMContentLoaded', function() {
-    log('DOM loaded, initializing kelp forest...');
-
-    if (typeof THREE === 'undefined') {
-        console.error('Three.js not loaded');
-        log('ERROR: Three.js not loaded');
-        return;
-    }
-    
-    log('Three.js loaded successfully');
-    initializeScene();
-    setupControls();
-
-    // Load kelp after short delay
-    setTimeout(() => {
-        loadGLTFKelp();
-    }, 500);
-});
-
 // Handle window resize
 window.addEventListener('resize', function() {
     if (camera && renderer) {
@@ -678,39 +846,3 @@ window.addEventListener('resize', function() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
 });
-
-// Debug utilities
-window.kelpDebug = {
-    info: () => {
-        console.log('Kelp Forest Status:');
-        console.log('- Kelp count:', kelp.length);
-        console.log('- Wave speed:', waveSpeed);
-        console.log('- Wave intensity:', waveIntensity);
-        console.log('- Current direction:', currentDirection);
-        console.log('- Time:', time);
-        console.log('- Using CPU vertex deformation (no shaders)');
-    },
-    resetCamera: () => {
-        distance = 30;
-        targetRotationX = 0;
-        targetRotationY = 0;
-        rotationX = 0;
-        rotationY = 0;
-        console.log('Camera reset');
-    },
-    reload: () => {
-        kelp.forEach(k => scene.remove(k));
-        kelp = [];
-        loadGLTFKelp();
-    },
-    toggleWireframe: () => {
-        kelp.forEach(k => {
-            k.traverse(child => {
-                if (child.material) {
-                    child.material.wireframe = !child.material.wireframe;
-                }
-            });
-        });
-        console.log('Wireframe toggled');
-    }
-};
