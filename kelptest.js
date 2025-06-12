@@ -325,15 +325,10 @@ function initializeScene() {
     // Create blue gradient background
     const canvas = document.createElement('canvas');
     canvas.width = 1000;
-    canvas.height = 1000;
     const context = canvas.getContext('2d');
-
-    const gradient = context.createLinearGradient(0, 0, 0, 1000);
-    gradient.addColorStop(0, '#2f9264');
-    gradient.addColorStop(1, '#2f9264');
-
-    context.fillStyle = gradient;
+    context.fillStyle = '#2f9264';
     context.fillRect(0, 0, 1000, 1000);
+
 
     const gradientTexture = new THREE.CanvasTexture(canvas);
     scene.background = gradientTexture;
