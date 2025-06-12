@@ -798,6 +798,10 @@ function animate() {
 
     kelp.forEach(function(k) {
         deformKelp(k, time);
+
+    if (typeof OscillatingPlane !== 'undefined') {
+        OscillatingPlane.update(0.01 * waveSpeed);
+    }
     });
 
     // Update particles
