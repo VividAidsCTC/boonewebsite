@@ -422,6 +422,7 @@ function loadGLTFKelpGPU() {
     if (typeof THREE.GLTFLoader === 'undefined') {
         log('GLTFLoader not available, using procedural kelp');
         createGPUKelpSystem();
+        startAnimation(); // Start animation here
         return;
     }
 
@@ -462,6 +463,7 @@ function loadGLTFKelpGPU() {
             }
             
             createGPUKelpSystem();
+            startAnimation(); // Start animation here
         },
         function(progress) {
             if (progress.total > 0) {
@@ -471,6 +473,7 @@ function loadGLTFKelpGPU() {
         function(error) {
             log('Error loading GLTF, using procedural kelp: ' + error.message);
             createGPUKelpSystem();
+            startAnimation(); // Start animation here too
         }
     );
 }
@@ -521,6 +524,7 @@ function createFallbackKelp() {
     }
 
     log(`Created ${kelp.length} fallback CPU kelp plants`);
+    startAnimation(); // Start animation after creating kelp
 }
 
 function deformKelp(kelpMesh, time) {
@@ -851,11 +855,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (typeof THREE === 'undefined') {
         console.error('Three.js not loaded');
+        log('ERROR: Three.js not loaded');
         return;
     }
     
+    log('Three.js loaded successfully');
     initializeScene();
     setupControls();
+
+    // Check if container exists
+    const container = document.getElementById('container');
+    if (!container) {
+        log('ERROR: Container element not found');
+        return;
+    }
 
     // Try GPU kelp first, fallback to CPU if needed
     setTimeout(() => {
@@ -865,7 +878,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             log('GPU instancing not supported - using CPU fallback');
             createFallbackKelp();
-            startAnimation();
         }
     }, 500);
 });
