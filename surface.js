@@ -6,13 +6,13 @@ let oscillatingTime = 0;
 const PLANE_CONFIG = {
     width: 1000,           // Same as your ground plane
     height: 1000,          // Same as your ground plane
-    segments: 64,          // Number of segments for smooth waves
+    segments: 128,         // More segments for smoother waves
     yPosition: 9,          // 10 units above ground (ground is at y = -1)
-    amplitude: 0.5,        // Wave height
-    frequency: 0.02,       // Wave frequency
+    amplitude: 2.0,        // Larger wave height for visibility
+    frequency: 0.01,       // Lower frequency for larger waves
     speed: 1.0,            // Animation speed
-    opacity: 0.7,          // Transparency
-    color: 0xFFFFFF        // Ocean blue color
+    opacity: 0.6,          // Transparency
+    color: 0x4499dd        // Ocean blue color
 };
 
 function createOscillatingPlane() {
@@ -36,8 +36,8 @@ function createOscillatingPlane() {
         transparent: true,
         opacity: PLANE_CONFIG.opacity,
         side: THREE.DoubleSide,
-        shininess: 100,
-        specular: 0x222222
+        shininess: 50,
+        specular: 0x888888
     });
     
     // Create the mesh
@@ -50,14 +50,15 @@ function createOscillatingPlane() {
     // Add to scene
     scene.add(oscillatingPlane);
     
-    console.log('Oscillating plane created and added to scene');
+    console.log('Oscillating plane created and added to scene at Y:', PLANE_CONFIG.yPosition);
+    console.log('Plane has', positions.length / 3, 'vertices');
 }
 
 function updateOscillatingPlane(deltaTime) {
     if (!oscillatingPlane) return;
     
-    // Update time
-    oscillatingTime += deltaTime * PLANE_CONFIG.speed;
+    // Update time with more dramatic speed
+    oscillatingTime += deltaTime * PLANE_CONFIG.speed * 5; // Increased speed multiplier
     
     const geometry = oscillatingPlane.geometry;
     const positions = geometry.attributes.position;
@@ -67,21 +68,23 @@ function updateOscillatingPlane(deltaTime) {
     for (let i = 0; i < positions.count; i++) {
         const i3 = i * 3;
         
-        // Get original X and Z coordinates
+        // Get original X and Z coordinates (remember plane is rotated)
         const originalX = originalPositions[i3];
-        const originalZ = originalPositions[i3 + 2];
+        const originalY = originalPositions[i3 + 1]; // This is actually Z when rotated
+        const originalZ = originalPositions[i3 + 2]; // This is actually Y when rotated
         
-        // Calculate sine wave based on position and time
-        const waveX = Math.sin(originalX * PLANE_CONFIG.frequency + oscillatingTime) * PLANE_CONFIG.amplitude;
-        const waveZ = Math.cos(originalZ * PLANE_CONFIG.frequency + oscillatingTime * 0.7) * PLANE_CONFIG.amplitude * 0.5;
+        // Calculate multiple wave patterns
+        const wave1 = Math.sin(originalX * PLANE_CONFIG.frequency + oscillatingTime) * PLANE_CONFIG.amplitude;
+        const wave2 = Math.cos(originalY * PLANE_CONFIG.frequency * 0.7 + oscillatingTime * 1.3) * PLANE_CONFIG.amplitude * 0.6;
+        const wave3 = Math.sin((originalX + originalY) * PLANE_CONFIG.frequency * 0.5 + oscillatingTime * 0.8) * PLANE_CONFIG.amplitude * 0.4;
         
-        // Apply wave displacement to Y coordinate (up/down movement)
-        const waveHeight = waveX + waveZ;
+        // Combine waves for more interesting motion
+        const totalWave = wave1 + wave2 + wave3;
         
-        // Set new position (X and Z stay the same, only Y changes)
+        // Set new position - Z coordinate changes (up/down when plane is horizontal)
         positions.setX(i, originalX);
-        positions.setY(i, originalPositions[i3 + 1] + waveHeight);
-        positions.setZ(i, originalZ);
+        positions.setY(i, originalY);
+        positions.setZ(i, originalZ + totalWave);
     }
     
     // Mark positions for update
