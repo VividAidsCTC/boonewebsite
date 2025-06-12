@@ -793,7 +793,6 @@ function deformKelp(kelpMesh, time) {
     }
 }
 
-// Animation loop
 function animate() {
     requestAnimationFrame(animate);
 
@@ -803,10 +802,15 @@ function animate() {
         deformKelp(k, time);
     });
 
-        if (typeof OceanParticles !== 'undefined') {
+    // Update particles
+    if (typeof OceanParticles !== 'undefined') {
         OceanParticles.update(.01 * waveSpeed); // Use your existing deltaTime
     }
 
+    // Update ocean surface waves - ADD THIS LINE
+    if (typeof OceanSurface !== 'undefined') {
+        OceanSurface.update(.01 * waveSpeed); // Same deltaTime as particles
+    }
 
     // Update camera position based on mouse controls - lower Y position
     rotationX += (targetRotationX - rotationX) * 0.1;
