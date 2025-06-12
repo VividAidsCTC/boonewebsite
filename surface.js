@@ -116,18 +116,18 @@ const oceanFragmentShader = `
 function createOscillatingPlane() {
     console.log('Creating oscillating hemisphere with ShaderMaterial...');
 
-    // Create a hemisphere using SphereGeometry
+    // Create a hemisphere using SphereGeometry - flipped to face up
     const geometry = new THREE.SphereGeometry(
         PLANE_CONFIG.radius,
         PLANE_CONFIG.widthSegments,
         PLANE_CONFIG.heightSegments,
         0,                    // phiStart (horizontal start angle)
         Math.PI * 2,         // phiLength (horizontal sweep angle - full circle)
-        0,                    // thetaStart (vertical start angle)
-        Math.PI / 2          // thetaLength (vertical sweep angle - half sphere)
+        Math.PI / 2,         // thetaStart (vertical start angle - start from equator)
+        Math.PI / 2          // thetaLength (vertical sweep angle - half sphere upward)
     );
 
-    // Flatten the hemisphere slightly to make it more water-like
+    // Flatten the hemisphere to make it more water-like
     const positions = geometry.attributes.position.array;
     const vertexCount = positions.length / 3;
     
@@ -136,14 +136,14 @@ function createOscillatingPlane() {
         const y = positions[i * 3 + 1];
         const z = positions[i * 3 + 2];
         
-        // Flatten the Y component to make it less dome-like and more water surface-like
-        const flatteningFactor = 0.15; // Adjust this to control how flat the surface is
+        // Flatten the Y component to make it less dome-like
+        const flatteningFactor = 0.2; // Slightly more flattening
         positions[i * 3 + 1] = y * flatteningFactor;
     }
     
     // Update the geometry
     geometry.attributes.position.needsUpdate = true;
-    geometry.computeVertexNormals(); // Recalculate normals for proper lighting
+    geometry.computeVertexNormals();
 
     const material = new THREE.ShaderMaterial({
         uniforms: {
@@ -157,16 +157,30 @@ function createOscillatingPlane() {
         vertexShader: oceanVertexShader,
         fragmentShader: oceanFragmentShader,
         transparent: true,
-        side: THREE.DoubleSide
+        side: THREE.DoubleSide,
+        depthWrite: false    // This helps with transparency
     });
 
     oscillatingPlane = new THREE.Mesh(geometry, material);
     oscillatingPlane.position.y = PLANE_CONFIG.yPosition;
+    
+    // Add some debugging
+    console.log('Hemisphere position:', oscillatingPlane.position);
+    console.log('Hemisphere radius:', PLANE_CONFIG.radius);
+    console.log('Material color:', PLANE_CONFIG.color);
 
     scene.add(oscillatingPlane);
 
     console.log('Oscillating hemisphere created at Y:', PLANE_CONFIG.yPosition);
     console.log('Hemisphere has', geometry.attributes.position.count, 'vertices');
+    
+    // Create a simple test sphere to verify positioning
+    const testGeometry = new THREE.SphereGeometry(50, 16, 16);
+    const testMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+    const testSphere = new THREE.Mesh(testGeometry, testMaterial);
+    testSphere.position.set(0, PLANE_CONFIG.yPosition + 100, 0);
+    scene.add(testSphere);
+    console.log('Added red test sphere at:', testSphere.position);
 }
 
 function updateOscillatingPlane(deltaTime) {
