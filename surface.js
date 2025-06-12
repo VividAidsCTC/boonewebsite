@@ -7,7 +7,7 @@ const PLANE_CONFIG = {
     width: 2000,
     height: 2000,
     segments: 256,
-    yPosition: 70,
+    yPosition: 50,
     amplitude: 2.0,
     frequency: 0.01,
     speed: 1.0,
