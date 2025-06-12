@@ -1,10 +1,6 @@
-console.log('🌊 Wave.js loaded - VERSION 2.0');
-
 // Also allow passing scene as parameter
 function initializeOceanSurfaceWithScene(sceneParam) {
-  const sceneRef = sceneParam;
-  
-  if (!sceneRef) {
+  if (!sceneParam) {
     console.error('❌ No scene provided as parameter');
     return;
   }
@@ -49,7 +45,7 @@ function initializeOceanSurfaceWithScene(sceneParam) {
     });
   }
 
-  sceneRef.add(oceanSurface);
+  sceneParam.add(oceanSurface);
   console.log('✅ Ocean surface created with', positions.count, 'vertices');
 }console.log('🌊 Ocean Surface Wave System Loading...');
 
