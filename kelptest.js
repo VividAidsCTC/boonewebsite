@@ -326,7 +326,7 @@ function initializeScene() {
     const canvas = document.createElement('canvas');
     canvas.width = 1000;
     const context = canvas.getContext('2d');
-    context.fillStyle = '#2f6992';
+    context.fillStyle = '#ffffff';
     context.fillRect(0, 0, 1000, 1000);
 
 
