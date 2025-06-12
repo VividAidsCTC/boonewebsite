@@ -4,11 +4,11 @@ let oscillatingTime = 0;
 
 // Configuration for the oscillating plane
 const PLANE_CONFIG = {
-    width: 2000,
-    height: 2000,
+    width: 4000,
+    height: 4000,
     segments: 256,
-    yPosition: 50,
-    amplitude: 2.0,
+    yPosition: 55,
+    amplitude: 3.0,
     frequency: 0.01,
     speed: 1.0,
     opacity: 0.7,
@@ -24,6 +24,7 @@ const oceanVertexShader = `
 
     varying vec3 vNormal;
     varying vec3 vViewPosition;
+    varying vec3 vWorldPosition;
 
     void main() {
         vNormal = normal;
@@ -40,6 +41,10 @@ const oceanVertexShader = `
         // Apply wave displacement along the Z-axis
         newPosition.z += totalWave;
 
+        // Pass world position to fragment shader for foam calculation
+        vec4 worldPosition = modelMatrix * vec4(newPosition, 1.0);
+        vWorldPosition = worldPosition.xyz;
+
         vec4 mvPosition = modelViewMatrix * vec4(newPosition, 1.0);
         vViewPosition = -mvPosition.xyz;
 
@@ -51,16 +56,37 @@ const oceanVertexShader = `
 const oceanFragmentShader = `
     uniform vec3 color;
     uniform float opacity;
+    uniform float time;
 
     varying vec3 vNormal;
     varying vec3 vViewPosition;
+    varying vec3 vWorldPosition;
 
     void main() {
         vec3 normal = normalize(vNormal);
         vec3 lightDirection = normalize(vec3(0.0, 1.0, 0.0));
         float lightIntensity = max(0.0, dot(normal, lightDirection));
 
-        gl_FragColor = vec4(color * (0.5 + lightIntensity * 0.5), opacity);
+        // Calculate foam based on wave steepness and position
+        float waveHeight = vWorldPosition.z;
+        float foamThreshold = 1.5; // Adjust this to control foam amount
+        
+        // Create foam pattern using noise-like function
+        float foamNoise = sin(vWorldPosition.x * 0.1 + time * 2.0) * 
+                         cos(vWorldPosition.y * 0.15 + time * 1.5) * 
+                         sin((vWorldPosition.x + vWorldPosition.y) * 0.08 + time * 1.8);
+        
+        // Foam appears on wave crests
+        float foamFactor = smoothstep(foamThreshold - 0.5, foamThreshold + 0.5, waveHeight + foamNoise * 0.3);
+        
+        // Mix ocean color with white foam
+        vec3 foamColor = vec3(1.0, 1.0, 1.0);
+        vec3 finalColor = mix(color * (0.5 + lightIntensity * 0.5), foamColor, foamFactor * 0.8);
+        
+        // Increase opacity where there's foam for more visibility
+        float finalOpacity = opacity + foamFactor * 0.3;
+
+        gl_FragColor = vec4(finalColor, finalOpacity);
     }
 `;
 
