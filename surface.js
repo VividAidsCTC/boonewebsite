@@ -7,7 +7,7 @@ const PLANE_CONFIG = {
     width: 2000,
     height: 2000,
     segments: 256,
-    yPosition: 70,
+    yPosition: 55,
     amplitude: 1.0,        // Reduced for smaller waves
     frequency: 0.05,       // Increased for more wave parts
     speed: 1.0,
@@ -38,8 +38,8 @@ const oceanVertexShader = `
         float randomOffset = noise1 + noise2;
         
         // Calculate multiple wave patterns with randomized frequencies
-        float wave1 = sin(newPosition.x * frequency * (1.0 + randomOffset * 0.5) + time * speed) * amplitude;
-        float wave2 = cos(newPosition.y * frequency * (1.2 + randomOffset * 0.3) + time * speed * 1.3) * amplitude * 0.7;
+        float wave1 = sin(newPosition.x * frequency * (1.0 + randomOffset * 0.7) + time * speed) * amplitude;
+        float wave2 = cos(newPosition.y * frequency * (1.2 + randomOffset * 0.2) + time * speed * 1.3) * amplitude * 0.7;
         float wave3 = sin((newPosition.x + newPosition.y) * frequency * (0.8 + randomOffset * 0.4) + time * speed * 0.9) * amplitude * 0.5;
         float wave4 = cos((newPosition.x * 1.3 - newPosition.y * 0.7) * frequency * (1.5 + randomOffset * 0.2) + time * speed * 1.1) * amplitude * 0.4;
         float wave5 = sin((newPosition.y * 1.1 + newPosition.x * 0.6) * frequency * (1.8 + randomOffset * 0.6) + time * speed * 0.7) * amplitude * 0.3;
