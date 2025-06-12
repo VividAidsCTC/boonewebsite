@@ -1,4 +1,55 @@
-console.log('🌊 Ocean Surface Wave System Loading...');
+// Also allow passing scene as parameter
+function initializeOceanSurfaceWithScene(sceneParam) {
+  const sceneRef = sceneParam;
+  
+  if (!sceneRef) {
+    console.error('❌ No scene provided as parameter');
+    return;
+  }
+
+  console.log('🌊 Creating ocean surface with provided scene...');
+
+  // Create plane geometry with many segments for smooth waves
+  surfaceGeometry = new THREE.PlaneGeometry(
+    SURFACE_CONFIG.width,
+    SURFACE_CONFIG.height,
+    SURFACE_CONFIG.segments,
+    SURFACE_CONFIG.segments
+  );
+
+  // Create material with water-like properties
+  surfaceMaterial = new THREE.MeshPhongMaterial({
+    color: SURFACE_CONFIG.color,
+    transparent: true,
+    opacity: SURFACE_CONFIG.opacity,
+    shininess: 100,
+    specular: 0x222222,
+    wireframe: SURFACE_CONFIG.wireframe,
+    side: THREE.DoubleSide  // Make visible from both sides
+  });
+
+  // Create the mesh
+  oceanSurface = new THREE.Mesh(surfaceGeometry, surfaceMaterial);
+
+  // Position the surface above the ground
+  oceanSurface.position.y = SURFACE_CONFIG.surfaceHeight;
+  oceanSurface.rotation.x = Math.PI / 2; // Rotate to face downward (view from below)
+
+  // Store original vertex positions for wave calculations
+  const positions = surfaceGeometry.attributes.position;
+  oceanSurface.userData.originalPositions = [];
+
+  for (let i = 0; i < positions.count; i++) {
+    oceanSurface.userData.originalPositions.push({
+      x: positions.getX(i),
+      y: positions.getY(i),
+      z: positions.getZ(i)
+    });
+  }
+
+  sceneRef.add(oceanSurface);
+  console.log('✅ Ocean surface created with', positions.count, 'vertices');
+}console.log('🌊 Ocean Surface Wave System Loading...');
 
 // Surface wave configuration
 const SURFACE_CONFIG = {
