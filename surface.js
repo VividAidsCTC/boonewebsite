@@ -47,16 +47,16 @@ function createOscillatingSphere() {
     // Store flattened positions as original for wave calculations
     geometry.userData.originalPositions = positions.slice();
     
-    // Create material with transparency and better wave visibility
+    // Create material that supports vertex colors for white patches
     const material = new THREE.MeshPhongMaterial({
-        color: SPHERE_CONFIG.color,
         transparent: true,
         opacity: SPHERE_CONFIG.opacity,
         side: THREE.DoubleSide,
-        shininess: 100,        // Increased shininess for more reflective waves
-        specular: 0xffffff,    // White specular highlights (the "white waves")
-        emissive: 0x001122,    // Slight blue glow
-        wireframe: false       // Set to true for debugging wave structure
+        shininess: 100,
+        specular: 0xffffff,
+        emissive: 0x001122,
+        vertexColors: true,    // Enable vertex colors for white patches
+        wireframe: false
     });
     
     // Create the mesh
@@ -72,61 +72,61 @@ function createOscillatingSphere() {
     console.log('Sphere has', positions.length / 3, 'vertices');
 }
 
-// Wave generation parameters - randomized for each vertex
-let waveData = [];
+// White patch generation parameters
+let whitePatchData = [];
+const NUM_WHITE_PATCHES = 15; // Number of white streaky patches
 
-function initializeWaveData(vertexCount) {
-    console.log('Initializing wave data for', vertexCount, 'vertices');
-    waveData = [];
+function initializeWhitePatches() {
+    console.log('Initializing white patch data...');
+    whitePatchData = [];
     
-    for (let i = 0; i < vertexCount; i++) {
-        // Create 10 different wave types per vertex with random parameters
-        const waves = [];
-        for (let w = 0; w < 10; w++) {
-            waves.push({
-                // Wave type parameters
-                frequency: 0.002 + Math.random() * 0.008,  // Random frequency
-                amplitude: 0.5 + Math.random() * 2.0,      // Random amplitude
-                speed: 0.5 + Math.random() * 2.0,          // Random speed
-                phase: Math.random() * Math.PI * 2,        // Random phase offset
-                noiseScale: 0.001 + Math.random() * 0.005, // Noise scale
-                waveType: Math.floor(Math.random() * 5),   // 5 different wave patterns
-                direction: Math.random() * Math.PI * 2,    // Random direction
-                persistence: 0.3 + Math.random() * 0.7     // Wave persistence
-            });
-        }
-        waveData.push({
-            waves: waves,
-            baseNoise: Math.random() * 100,  // Base noise offset
-            intensity: 0.7 + Math.random() * 0.6  // Overall intensity multiplier
+    for (let i = 0; i < NUM_WHITE_PATCHES; i++) {
+        whitePatchData.push({
+            // Orbital parameters
+            orbitRadius: 50 + Math.random() * 400,        // Distance from center
+            orbitSpeed: 0.5 + Math.random() * 2.0,        // How fast it orbits
+            orbitAngle: Math.random() * Math.PI * 2,      // Starting angle
+            orbitHeight: Math.random() * 20 - 10,         // Y offset variation
+            
+            // Patch characteristics
+            patchWidth: 30 + Math.random() * 80,          // Width of the streak
+            patchLength: 80 + Math.random() * 200,        // Length of the streak
+            intensity: 0.5 + Math.random() * 0.5,         // Brightness intensity
+            
+            // Movement variation
+            wobbleSpeed: 0.3 + Math.random() * 0.7,       // Secondary movement
+            wobbleAmount: 5 + Math.random() * 15,         // How much wobble
+            
+            // Streak direction
+            streakAngle: Math.random() * Math.PI * 2      // Direction of the streak
         });
     }
-}
-
-// Noise function (simple pseudo-random)
-function noise(x, y, z, scale) {
-    const n = Math.sin(x * scale + y * scale * 1.3 + z * scale * 0.7) * 
-              Math.cos(y * scale * 1.7 + z * scale * 0.3) *
-              Math.sin(z * scale * 2.1 + x * scale * 0.9);
-    return n * 0.5 + 0.5; // Normalize to 0-1
 }
 
 function updateOscillatingSphere(deltaTime) {
     if (!oscillatingSphere) return;
     
-    // Update time with more dramatic speed
-    oscillatingTime += deltaTime * SPHERE_CONFIG.speed * 5;
+    // Update time
+    oscillatingTime += deltaTime * SPHERE_CONFIG.speed * 3;
     
     const geometry = oscillatingSphere.geometry;
     const positions = geometry.attributes.position;
     const originalPositions = geometry.userData.originalPositions;
     
-    // Initialize wave data if not done yet
-    if (waveData.length === 0) {
-        initializeWaveData(positions.count);
+    // Initialize white patches if not done yet
+    if (whitePatchData.length === 0) {
+        initializeWhitePatches();
     }
     
-    // Update each vertex to create complex wave patterns
+    // Create color attribute if it doesn't exist
+    if (!geometry.attributes.color) {
+        const colors = new Float32Array(positions.count * 3);
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    }
+    
+    const colors = geometry.attributes.color;
+    
+    // Update each vertex
     for (let i = 0; i < positions.count; i++) {
         const i3 = i * 3;
         
@@ -135,85 +135,77 @@ function updateOscillatingSphere(deltaTime) {
         const originalY = originalPositions[i3 + 1];
         const originalZ = originalPositions[i3 + 2];
         
-        // Get wave data for this vertex
-        const vertexWaves = waveData[i];
-        let totalWave = 0;
+        // Reset color to base ocean color
+        let finalRed = 0.3;   // Base ocean color
+        let finalGreen = 0.6;
+        let finalBlue = 0.9;
         
-        // Calculate 10 different wave types
-        for (let w = 0; w < vertexWaves.waves.length; w++) {
-            const wave = vertexWaves.waves[w];
-            let waveValue = 0;
+        // Check if this vertex should be affected by any white patches
+        for (let p = 0; p < whitePatchData.length; p++) {
+            const patch = whitePatchData[p];
             
-            // Different wave patterns based on type
-            switch (wave.waveType) {
-                case 0: // Radial waves
-                    const distanceFromCenter = Math.sqrt(originalX * originalX + originalZ * originalZ);
-                    waveValue = Math.sin(distanceFromCenter * wave.frequency + oscillatingTime * wave.speed + wave.phase);
-                    break;
-                    
-                case 1: // Directional waves
-                    const dirX = Math.cos(wave.direction);
-                    const dirZ = Math.sin(wave.direction);
-                    const projection = originalX * dirX + originalZ * dirZ;
-                    waveValue = Math.cos(projection * wave.frequency + oscillatingTime * wave.speed + wave.phase);
-                    break;
-                    
-                case 2: // Spiral waves
-                    const angle = Math.atan2(originalZ, originalX);
-                    const radius = Math.sqrt(originalX * originalX + originalZ * originalZ);
-                    waveValue = Math.sin(angle * 3 + radius * wave.frequency + oscillatingTime * wave.speed + wave.phase);
-                    break;
-                    
-                case 3: // Cross waves (interference pattern)
-                    const wave3a = Math.sin(originalX * wave.frequency + oscillatingTime * wave.speed + wave.phase);
-                    const wave3b = Math.cos(originalZ * wave.frequency * 1.3 + oscillatingTime * wave.speed * 0.8 + wave.phase);
-                    waveValue = wave3a * wave3b;
-                    break;
-                    
-                case 4: // Circular ripples with multiple centers
-                    const centerX = Math.sin(oscillatingTime * 0.1 + wave.phase) * 100;
-                    const centerZ = Math.cos(oscillatingTime * 0.15 + wave.phase) * 100;
-                    const distFromMovingCenter = Math.sqrt((originalX - centerX) * (originalX - centerX) + (originalZ - centerZ) * (originalZ - centerZ));
-                    waveValue = Math.sin(distFromMovingCenter * wave.frequency + oscillatingTime * wave.speed + wave.phase);
-                    break;
+            // Update patch orbit position
+            const currentAngle = patch.orbitAngle + oscillatingTime * patch.orbitSpeed;
+            const wobble = Math.sin(oscillatingTime * patch.wobbleSpeed) * patch.wobbleAmount;
+            
+            // Calculate patch center position
+            const patchCenterX = Math.cos(currentAngle) * (patch.orbitRadius + wobble);
+            const patchCenterZ = Math.sin(currentAngle) * (patch.orbitRadius + wobble);
+            const patchCenterY = patch.orbitHeight + Math.sin(oscillatingTime * patch.wobbleSpeed * 0.7) * 5;
+            
+            // Calculate distance from vertex to patch center
+            const dx = originalX - patchCenterX;
+            const dy = originalY - patchCenterY;
+            const dz = originalZ - patchCenterZ;
+            
+            // Create streak effect by using different distances for width vs length
+            const streakDx = dx * Math.cos(patch.streakAngle) + dz * Math.sin(patch.streakAngle);
+            const streakDz = -dx * Math.sin(patch.streakAngle) + dz * Math.cos(patch.streakAngle);
+            
+            // Calculate elliptical distance for streak shape
+            const normalizedWidth = (streakDz * streakDz) / (patch.patchWidth * patch.patchWidth);
+            const normalizedLength = (streakDx * streakDx) / (patch.patchLength * patch.patchLength);
+            const normalizedHeight = (dy * dy) / (20 * 20); // Height tolerance
+            
+            const ellipticalDistance = normalizedWidth + normalizedLength + normalizedHeight;
+            
+            // If vertex is within the streak patch
+            if (ellipticalDistance < 1.0) {
+                // Calculate intensity based on distance from center
+                const intensity = (1.0 - ellipticalDistance) * patch.intensity;
+                
+                // Add some noise/variation to the patch
+                const noiseX = Math.sin(originalX * 0.02 + oscillatingTime * 2) * 0.3;
+                const noiseZ = Math.cos(originalZ * 0.02 + oscillatingTime * 1.5) * 0.3;
+                const finalIntensity = intensity * (0.7 + noiseX + noiseZ);
+                
+                // Blend white color based on intensity
+                if (finalIntensity > 0) {
+                    finalRed = Math.min(1.0, finalRed + finalIntensity * 0.8);
+                    finalGreen = Math.min(1.0, finalGreen + finalIntensity * 0.9);
+                    finalBlue = Math.min(1.0, finalBlue + finalIntensity * 1.0);
+                }
             }
-            
-            // Add noise to the wave
-            const noiseValue = noise(originalX, originalZ, oscillatingTime * wave.speed, wave.noiseScale);
-            waveValue = waveValue * (0.7 + noiseValue * 0.6);
-            
-            // Apply amplitude and persistence
-            totalWave += waveValue * wave.amplitude * wave.persistence;
         }
         
-        // Add global noise layer
-        const globalNoise = noise(originalX, originalZ, oscillatingTime * 0.5, 0.003) - 0.5;
-        totalWave += globalNoise * SPHERE_CONFIG.amplitude * 0.5;
+        // Apply the color to the vertex
+        colors.setXYZ(i, finalRed, finalGreen, finalBlue);
         
-        // Apply vertex-specific intensity
-        totalWave *= vertexWaves.intensity;
-        
-        // Only apply waves to vertices that are close to the flattened surface
+        // Apply small wave displacement (much subtler now)
         const waveIntensity = Math.max(0, 1 - Math.abs(originalY) / (SPHERE_CONFIG.radius * SPHERE_CONFIG.flattenFactor * 2));
+        const smallWave = Math.sin(originalX * 0.01 + oscillatingTime) * 0.5 + 
+                         Math.cos(originalZ * 0.01 + oscillatingTime * 0.8) * 0.3;
         
-        // Add some turbulence based on position
-        const turbulence = Math.sin(originalX * 0.01 + oscillatingTime * 2) * 
-                          Math.cos(originalZ * 0.01 + oscillatingTime * 1.5) * 
-                          SPHERE_CONFIG.amplitude * 0.3;
-        
-        // Combine all wave effects
-        const finalWave = (totalWave + turbulence) * waveIntensity * SPHERE_CONFIG.amplitude * 0.5;
-        
-        // Set new position - apply wave displacement primarily in Y direction
         positions.setX(i, originalX);
-        positions.setY(i, originalY + finalWave);
+        positions.setY(i, originalY + smallWave * waveIntensity * SPHERE_CONFIG.amplitude * 0.2);
         positions.setZ(i, originalZ);
     }
     
-    // Mark positions for update
+    // Mark for updates
     positions.needsUpdate = true;
+    colors.needsUpdate = true;
     
-    // Recalculate normals for proper lighting
+    // Recalculate normals
     geometry.computeVertexNormals();
 }
 
