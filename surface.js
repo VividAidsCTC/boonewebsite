@@ -6,8 +6,8 @@ let oscillatingTime = 0;
 const PLANE_CONFIG = {
     width: 2000,
     height: 2000,
-    segments: 256,
-    yPosition: 70,
+    segments: 512,
+    yPosition: 50,
     amplitude: 1.0,        // Reduced for smaller waves
     frequency: 0.05,       // Increased for more wave parts
     speed: 1.0,
