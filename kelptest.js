@@ -74,13 +74,6 @@ const kelpVertexShader = `
         float normalizedHeight = (position.y + heightScale * 0.5) / heightScale;
         float heightFactor = clamp(normalizedHeight, 0.0, 1.0);
         
-        // Only apply deformation to vertices above the base (heightFactor > 0.1)
-        float deformationMask = smoothstep(0.0, 0.2, heightFactor);
-        
-        // Apply deformation in original object space, but only to upper vertices
-        vec3 deformedPosition = position;
-        deformedPosition.x += finalBendX * deformationMask;
-        deformedPosition.z += finalBendZ * deformationMask;
         // Convert direction to radians
         float dirRad = radians(currentDirection);
         
@@ -116,6 +109,16 @@ const kelpVertexShader = `
                           (undulationZ + currentInfluenceZ) * sin(dirRad) * 0.3;
         float finalBendZ = (undulationZ + currentInfluenceZ) * sin(dirRad) + 
                           (undulationX + currentInfluenceX) * cos(dirRad) * 0.3;
+        
+        // Only apply deformation to vertices above the base (heightFactor > 0.1)
+        float deformationMask = smoothstep(0.0, 0.2, heightFactor);
+        
+        // Apply deformation in original object space, but only to upper vertices
+        vec3 deformedPosition = position;
+        deformedPosition.x += finalBendX * deformationMask;
+        deformedPosition.z += finalBendZ * deformationMask;
+        
+        // Then apply instance transformations to the deformed geometry
         vec3 scaledPosition = deformedPosition * instanceScale;
         vec3 rotatedPosition = applyQuaternion(scaledPosition, instanceRotation);
         
