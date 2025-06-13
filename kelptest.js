@@ -375,7 +375,7 @@ function loadGLTFKelp() {
     }
 
     const loader = new THREE.GLTFLoader();
-    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp2.glb';
+    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp3.glb';
 
     loader.load(
         kelpURL,
