@@ -429,12 +429,12 @@ function loadGLTFKelp() {
                 const kelpInstance = template.clone();
 
                 // Position kelp on the seafloor in tighter formation
-                kelpInstance.position.x = (Math.random() - 0.5) * 100; // Reduced from 40 to 15
-                kelpInstance.position.z = (Math.random() - 0.5) * 100; // Reduced from 40 to 15
+                kelpInstance.position.x = (Math.random() - 0.5) * 200; // Reduced from 40 to 15
+                kelpInstance.position.z = (Math.random() - 0.5) * 200; // Reduced from 40 to 15
                 kelpInstance.position.y = -1; // Place on seafloor level
 
                 // Scale between 0.75x and 1.5x the original size
-                const scale = 3 + Math.random() * 10; // Random scale between 3x and 13x
+                const scale = 5 + Math.random() * 7; // Random scale between 5x and 12x
                 kelpInstance.scale.setScalar(scale);
 
                 // Random rotation only
