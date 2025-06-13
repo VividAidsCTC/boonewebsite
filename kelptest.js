@@ -3,7 +3,7 @@ let scene, camera, renderer;
 let kelpInstances = []; // Changed from kelp array to instances array
 let instancedKelp = null; // Will hold the InstancedMesh
 let waveSpeed = 1.2;
-let waveIntensity = 0.7;
+let waveIntensity = 0.6;
 let currentDirection = 45;
 let time = 0;
 
@@ -29,8 +29,11 @@ let instanceData = []; // Store animation data for each instance
 let kelpGeometry = null;
 let kelpMaterial = null;
 
-// Vertex shader for kelp animation
+// Vertex shader for kelp animation that extends Three.js built-in shaders
 const kelpVertexShader = `
+    #include <common>
+    #include <fog_pars_vertex>
+    
     attribute vec3 instancePosition;
     attribute vec4 instanceRotation;
     attribute vec3 instanceScale;
@@ -44,7 +47,6 @@ const kelpVertexShader = `
     uniform float currentDirection;
     
     varying vec3 vNormal;
-    varying vec3 vPosition;
     
     // Function to apply quaternion rotation
     vec3 applyQuaternion(vec3 v, vec4 q) {
@@ -115,30 +117,27 @@ const kelpVertexShader = `
         vec3 rotatedPosition = applyQuaternion(scaledPosition, instanceRotation);
         vec3 finalPosition = rotatedPosition + instancePosition;
         
-        // Transform to world space
-        vec4 worldPosition = modelMatrix * vec4(finalPosition, 1.0);
-        gl_Position = projectionMatrix * viewMatrix * worldPosition;
+        // Transform to world and view space
+        vec4 mvPosition = modelViewMatrix * vec4(finalPosition, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
         
-        // Pass varyings for lighting
+        // Pass normal for lighting
         vNormal = normalize(normalMatrix * normal);
-        vPosition = worldPosition.xyz;
+        
+        // Three.js fog calculation
+        #include <fog_vertex>
     }
 `;
 
-// Fragment shader for kelp
+// Fragment shader for kelp that uses Three.js fog system
 const kelpFragmentShader = `
+    #include <common>
+    #include <fog_pars_fragment>
+    
     uniform vec3 diffuse;
     uniform float opacity;
     
     varying vec3 vNormal;
-    varying vec3 vPosition;
-    
-    // Fog uniforms (will be set by Three.js when fog is enabled)
-    #ifdef USE_FOG
-        uniform vec3 fogColor;
-        uniform float fogNear;
-        uniform float fogFar;
-    #endif
     
     void main() {
         // Basic Phong-like lighting
@@ -149,12 +148,8 @@ const kelpFragmentShader = `
         
         gl_FragColor = vec4(color, opacity);
         
-        // Apply fog if enabled
-        #ifdef USE_FOG
-            float depth = gl_FragCoord.z / gl_FragCoord.w;
-            float fogFactor = smoothstep(fogNear, fogFar, depth);
-            gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, fogFactor);
-        #endif
+        // Three.js fog calculation
+        #include <fog_fragment>
     }
 `;
 
@@ -328,23 +323,23 @@ function createGPUKelp() {
     
     kelpGeometry = new THREE.CylinderGeometry(0.2, 0.4, baseKelpHeight, radialSegments, segments);
     
-    // Create custom shader material with fog support
+    // Create custom shader material with Three.js fog integration
     kelpMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-            time: { value: 0 },
-            waveSpeed: { value: waveSpeed },
-            waveIntensity: { value: waveIntensity },
-            currentDirection: { value: currentDirection },
-            diffuse: { value: new THREE.Color(0x735F1D) }, // Dark green-brown
-            opacity: { value: 0.85 }
-        },
+        uniforms: THREE.UniformsUtils.merge([
+            THREE.UniformsLib.fog,
+            {
+                time: { value: 0 },
+                waveSpeed: { value: waveSpeed },
+                waveIntensity: { value: waveIntensity },
+                currentDirection: { value: currentDirection },
+                diffuse: { value: new THREE.Color(0x735F1D) }, // Dark green-brown
+                opacity: { value: 0.85 }
+            }
+        ]),
         vertexShader: kelpVertexShader,
         fragmentShader: kelpFragmentShader,
         transparent: true,
-        fog: true, // CRITICAL: Enable fog support
-        defines: {
-            USE_FOG: true // Enable fog in shader
-        }
+        fog: true // CRITICAL: Enable fog support
     });
 
     // Create instanced mesh
@@ -462,23 +457,23 @@ function loadGLTFKelp() {
                 
                 log(`Using GLTF geometry with height: ${height.toFixed(2)}`);
                 
-                // Create material with fog support
+                // Create material with Three.js fog integration
                 kelpMaterial = new THREE.ShaderMaterial({
-                    uniforms: {
-                        time: { value: 0 },
-                        waveSpeed: { value: waveSpeed },
-                        waveIntensity: { value: waveIntensity },
-                        currentDirection: { value: currentDirection },
-                        diffuse: { value: new THREE.Color(0x735F1D) },
-                        opacity: { value: 0.85 }
-                    },
+                    uniforms: THREE.UniformsUtils.merge([
+                        THREE.UniformsLib.fog,
+                        {
+                            time: { value: 0 },
+                            waveSpeed: { value: waveSpeed },
+                            waveIntensity: { value: waveIntensity },
+                            currentDirection: { value: currentDirection },
+                            diffuse: { value: new THREE.Color(0x735F1D) },
+                            opacity: { value: 0.85 }
+                        }
+                    ]),
                     vertexShader: kelpVertexShader,
                     fragmentShader: kelpFragmentShader,
                     transparent: true,
-                    fog: true, // CRITICAL: Enable fog support
-                    defines: {
-                        USE_FOG: true
-                    }
+                    fog: true // CRITICAL: Enable fog support
                 });
 
                 // Create instanced mesh with GLTF geometry
