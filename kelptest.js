@@ -326,7 +326,7 @@ function initializeScene() {
     const canvas = document.createElement('canvas');
     canvas.width = 1000;
     const context = canvas.getContext('2d');
-    context.fillStyle = '#2f6992';
+    context.fillStyle = '#3c7878';
     context.fillRect(0, 0, 1000, 1000);
 
 
@@ -410,7 +410,7 @@ function loadGLTFKelp() {
                     
                     // Apply dark green-brown kelp material
                     const kelpMaterial = new THREE.MeshPhongMaterial({
-                        color: 0x1c4709, // Dark green-brown
+                        color: 0x735F1D, // Dark green-brown
                         transparent: true,
                         opacity: 0.85,
                         shininess: 10
@@ -818,7 +818,7 @@ function animate() {
     camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
     camera.position.y = Math.sin(rotationX) * distance + 3;
     camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
-    camera.lookAt(0, 3, 0);
+    camera.lookAt(0, 3, 3);
 
     renderer.render(scene, camera);
 }
