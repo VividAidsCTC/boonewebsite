@@ -29,7 +29,7 @@ let instanceData = []; // Store animation data for each instance
 let kelpGeometry = null;
 let kelpMaterial = null;
 
-// Vertex shader for kelp animation that extends Three.js built-in shaders
+// Vertex shader for kelp animation that mimics the original CPU deformation
 const kelpVertexShader = `
     #include <common>
     #include <fog_pars_vertex>
@@ -37,7 +37,7 @@ const kelpVertexShader = `
     attribute vec3 instancePosition;
     attribute vec4 instanceRotation;
     attribute vec3 instanceScale;
-    attribute vec4 animationData; // offset1, freq1, amplitude1, heightScale
+    attribute vec4 animationData; // offset1, freq1, amplitude1, unused
     attribute vec4 animationData2; // offset2, freq2, amplitude2, offset3
     attribute vec2 animationData3; // freq3, amplitude3
     
@@ -54,11 +54,10 @@ const kelpVertexShader = `
     }
     
     void main() {
-        // Get animation parameters
+        // Get animation parameters for this instance
         float offset1 = animationData.x;
         float freq1 = animationData.y;
         float amplitude1 = animationData.z;
-        float heightScale = animationData.w;
         
         float offset2 = animationData2.x;
         float freq2 = animationData2.y;
@@ -68,65 +67,64 @@ const kelpVertexShader = `
         float freq3 = animationData3.x;
         float amplitude3 = animationData3.y;
         
-        // Calculate height factor more carefully to ensure base stays fixed
-        // For cylinder geometry, Y goes from -height/2 to +height/2
-        // For GLTF, we need to use the actual bounds
-        float normalizedHeight = (position.y + heightScale * 0.5) / heightScale;
-        float heightFactor = clamp(normalizedHeight, 0.0, 1.0);
+        // Start with the original vertex position
+        vec3 pos = position;
         
-        // Convert direction to radians
-        float dirRad = radians(currentDirection);
+        // Calculate height factor for this vertex (0 = bottom, 1 = top)
+        // Assuming cylinder geometry goes from -10 to +10 in Y (height 20)
+        float baseHeight = 20.0;
+        float heightFactor = (pos.y + baseHeight * 0.5) / baseHeight;
+        heightFactor = clamp(heightFactor, 0.0, 1.0);
         
-        // Calculate wave values
-        float wave1 = sin(time * freq1 + offset1) * amplitude1;
-        float wave2 = cos(time * freq2 + offset2) * amplitude2;
-        float wave3 = sin(time * freq3 + offset3) * amplitude3;
+        // Only deform vertices that are above the base
+        if (heightFactor > 0.05) {
+            // Convert current direction to radians
+            float dirRad = radians(currentDirection);
+            
+            // Calculate wave values (same as original CPU version)
+            float wave1 = sin(time * freq1 + offset1) * amplitude1;
+            float wave2 = cos(time * freq2 + offset2) * amplitude2;
+            float wave3 = sin(time * freq3 + offset3) * amplitude3;
+            
+            // Create undulating motion along the height (like original)
+            float undulationFreq1 = 3.0;
+            float undulationFreq2 = 6.0;
+            float undulationFreq3 = 9.0;
+            
+            float undulationX = (
+                sin(heightFactor * undulationFreq1 + time * freq1 + offset1) * 0.8 +
+                sin(heightFactor * undulationFreq2 + time * freq2 + offset2) * 0.4 +
+                sin(heightFactor * undulationFreq3 + time * freq3 + offset3) * 0.2
+            ) * waveIntensity * heightFactor;
+            
+            float undulationZ = (
+                cos(heightFactor * undulationFreq1 + time * freq1 + offset1 + 0.785) * 0.6 +
+                cos(heightFactor * undulationFreq2 + time * freq2 + offset2 + 1.047) * 0.3 +
+                cos(heightFactor * undulationFreq3 + time * freq3 + offset3 + 0.524) * 0.15
+            ) * waveIntensity * heightFactor;
+            
+            // Apply directional current influence (like original)
+            float currentInfluenceX = (wave1 + wave2 * 0.5) * waveIntensity * heightFactor * heightFactor;
+            float currentInfluenceZ = (wave2 + wave3 * 0.5) * waveIntensity * heightFactor * heightFactor;
+            
+            // Combine undulation with current direction
+            float finalBendX = (undulationX + currentInfluenceX) * cos(dirRad) + 
+                              (undulationZ + currentInfluenceZ) * sin(dirRad) * 0.3;
+            float finalBendZ = (undulationZ + currentInfluenceZ) * sin(dirRad) + 
+                              (undulationX + currentInfluenceX) * cos(dirRad) * 0.3;
+            
+            // Apply the deformation to the vertex position
+            pos.x += finalBendX;
+            pos.z += finalBendZ;
+        }
         
-        // Create multiple undulation points along the height
-        float undulationFreq1 = 2.5;
-        float undulationFreq2 = 5.0;
-        float undulationFreq3 = 8.0;
+        // Now apply instance transformations (scale, rotate, position)
+        vec3 scaledPos = pos * instanceScale;
+        vec3 rotatedPos = applyQuaternion(scaledPos, instanceRotation);
+        vec3 worldPos = rotatedPos + instancePosition;
         
-        // Calculate undulating displacement - only use heightFactor for intensity
-        float undulationX = (
-            sin(heightFactor * undulationFreq1 + time * freq1 + offset1) * 1.0 +
-            sin(heightFactor * undulationFreq2 + time * freq2 + offset2) * 0.5 +
-            sin(heightFactor * undulationFreq3 + time * freq3 + offset3) * 0.25
-        ) * waveIntensity * heightFactor;
-        
-        float undulationZ = (
-            cos(heightFactor * undulationFreq1 + time * freq1 + offset1 + 0.785) * 0.8 +
-            cos(heightFactor * undulationFreq2 + time * freq2 + offset2 + 1.047) * 0.4 +
-            cos(heightFactor * undulationFreq3 + time * freq3 + offset3 + 0.524) * 0.2
-        ) * waveIntensity * heightFactor;
-        
-        // Apply directional current influence
-        float currentInfluenceX = (wave1 + wave2 * 0.7) * waveIntensity * heightFactor * heightFactor;
-        float currentInfluenceZ = (wave2 + wave3 * 0.8) * waveIntensity * heightFactor * heightFactor;
-        
-        // Combine undulation with current direction
-        float finalBendX = (undulationX + currentInfluenceX) * cos(dirRad) + 
-                          (undulationZ + currentInfluenceZ) * sin(dirRad) * 0.3;
-        float finalBendZ = (undulationZ + currentInfluenceZ) * sin(dirRad) + 
-                          (undulationX + currentInfluenceX) * cos(dirRad) * 0.3;
-        
-        // Only apply deformation to vertices above the base (heightFactor > 0.1)
-        float deformationMask = smoothstep(0.0, 0.2, heightFactor);
-        
-        // Apply deformation in original object space, but only to upper vertices
-        vec3 deformedPosition = position;
-        deformedPosition.x += finalBendX * deformationMask;
-        deformedPosition.z += finalBendZ * deformationMask;
-        
-        // Then apply instance transformations to the deformed geometry
-        vec3 scaledPosition = deformedPosition * instanceScale;
-        vec3 rotatedPosition = applyQuaternion(scaledPosition, instanceRotation);
-        
-        // Finally position in world space (this should keep the base fixed)
-        vec3 finalPosition = rotatedPosition + instancePosition;
-        
-        // Transform to world and view space
-        vec4 mvPosition = modelViewMatrix * vec4(finalPosition, 1.0);
+        // Transform to clip space
+        vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
         gl_Position = projectionMatrix * mvPosition;
         
         // Pass normal for lighting
@@ -389,7 +387,7 @@ function createGPUKelp() {
         animationData[i * 4] = Math.random() * Math.PI * 2; // offset1
         animationData[i * 4 + 1] = 0.8 + Math.random() * 0.6; // freq1
         animationData[i * 4 + 2] = 0.8 + Math.random() * 0.6; // amplitude1
-        animationData[i * 4 + 3] = baseKelpHeight * scale; // heightScale
+        animationData[i * 4 + 3] = 0.0; // unused
 
         animationData2[i * 4] = Math.random() * Math.PI * 2; // offset2
         animationData2[i * 4 + 1] = 1.1 + Math.random() * 0.8; // freq2
