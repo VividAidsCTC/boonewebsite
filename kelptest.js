@@ -1,7 +1,7 @@
     // Global variables
 let scene, camera, renderer;
 let kelp = [];
-let waveSpeed = .8;
+let waveSpeed = 1.2;
 let waveIntensity = .6;
 let currentDirection = 45;
 let time = 0;
@@ -434,7 +434,7 @@ function loadGLTFKelp() {
                 kelpInstance.position.y = -1; // Place on seafloor level
 
                 // Scale between 0.75x and 1.5x the original size
-                const scale = 5 + Math.random() * 7; // Random scale between 5x and 12x
+                const scale = 4 + Math.random() * 12; // Random scale between 5x and 16x
                 kelpInstance.scale.setScalar(scale);
 
                 // Random rotation only
