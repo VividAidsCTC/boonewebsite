@@ -685,3 +685,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (typeof THREE === 'undefined') {
         console.error('Three.js not loaded');
+        return;
+    }
+    
+    initializeScene();
+    setupControls();
+
+    // Try to load GLTF first, fallback to GPU cylinders if it fails
+    setTimeout(() => {
+        loadGLTFKelp();
+    }, 500);
+});
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    if (camera && renderer) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+});
+
+// Mouse event handlers
+document.addEventListener('mousedown', function(event) {
+    isMouseDown = true;
+});
+
+document.addEventListener('mouseup', function(event) {
+    isMouseDown = false;
+});
+
+// Export for compatibility with other systems
+window.KelpSystem = {
+    getInstancedMesh: () => instancedKelp,
+    getInstanceCount: () => KELP_COUNT,
+    getInstanceData: () => instanceData,
+    updateUniforms: (uniforms) => {
+        if (instancedKelp && instancedKelp.material.uniforms) {
+            Object.assign(instancedKelp.material.uniforms, uniforms);
+        }
+    }
+};
