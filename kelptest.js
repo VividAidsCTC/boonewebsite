@@ -318,7 +318,7 @@ function initializeScene() {
 
     // Scene setup
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(120, window.innerWidth / window.innerHeight, 0.1, 1000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -568,27 +568,22 @@ function createFallbackKelp() {
 }
 
 function setupControls() {
-    // Mouse controls
-    document.addEventListener('mousedown', function() {
-        isMouseDown = true;
-    });
-
-    document.addEventListener('mouseup', function() {
-        isMouseDown = false;
-    });
-
-    document.addEventListener('mousemove', function(event) {
-        if (isMouseDown) {
-            targetRotationY += event.movementX * 0.01;
-            targetRotationX += event.movementY * 0.01;
-            targetRotationX = Math.max(-Math.PI/3, Math.min(Math.PI/3, targetRotationX));
-        }
-    });
-
-    document.addEventListener('wheel', function(event) {
-        distance += event.deltaY * 0.02;
-        distance = Math.max(8, Math.min(60, distance));
-    });
+    
+document.addEventListener('mousemove', function(event) {
+    if (isMouseDown) {
+        targetRotationY += event.movementX * 0.01;
+        targetRotationX += event.movementY * 0.01;
+        
+        // Convert 15 degrees to radians: 15° × (π/180) = 0.2618 radians
+        const maxRotation = 15 * (Math.PI / 180); // 15 degrees in radians
+        
+        // Limit horizontal rotation (left/right) to ±15 degrees
+        targetRotationY = Math.max(-maxRotation, Math.min(maxRotation, targetRotationY));
+        
+        // Limit vertical rotation (up/down) to ±15 degrees  
+        targetRotationX = Math.max(-maxRotation, Math.min(maxRotation, targetRotationX));
+    }
+});
 
     log('Manual camera controls initialized successfully');
 
@@ -818,7 +813,7 @@ function animate() {
     camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
     camera.position.y = Math.sin(rotationX) * distance + 3;
     camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
-    camera.lookAt(0, 3, 3);
+    camera.lookAt(0, 5, 5);
 
     renderer.render(scene, camera);
 }
