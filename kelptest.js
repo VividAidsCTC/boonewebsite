@@ -68,9 +68,19 @@ const kelpVertexShader = `
         float freq3 = animationData3.x;
         float amplitude3 = animationData3.y;
         
-        // Calculate height factor (0 at bottom, 1 at top)
-        float heightFactor = max(0.0, (position.y + heightScale * 0.5) / heightScale);
+        // Calculate height factor more carefully to ensure base stays fixed
+        // For cylinder geometry, Y goes from -height/2 to +height/2
+        // For GLTF, we need to use the actual bounds
+        float normalizedHeight = (position.y + heightScale * 0.5) / heightScale;
+        float heightFactor = clamp(normalizedHeight, 0.0, 1.0);
         
+        // Only apply deformation to vertices above the base (heightFactor > 0.1)
+        float deformationMask = smoothstep(0.0, 0.2, heightFactor);
+        
+        // Apply deformation in original object space, but only to upper vertices
+        vec3 deformedPosition = position;
+        deformedPosition.x += finalBendX * deformationMask;
+        deformedPosition.z += finalBendZ * deformationMask;
         // Convert direction to radians
         float dirRad = radians(currentDirection);
         
@@ -84,7 +94,7 @@ const kelpVertexShader = `
         float undulationFreq2 = 5.0;
         float undulationFreq3 = 8.0;
         
-        // Calculate undulating displacement
+        // Calculate undulating displacement - only use heightFactor for intensity
         float undulationX = (
             sin(heightFactor * undulationFreq1 + time * freq1 + offset1) * 1.0 +
             sin(heightFactor * undulationFreq2 + time * freq2 + offset2) * 0.5 +
@@ -106,18 +116,10 @@ const kelpVertexShader = `
                           (undulationZ + currentInfluenceZ) * sin(dirRad) * 0.3;
         float finalBendZ = (undulationZ + currentInfluenceZ) * sin(dirRad) + 
                           (undulationX + currentInfluenceX) * cos(dirRad) * 0.3;
-        
-        // Apply instance transformations FIRST (scale and rotate the base geometry)
-        vec3 scaledPosition = position * instanceScale;
+        vec3 scaledPosition = deformedPosition * instanceScale;
         vec3 rotatedPosition = applyQuaternion(scaledPosition, instanceRotation);
         
-        // THEN apply deformation in local space (after scaling but before world positioning)
-        // Scale the deformation by the instance scale to maintain proportional bending
-        float deformationScale = instanceScale.x; // Use X scale as reference
-        rotatedPosition.x += finalBendX * deformationScale;
-        rotatedPosition.z += finalBendZ * deformationScale;
-        
-        // Finally position in world space
+        // Finally position in world space (this should keep the base fixed)
         vec3 finalPosition = rotatedPosition + instancePosition;
         
         // Transform to world and view space
