@@ -107,14 +107,17 @@ const kelpVertexShader = `
         float finalBendZ = (undulationZ + currentInfluenceZ) * sin(dirRad) + 
                           (undulationX + currentInfluenceX) * cos(dirRad) * 0.3;
         
-        // Apply deformation to position
-        vec3 deformedPosition = position;
-        deformedPosition.x += finalBendX;
-        deformedPosition.z += finalBendZ;
-        
-        // Apply instance transformations
-        vec3 scaledPosition = deformedPosition * instanceScale;
+        // Apply instance transformations FIRST (scale and rotate the base geometry)
+        vec3 scaledPosition = position * instanceScale;
         vec3 rotatedPosition = applyQuaternion(scaledPosition, instanceRotation);
+        
+        // THEN apply deformation in local space (after scaling but before world positioning)
+        // Scale the deformation by the instance scale to maintain proportional bending
+        float deformationScale = instanceScale.x; // Use X scale as reference
+        rotatedPosition.x += finalBendX * deformationScale;
+        rotatedPosition.z += finalBendZ * deformationScale;
+        
+        // Finally position in world space
         vec3 finalPosition = rotatedPosition + instancePosition;
         
         // Transform to world and view space
