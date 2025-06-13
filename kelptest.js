@@ -3,7 +3,7 @@ let scene, camera, renderer;
 let kelpInstances = []; // Changed from kelp array to instances array
 let instancedKelp = null; // Will hold the InstancedMesh
 let waveSpeed = 1.2;
-let waveIntensity = 0.6;
+let waveIntensity = 0.7;
 let currentDirection = 45;
 let time = 0;
 
