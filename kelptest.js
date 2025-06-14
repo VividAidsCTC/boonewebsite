@@ -1,163 +1,121 @@
 // Global variables
 let scene, camera, renderer;
-let kelpInstances = []; // Changed from kelp array to instances array
-let instancedKelp = null; // Will hold the InstancedMesh
+let kelpInstances = [];
+let instancedKelp = null;
 let waveSpeed = 1.2;
 let waveIntensity = 0.6;
 let currentDirection = 45;
 let time = 0;
 
-// Camera controls
 let targetRotationX = 0, targetRotationY = 0;
 let rotationX = 0, rotationY = 0;
 let distance = 30;
 let isMouseDown = false;
 
-// Texture loading variables
-let floorTextures = {
-    diffuse: null,
-    normal: null,
-    roughness: null,
-    displacement: null
-};
+let floorTextures = { diffuse: null, normal: null, roughness: null, displacement: null };
 let textureLoader = new THREE.TextureLoader();
 
-// GPU Instancing variables
 const KELP_COUNT = 175;
-let instanceMatrix = null;
-let instanceData = []; // Store animation data for each instance
+let instanceData = [];
 let kelpGeometry = null;
 let kelpMaterial = null;
 
-// Vertex shader for kelp animation that mimics the original CPU deformation
+// Vertex shader with fixed base deformation
 const kelpVertexShader = `
     #include <common>
     #include <fog_pars_vertex>
-    
     attribute vec3 instancePosition;
     attribute vec4 instanceRotation;
     attribute vec3 instanceScale;
-    attribute vec4 animationData; // offset1, freq1, amplitude1, unused
-    attribute vec4 animationData2; // offset2, freq2, amplitude2, offset3
-    attribute vec2 animationData3; // freq3, amplitude3
-    
+    attribute vec4 animationData;
+    attribute vec4 animationData2;
+    attribute vec2 animationData3;
     uniform float time;
     uniform float waveSpeed;
     uniform float waveIntensity;
     uniform float currentDirection;
-    
     varying vec3 vNormal;
-    
-    // Function to apply quaternion rotation
+
     vec3 applyQuaternion(vec3 v, vec4 q) {
         return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
     }
-    
+
     void main() {
-        // Get animation parameters for this instance
         float offset1 = animationData.x;
         float freq1 = animationData.y;
         float amplitude1 = animationData.z;
-        
         float offset2 = animationData2.x;
         float freq2 = animationData2.y;
         float amplitude2 = animationData2.z;
         float offset3 = animationData2.w;
-        
         float freq3 = animationData3.x;
         float amplitude3 = animationData3.y;
-        
-        // Start with the original vertex position
+
         vec3 pos = position;
-        
-        // Calculate height factor for this vertex (0 = bottom, 1 = top)
-        // Assuming cylinder geometry goes from -10 to +10 in Y (height 20)
+
+        // Compute normalized height (0 = base, 1 = top)
         float baseHeight = 20.0;
         float heightFactor = (pos.y + baseHeight * 0.5) / baseHeight;
         heightFactor = clamp(heightFactor, 0.0, 1.0);
-        
-        // Only deform vertices that are above the base
-        if (heightFactor > 0.05) {
-            // Convert current direction to radians
-            float dirRad = radians(currentDirection);
-            
-            // Calculate wave values (same as original CPU version)
-            float wave1 = sin(time * freq1 + offset1) * amplitude1;
-            float wave2 = cos(time * freq2 + offset2) * amplitude2;
-            float wave3 = sin(time * freq3 + offset3) * amplitude3;
-            
-            // Create undulating motion along the height (like original)
-            float undulationFreq1 = 3.0;
-            float undulationFreq2 = 6.0;
-            float undulationFreq3 = 9.0;
-            
-            float undulationX = (
-                sin(heightFactor * undulationFreq1 + time * freq1 + offset1) * 0.8 +
-                sin(heightFactor * undulationFreq2 + time * freq2 + offset2) * 0.4 +
-                sin(heightFactor * undulationFreq3 + time * freq3 + offset3) * 0.2
-            ) * waveIntensity * heightFactor;
-            
-            float undulationZ = (
-                cos(heightFactor * undulationFreq1 + time * freq1 + offset1 + 0.785) * 0.6 +
-                cos(heightFactor * undulationFreq2 + time * freq2 + offset2 + 1.047) * 0.3 +
-                cos(heightFactor * undulationFreq3 + time * freq3 + offset3 + 0.524) * 0.15
-            ) * waveIntensity * heightFactor;
-            
-            // Apply directional current influence (like original)
-            float currentInfluenceX = (wave1 + wave2 * 0.5) * waveIntensity * heightFactor * heightFactor;
-            float currentInfluenceZ = (wave2 + wave3 * 0.5) * waveIntensity * heightFactor * heightFactor;
-            
-            // Combine undulation with current direction
-            float finalBendX = (undulationX + currentInfluenceX) * cos(dirRad) + 
-                              (undulationZ + currentInfluenceZ) * sin(dirRad) * 0.3;
-            float finalBendZ = (undulationZ + currentInfluenceZ) * sin(dirRad) + 
-                              (undulationX + currentInfluenceX) * cos(dirRad) * 0.3;
-            
-            // Apply the deformation to the vertex position
-            pos.x += finalBendX;
-            pos.z += finalBendZ;
-        }
-        
-        // Now apply instance transformations (scale, rotate, position)
+
+        float dirRad = radians(currentDirection);
+
+        float wave1 = sin(time * freq1 + offset1) * amplitude1;
+        float wave2 = cos(time * freq2 + offset2) * amplitude2;
+        float wave3 = sin(time * freq3 + offset3) * amplitude3;
+
+        float undulationX = (
+            sin(heightFactor * 3.0 + time * freq1 + offset1) * 0.8 +
+            sin(heightFactor * 6.0 + time * freq2 + offset2) * 0.4 +
+            sin(heightFactor * 9.0 + time * freq3 + offset3) * 0.2
+        ) * waveIntensity * heightFactor;
+
+        float undulationZ = (
+            cos(heightFactor * 3.0 + time * freq1 + offset1 + 0.785) * 0.6 +
+            cos(heightFactor * 6.0 + time * freq2 + offset2 + 1.047) * 0.3 +
+            cos(heightFactor * 9.0 + time * freq3 + offset3 + 0.524) * 0.15
+        ) * waveIntensity * heightFactor;
+
+        float currentInfluenceX = (wave1 + wave2 * 0.5) * waveIntensity * heightFactor * heightFactor;
+        float currentInfluenceZ = (wave2 + wave3 * 0.5) * waveIntensity * heightFactor * heightFactor;
+
+        float finalBendX = (undulationX + currentInfluenceX) * cos(dirRad) + 
+                          (undulationZ + currentInfluenceZ) * sin(dirRad) * 0.3;
+        float finalBendZ = (undulationZ + currentInfluenceZ) * sin(dirRad) + 
+                          (undulationX + currentInfluenceX) * cos(dirRad) * 0.3;
+
+        // Pin the base: scale displacement by heightFactor
+        pos.x += finalBendX * heightFactor;
+        pos.z += finalBendZ * heightFactor;
+
+        // Instance transform
         vec3 scaledPos = pos * instanceScale;
         vec3 rotatedPos = applyQuaternion(scaledPos, instanceRotation);
         vec3 worldPos = rotatedPos + instancePosition;
-        
-        // Transform to clip space
-        vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
-        gl_Position = projectionMatrix * mvPosition;
-        
-        // Pass normal for lighting
+
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPos, 1.0);
         vNormal = normalize(normalMatrix * normal);
-        
-        // Three.js fog calculation
         #include <fog_vertex>
     }
 `;
 
-// Fragment shader for kelp that uses Three.js fog system
+// Fragment shader unchanged
 const kelpFragmentShader = `
     #include <common>
     #include <fog_pars_fragment>
-    
     uniform vec3 diffuse;
     uniform float opacity;
-    
     varying vec3 vNormal;
-    
+
     void main() {
-        // Basic Phong-like lighting
         vec3 lightDirection = normalize(vec3(0.5, 1.0, 0.3));
         float dotNL = max(dot(normalize(vNormal), lightDirection), 0.0);
-        
         vec3 color = diffuse * (0.3 + 0.7 * dotNL);
-        
         gl_FragColor = vec4(color, opacity);
-        
-        // Three.js fog calculation
         #include <fog_fragment>
     }
 `;
+
 
 // Texture loading functions (kept the same)
 function createTexturedFloor() {
