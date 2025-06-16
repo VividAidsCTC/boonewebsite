@@ -93,7 +93,11 @@ const kelpVertexShader = `
         vec3 rotatedPos = applyQuaternion(scaledPos, instanceRotation);
         vec3 worldPos = rotatedPos + instancePosition;
 
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPos, 1.0);
+        vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
+
+        mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+        
         vNormal = normalize(normalMatrix * normal);
         #include <fog_vertex>
     }
