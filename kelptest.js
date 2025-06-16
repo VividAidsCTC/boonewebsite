@@ -81,10 +81,17 @@ const kelpVertexShader = `
         vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
         gl_Position = projectionMatrix * mvPosition;
 
-        vNormal = normalize(normalMatrix * normal);
+        // Transform normal to world space for shadows
+        vec3 transformedNormal = normalMatrix * normal;
+        vNormal = normalize(transformedNormal);
         
         #include <fog_vertex>
-        #include <shadowmap_vertex>
+        
+        // Shadow mapping - need to define required variables
+        #ifdef USE_SHADOWMAP
+            vec4 worldPosition = vec4(worldPos, 1.0);
+            #include <shadowmap_vertex>
+        #endif
     }
 `;
 
@@ -103,10 +110,10 @@ const kelpFragmentShader = `
         vec3 lightDirection = normalize(vec3(0.5, 1.0, 0.3));
         float dotNL = max(dot(normalize(vNormal), lightDirection), 0.0);
         
-        // Calculate shadow factor
+        // Calculate shadow factor using Three.js built-in functions
         float shadowFactor = 1.0;
         #ifdef USE_SHADOWMAP
-            shadowFactor = getShadowMask();
+            shadowFactor = getShadow( directionalShadowMap[ 0 ], directionalLightShadows[ 0 ].shadowMapSize, directionalLightShadows[ 0 ].shadowBias, directionalLightShadows[ 0 ].shadowRadius, vDirectionalShadowCoord[ 0 ] );
         #endif
         
         // Apply shadows to lighting
@@ -122,7 +129,8 @@ function createKelpMaterial(kelpHeight = 20, baseY = -10) {
     return new THREE.ShaderMaterial({
         uniforms: THREE.UniformsUtils.merge([
             THREE.UniformsLib.fog,
-            THREE.UniformsLib.lights, // Add lights support for shadows
+            THREE.UniformsLib.lights,
+            THREE.UniformsLib.shadowmap,
             {
                 time: { value: 0 },
                 waveSpeed: { value: waveSpeed },
@@ -158,7 +166,8 @@ function createTexturedFloor() {
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -1;
-    floor.receiveShadow = true;
+    floor.receiveShadow = true; // Enable shadow receiving on the seafloor
+    floor.castShadow = false; // Floor doesn't cast shadows
     scene.add(floor);
     
     window.seafloor = floor;
@@ -337,6 +346,8 @@ function createGPUKelp() {
 
     // Create instanced mesh
     instancedKelp = new THREE.InstancedMesh(kelpGeometry, kelpMaterial, KELP_COUNT);
+    instancedKelp.castShadow = true; // Enable shadow casting
+    instancedKelp.receiveShadow = false; // Kelp doesn't need to receive shadows from other kelp
     
     // Set up instance data
     setupInstanceData(baseKelpHeight);
@@ -397,6 +408,8 @@ function loadGLTFKelp() {
 
                 // Create instanced mesh with GLTF geometry
                 instancedKelp = new THREE.InstancedMesh(kelpGeometry, kelpMaterial, KELP_COUNT);
+                instancedKelp.castShadow = true; // Enable shadow casting
+                instancedKelp.receiveShadow = false; // Kelp doesn't need to receive shadows from other kelp
                 
                 // Set up instance data with GLTF height
                 setupInstanceData(height);
