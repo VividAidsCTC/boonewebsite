@@ -15,15 +15,16 @@ let isMouseDown = false;
 let floorTextures = { diffuse: null, normal: null, roughness: null, displacement: null };
 let textureLoader = new THREE.TextureLoader();
 
-const KELP_COUNT = 250;
+const KELP_COUNT = 175;
 let instanceData = [];
 let kelpGeometry = null;
 let kelpMaterial = null;
 
-// Vertex shader with fixed base deformation
+// Vertex shader with shadow support
 const kelpVertexShader = `
     #include <common>
     #include <fog_pars_vertex>
+    #include <shadowmap_pars_vertex>
     
     attribute vec3 instancePosition;
     attribute vec4 instanceRotation;
@@ -40,6 +41,7 @@ const kelpVertexShader = `
     uniform float kelpHeight;
 
     varying vec3 vNormal;
+    varying vec3 vWorldPosition;
 
     vec3 applyQuaternion(vec3 v, vec4 q) {
         return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
@@ -71,28 +73,45 @@ const kelpVertexShader = `
         vec3 scaledPos = pos * instanceScale;
         vec3 rotatedPos = applyQuaternion(scaledPos, instanceRotation);
         vec3 worldPos = rotatedPos + instancePosition;
+        
+        // Store world position for fragment shader
+        vWorldPosition = worldPos;
 
         // Final projection
         vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
         gl_Position = projectionMatrix * mvPosition;
 
         vNormal = normalize(normalMatrix * normal);
+        
         #include <fog_vertex>
+        #include <shadowmap_vertex>
     }
 `;
 
-// Fragment shader unchanged
+// Fragment shader with shadow support
 const kelpFragmentShader = `
     #include <common>
     #include <fog_pars_fragment>
+    #include <shadowmap_pars_fragment>
+    
     uniform vec3 diffuse;
     uniform float opacity;
     varying vec3 vNormal;
+    varying vec3 vWorldPosition;
 
     void main() {
         vec3 lightDirection = normalize(vec3(0.5, 1.0, 0.3));
         float dotNL = max(dot(normalize(vNormal), lightDirection), 0.0);
-        vec3 color = diffuse * (0.3 + 0.7 * dotNL);
+        
+        // Calculate shadow factor
+        float shadowFactor = 1.0;
+        #ifdef USE_SHADOWMAP
+            shadowFactor = getShadowMask();
+        #endif
+        
+        // Apply shadows to lighting
+        vec3 color = diffuse * (0.2 + 0.8 * dotNL * shadowFactor);
+        
         gl_FragColor = vec4(color, opacity);
         #include <fog_fragment>
     }
@@ -103,6 +122,7 @@ function createKelpMaterial(kelpHeight = 20, baseY = -10) {
     return new THREE.ShaderMaterial({
         uniforms: THREE.UniformsUtils.merge([
             THREE.UniformsLib.fog,
+            THREE.UniformsLib.lights, // Add lights support for shadows
             {
                 time: { value: 0 },
                 waveSpeed: { value: waveSpeed },
@@ -117,7 +137,8 @@ function createKelpMaterial(kelpHeight = 20, baseY = -10) {
         vertexShader: kelpVertexShader,
         fragmentShader: kelpFragmentShader,
         transparent: true,
-        fog: true // CRITICAL: Enable fog support
+        fog: true, // CRITICAL: Enable fog support
+        lights: true // Enable lighting calculations for shadows
     });
 }
 
@@ -239,6 +260,11 @@ function initializeScene() {
     camera = new THREE.PerspectiveCamera(120, window.innerWidth / window.innerHeight, 0.1, 1000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    
+    // Enable shadow mapping for GPU-accelerated shadows
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows for better quality
+    renderer.shadowMap.autoUpdate = true;
 
     // Create blue gradient background
     const canvas = document.createElement('canvas');
@@ -253,23 +279,38 @@ function initializeScene() {
     const container = document.getElementById('container');
     container.appendChild(renderer.domElement);
 
-    // Lighting setup
-    const ambientLight = new THREE.AmbientLight(0x6699bb, 0.3);
+    // Lighting setup with shadow-casting sun light
+    const ambientLight = new THREE.AmbientLight(0x6699bb, 0.2); // Reduced ambient for better shadow contrast
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xaaccdd, 0.8);
-    sunLight.position.set(0, 50, 10);
+    const sunLight = new THREE.DirectionalLight(0xaaccdd, 0.9);
+    sunLight.position.set(30, 80, 40); // Positioned for good shadow angles
+    sunLight.castShadow = true; // Enable shadow casting
+    
+    // Configure shadow camera for better coverage
+    sunLight.shadow.mapSize.width = 4096;  // High resolution shadow map
+    sunLight.shadow.mapSize.height = 4096;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 200;
+    sunLight.shadow.camera.left = -100;
+    sunLight.shadow.camera.right = 100;
+    sunLight.shadow.camera.top = 100;
+    sunLight.shadow.camera.bottom = -100;
+    sunLight.shadow.bias = -0.0001; // Reduce shadow acne
+    sunLight.shadow.radius = 8; // Soft shadow radius
+    
     scene.add(sunLight);
 
-    const rimLight1 = new THREE.DirectionalLight(0x7799cc, 0.3);
+    // Additional rim lights (non-shadow casting)
+    const rimLight1 = new THREE.DirectionalLight(0x7799cc, 0.2);
     rimLight1.position.set(20, 20, 0);
     scene.add(rimLight1);
 
-    const rimLight2 = new THREE.DirectionalLight(0x6688bb, 0.25);
+    const rimLight2 = new THREE.DirectionalLight(0x6688bb, 0.15);
     rimLight2.position.set(-20, 15, 0);
     scene.add(rimLight2);
 
-    const floorLight = new THREE.DirectionalLight(0x7aacbe, 0.2);
+    const floorLight = new THREE.DirectionalLight(0x7aacbe, 0.1);
     floorLight.position.set(0, -30, 0);
     scene.add(floorLight);
 
