@@ -98,6 +98,28 @@ const kelpFragmentShader = `
     }
 `;
 
+// Create material function
+function createKelpMaterial(kelpHeight = 20, baseY = -10) {
+    return new THREE.ShaderMaterial({
+        uniforms: THREE.UniformsUtils.merge([
+            THREE.UniformsLib.fog,
+            {
+                time: { value: 0 },
+                waveSpeed: { value: waveSpeed },
+                waveIntensity: { value: waveIntensity },
+                currentDirection: { value: currentDirection },
+                diffuse: { value: new THREE.Color(0x735F1D) }, // Dark green-brown
+                opacity: { value: 0.85 },
+                kelpHeight: { value: kelpHeight },
+                baseY: { value: baseY },
+            }
+        ]),
+        vertexShader: kelpVertexShader,
+        fragmentShader: kelpFragmentShader,
+        transparent: true,
+        fog: true // CRITICAL: Enable fog support
+    });
+}
 
 // Texture loading functions (kept the same)
 function createTexturedFloor() {
@@ -269,91 +291,14 @@ function createGPUKelp() {
     
     kelpGeometry = new THREE.CylinderGeometry(0.2, 0.4, baseKelpHeight, radialSegments, segments);
     
-    // Create custom shader material with Three.js fog integration
-    kelpMaterial = new THREE.ShaderMaterial({
-        uniforms: THREE.UniformsUtils.merge([
-            THREE.UniformsLib.fog,
-            {
-                time: { value: 0 },
-                waveSpeed: { value: waveSpeed },
-                waveIntensity: { value: waveIntensity },
-                currentDirection: { value: currentDirection },
-                diffuse: { value: new THREE.Color(0x735F1D) }, // Dark green-brown
-                opacity: { value: 0.85 },
-                kelpHeight: { value: 20 },
-                baseY: { value: -10 },
-            }
-        ]),
-        vertexShader: kelpVertexShader,
-        fragmentShader: kelpFragmentShader,
-        transparent: true,
-        fog: true // CRITICAL: Enable fog support
-    });
+    // Create material
+    kelpMaterial = createKelpMaterial(baseKelpHeight, -10);
 
     // Create instanced mesh
     instancedKelp = new THREE.InstancedMesh(kelpGeometry, kelpMaterial, KELP_COUNT);
     
-    // Set up instance attributes
-    const instancePositions = new Float32Array(KELP_COUNT * 3);
-    const instanceRotations = new Float32Array(KELP_COUNT * 4);
-    const instanceScales = new Float32Array(KELP_COUNT * 3);
-    const animationData = new Float32Array(KELP_COUNT * 4); // offset1, freq1, amplitude1, heightScale
-    const animationData2 = new Float32Array(KELP_COUNT * 4); // offset2, freq2, amplitude2, offset3
-    const animationData3 = new Float32Array(KELP_COUNT * 2); // freq3, amplitude3
-
-    // Generate instance data
-    for (let i = 0; i < KELP_COUNT; i++) {
-        // Position
-        const x = (Math.random() - 0.5) * 175;
-        const z = (Math.random() - 0.5) * 175;
-        const y = -1; // Seafloor level
-        
-        instancePositions[i * 3] = x;
-        instancePositions[i * 3 + 1] = y;
-        instancePositions[i * 3 + 2] = z;
-
-        // Rotation (quaternion)
-        const rotation = Math.random() * Math.PI * 2;
-        instanceRotations[i * 4] = 0;
-        instanceRotations[i * 4 + 1] = Math.sin(rotation / 2);
-        instanceRotations[i * 4 + 2] = 0;
-        instanceRotations[i * 4 + 3] = Math.cos(rotation / 2);
-
-        // Scale
-        const scale = 4 + Math.random() * 20; // Random scale between 4x and 24x
-        instanceScales[i * 3] = scale;
-        instanceScales[i * 3 + 1] = scale;
-        instanceScales[i * 3 + 2] = scale;
-
-        // Animation data
-        animationData[i * 4] = Math.random() * Math.PI * 2; // offset1
-        animationData[i * 4 + 1] = 0.8 + Math.random() * 0.6; // freq1
-        animationData[i * 4 + 2] = 0.8 + Math.random() * 0.6; // amplitude1
-        animationData[i * 4 + 3] = 0.0; // unused
-
-        animationData2[i * 4] = Math.random() * Math.PI * 2; // offset2
-        animationData2[i * 4 + 1] = 1.1 + Math.random() * 0.8; // freq2
-        animationData2[i * 4 + 2] = 0.6 + Math.random() * 0.5; // amplitude2
-        animationData2[i * 4 + 3] = Math.random() * Math.PI * 2; // offset3
-
-        animationData3[i * 2] = 0.5 + Math.random() * 0.4; // freq3
-        animationData3[i * 2 + 1] = 0.4 + Math.random() * 0.3; // amplitude3
-
-        // Store instance data for reference
-        instanceData[i] = {
-            position: { x, y, z },
-            scale: scale,
-            rotation: rotation
-        };
-    }
-
-    // Set instance attributes
-    kelpGeometry.setAttribute('instancePosition', new THREE.InstancedBufferAttribute(instancePositions, 3));
-    kelpGeometry.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(instanceRotations, 4));
-    kelpGeometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(instanceScales, 3));
-    kelpGeometry.setAttribute('animationData', new THREE.InstancedBufferAttribute(animationData, 4));
-    kelpGeometry.setAttribute('animationData2', new THREE.InstancedBufferAttribute(animationData2, 4));
-    kelpGeometry.setAttribute('animationData3', new THREE.InstancedBufferAttribute(animationData3, 2));
+    // Set up instance data
+    setupInstanceData(baseKelpHeight);
 
     scene.add(instancedKelp);
     
@@ -398,40 +343,21 @@ function loadGLTFKelp() {
                 // Use GLTF geometry instead of cylinder
                 kelpGeometry = gltfGeometry;
 
+                // Get bounds for height calculations
                 gltfGeometry.computeBoundingBox();
                 const bbox = gltfGeometry.boundingBox;
                 const height = bbox.max.y - bbox.min.y;
                 const baseY = bbox.min.y;
                 
-                kelpMaterial.uniforms.kelpHeight.value = height;
-                kelpMaterial.uniforms.baseY.value = baseY;
-
+                log(`Using GLTF geometry with height: ${height.toFixed(2)}, baseY: ${baseY.toFixed(2)}`);
                 
-                log(`Using GLTF geometry with height: ${height.toFixed(2)}`);
-                
-                // Create material with Three.js fog integration
-                kelpMaterial = new THREE.ShaderMaterial({
-                    uniforms: THREE.UniformsUtils.merge([
-                        THREE.UniformsLib.fog,
-                        {
-                            time: { value: 0 },
-                            waveSpeed: { value: waveSpeed },
-                            waveIntensity: { value: waveIntensity },
-                            currentDirection: { value: currentDirection },
-                            diffuse: { value: new THREE.Color(0x735F1D) },
-                            opacity: { value: 0.85 }
-                        }
-                    ]),
-                    vertexShader: kelpVertexShader,
-                    fragmentShader: kelpFragmentShader,
-                    transparent: true,
-                    fog: true // CRITICAL: Enable fog support
-                });
+                // Create material with proper height and baseY values
+                kelpMaterial = createKelpMaterial(height, baseY);
 
                 // Create instanced mesh with GLTF geometry
                 instancedKelp = new THREE.InstancedMesh(kelpGeometry, kelpMaterial, KELP_COUNT);
                 
-                // Set up instance data (same as before but with GLTF height)
+                // Set up instance data with GLTF height
                 setupInstanceData(height);
                 
                 scene.add(instancedKelp);
