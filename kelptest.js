@@ -20,11 +20,10 @@ let instanceData = [];
 let kelpGeometry = null;
 let kelpMaterial = null;
 
-// Vertex shader with shadow support
+// Vertex shader with simple shadow support
 const kelpVertexShader = `
     #include <common>
     #include <fog_pars_vertex>
-    #include <shadowmap_pars_vertex>
     
     attribute vec3 instancePosition;
     attribute vec4 instanceRotation;
@@ -81,42 +80,40 @@ const kelpVertexShader = `
         vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
         gl_Position = projectionMatrix * mvPosition;
 
-        // Transform normal to world space for shadows
-        vec3 transformedNormal = normalMatrix * normal;
-        vNormal = normalize(transformedNormal);
+        // Transform normal
+        vNormal = normalize(normalMatrix * normal);
         
         #include <fog_vertex>
-        
-        // Shadow mapping - need to define required variables
-        #ifdef USE_SHADOWMAP
-            vec4 worldPosition = vec4(worldPos, 1.0);
-            #include <shadowmap_vertex>
-        #endif
     }
 `;
 
-// Fragment shader with shadow support
+// Fragment shader with simple lighting
 const kelpFragmentShader = `
     #include <common>
     #include <fog_pars_fragment>
-    #include <shadowmap_pars_fragment>
     
     uniform vec3 diffuse;
     uniform float opacity;
+    uniform vec3 lightDirection;
+    uniform vec3 lightColor;
+    
     varying vec3 vNormal;
     varying vec3 vWorldPosition;
 
     void main() {
-        vec3 lightDirection = normalize(vec3(0.5, 1.0, 0.3));
-        float dotNL = max(dot(normalize(vNormal), lightDirection), 0.0);
+        // Simple directional lighting
+        vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
+        float dotNL = max(dot(normalize(vNormal), lightDir), 0.0);
         
-        // Calculate shadow factor using Three.js built-in functions
+        // Simple shadow approximation based on world position and normal
         float shadowFactor = 1.0;
-        #ifdef USE_SHADOWMAP
-            shadowFactor = getShadow( directionalShadowMap[ 0 ], directionalLightShadows[ 0 ].shadowMapSize, directionalLightShadows[ 0 ].shadowBias, directionalLightShadows[ 0 ].shadowRadius, vDirectionalShadowCoord[ 0 ] );
-        #endif
+        float distanceFromCenter = length(vWorldPosition.xz);
+        float heightFactor = (vWorldPosition.y + 1.0) / 20.0; // Assuming kelp height of ~20
         
-        // Apply shadows to lighting
+        // Create simple shadow effect - kelp further from center and higher up cast less shadow
+        shadowFactor = mix(0.3, 1.0, min(1.0, distanceFromCenter / 30.0 + heightFactor * 0.5));
+        
+        // Apply lighting with shadow approximation
         vec3 color = diffuse * (0.2 + 0.8 * dotNL * shadowFactor);
         
         gl_FragColor = vec4(color, opacity);
@@ -129,8 +126,6 @@ function createKelpMaterial(kelpHeight = 20, baseY = -10) {
     return new THREE.ShaderMaterial({
         uniforms: THREE.UniformsUtils.merge([
             THREE.UniformsLib.fog,
-            THREE.UniformsLib.lights,
-            THREE.UniformsLib.shadowmap,
             {
                 time: { value: 0 },
                 waveSpeed: { value: waveSpeed },
@@ -140,13 +135,14 @@ function createKelpMaterial(kelpHeight = 20, baseY = -10) {
                 opacity: { value: 0.85 },
                 kelpHeight: { value: kelpHeight },
                 baseY: { value: baseY },
+                lightDirection: { value: new THREE.Vector3(0.5, 1.0, 0.3) },
+                lightColor: { value: new THREE.Color(0xaaccdd) }
             }
         ]),
         vertexShader: kelpVertexShader,
         fragmentShader: kelpFragmentShader,
         transparent: true,
-        fog: true, // CRITICAL: Enable fog support
-        lights: true // Enable lighting calculations for shadows
+        fog: true
     });
 }
 
@@ -156,10 +152,8 @@ function createTexturedFloor() {
     
     const floorGeometry = new THREE.PlaneGeometry(1000, 1000, 256, 256);
     
-    let floorMaterial = new THREE.MeshPhongMaterial({ 
+    let floorMaterial = new THREE.MeshLambertMaterial({ 
         color: 0x302114,
-        shininess: 2,
-        specular: 0x332211,
         fog: true // IMPORTANT: Enable fog for compatibility
     });
     
@@ -218,8 +212,6 @@ function updateFloorMaterial() {
     
     const materialProps = {
         color: floorTextures.diffuse ? 0xffffff : 0x302114,
-        shininess: 5,
-        specular: 0x333333,
         fog: true // IMPORTANT: Enable fog for compatibility
     };
     
@@ -232,7 +224,7 @@ function updateFloorMaterial() {
         materialProps.normalScale = new THREE.Vector2(0.5, 0.5);
     }
     
-    const newMaterial = new THREE.MeshPhongMaterial(materialProps);
+    const newMaterial = new THREE.MeshLambertMaterial(materialProps);
     
     window.seafloor.material.dispose();
     window.seafloor.material = newMaterial;
