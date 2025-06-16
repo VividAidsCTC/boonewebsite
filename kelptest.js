@@ -59,34 +59,17 @@ const kelpVertexShader = `
         heightFactor = clamp(heightFactor, 0.0, 1.0);
 
         float dirRad = radians(currentDirection);
-
-        float wave1 = sin(time * freq1 + offset1) * amplitude1;
-        float wave2 = cos(time * freq2 + offset2) * amplitude2;
-        float wave3 = sin(time * freq3 + offset3) * amplitude3;
-
-        float undulationX = (
-            sin(heightFactor * 3.0 + time * freq1 + offset1) * 0.8 +
-            sin(heightFactor * 6.0 + time * freq2 + offset2) * 0.4 +
-            sin(heightFactor * 9.0 + time * freq3 + offset3) * 0.2
-        ) * waveIntensity * heightFactor;
-
-        float undulationZ = (
-            cos(heightFactor * 3.0 + time * freq1 + offset1 + 0.785) * 0.6 +
-            cos(heightFactor * 6.0 + time * freq2 + offset2 + 1.047) * 0.3 +
-            cos(heightFactor * 9.0 + time * freq3 + offset3 + 0.524) * 0.15
-        ) * waveIntensity * heightFactor;
-
-        float currentInfluenceX = (wave1 + wave2 * 0.5) * waveIntensity * heightFactor * heightFactor;
-        float currentInfluenceZ = (wave2 + wave3 * 0.5) * waveIntensity * heightFactor * heightFactor;
-
-        float finalBendX = (undulationX + currentInfluenceX) * cos(dirRad) + 
-                          (undulationZ + currentInfluenceZ) * sin(dirRad) * 0.3;
-        float finalBendZ = (undulationZ + currentInfluenceZ) * sin(dirRad) + 
-                          (undulationX + currentInfluenceX) * cos(dirRad) * 0.3;
-
-        // Pin the base: scale displacement by heightFactor
-        pos.x += finalBendX * heightFactor;
-        pos.z += finalBendZ * heightFactor;
+        
+        // Simple sine wave based on vertex height and time
+        float wave = sin(time * waveSpeed + pos.y * 0.3 + offset1) * waveIntensity * heightFactor;
+        
+        // Apply bending perpendicular to current
+        float bendX = wave * cos(dirRad);
+        float bendZ = wave * sin(dirRad);
+        
+        // Only bend upper parts — base stays pinned
+        pos.x += bendX * heightFactor;
+        pos.z += bendZ * heightFactor;
 
         // Instance transform
         vec3 scaledPos = pos * instanceScale;
