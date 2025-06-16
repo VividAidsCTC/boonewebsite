@@ -407,11 +407,6 @@ function loadGLTFKelp() {
                 kelpMaterial.uniforms.baseY.value = baseY;
 
                 
-                // Get bounds for height calculations
-                gltfGeometry.computeBoundingBox();
-                const bbox = gltfGeometry.boundingBox;
-                const height = bbox.max.y - bbox.min.y;
-                
                 log(`Using GLTF geometry with height: ${height.toFixed(2)}`);
                 
                 // Create material with Three.js fog integration
