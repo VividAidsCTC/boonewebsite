@@ -24,16 +24,21 @@ let kelpMaterial = null;
 const kelpVertexShader = `
     #include <common>
     #include <fog_pars_vertex>
+    
     attribute vec3 instancePosition;
     attribute vec4 instanceRotation;
     attribute vec3 instanceScale;
     attribute vec4 animationData;
     attribute vec4 animationData2;
     attribute vec2 animationData3;
+    
     uniform float time;
     uniform float waveSpeed;
     uniform float waveIntensity;
     uniform float currentDirection;
+    uniform float baseY;
+    uniform float kelpHeight;
+
     varying vec3 vNormal;
 
     vec3 applyQuaternion(vec3 v, vec4 q) {
@@ -41,46 +46,36 @@ const kelpVertexShader = `
     }
 
     void main() {
+        // Per-instance animation params
         float offset1 = animationData.x;
-        float freq1 = animationData.y;
-        float amplitude1 = animationData.z;
-        float offset2 = animationData2.x;
-        float freq2 = animationData2.y;
-        float amplitude2 = animationData2.z;
-        float offset3 = animationData2.w;
-        float freq3 = animationData3.x;
-        float amplitude3 = animationData3.y;
 
+        // Vertex local position
         vec3 pos = position;
 
-        // Compute normalized height (0 = base, 1 = top)
-        float baseHeight = 20.0;
-        float heightFactor = (pos.y + baseHeight * 0.5) / baseHeight;
+        // Height factor: 0 at baseY, 1 at top
+        float heightFactor = (pos.y - baseY) / kelpHeight;
         heightFactor = clamp(heightFactor, 0.0, 1.0);
 
+        // Sine wave for swaying
         float dirRad = radians(currentDirection);
-        
-        // Simple sine wave based on vertex height and time
         float wave = sin(time * waveSpeed + pos.y * 0.3 + offset1) * waveIntensity * heightFactor;
-        
-        // Apply bending perpendicular to current
+
         float bendX = wave * cos(dirRad);
         float bendZ = wave * sin(dirRad);
-        
-        // Only bend upper parts — base stays pinned
+
+        // Deform only upper parts
         pos.x += bendX * heightFactor;
         pos.z += bendZ * heightFactor;
 
-        // Instance transform
+        // Apply scale, rotation, and position
         vec3 scaledPos = pos * instanceScale;
         vec3 rotatedPos = applyQuaternion(scaledPos, instanceRotation);
         vec3 worldPos = rotatedPos + instancePosition;
 
+        // Final projection
         vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
-
-        mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
         gl_Position = projectionMatrix * mvPosition;
-        
+
         vNormal = normalize(normalMatrix * normal);
         #include <fog_vertex>
     }
@@ -284,7 +279,9 @@ function createGPUKelp() {
                 waveIntensity: { value: waveIntensity },
                 currentDirection: { value: currentDirection },
                 diffuse: { value: new THREE.Color(0x735F1D) }, // Dark green-brown
-                opacity: { value: 0.85 }
+                opacity: { value: 0.85 },
+                kelpHeight: { value: 20 },
+                baseY: { value: -10 },
             }
         ]),
         vertexShader: kelpVertexShader,
@@ -400,6 +397,15 @@ function loadGLTFKelp() {
             if (gltfGeometry) {
                 // Use GLTF geometry instead of cylinder
                 kelpGeometry = gltfGeometry;
+
+                gltfGeometry.computeBoundingBox();
+                const bbox = gltfGeometry.boundingBox;
+                const height = bbox.max.y - bbox.min.y;
+                const baseY = bbox.min.y;
+                
+                kelpMaterial.uniforms.kelpHeight.value = height;
+                kelpMaterial.uniforms.baseY.value = baseY;
+
                 
                 // Get bounds for height calculations
                 gltfGeometry.computeBoundingBox();
