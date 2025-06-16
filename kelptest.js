@@ -15,7 +15,7 @@ let isMouseDown = false;
 let floorTextures = { diffuse: null, normal: null, roughness: null, displacement: null };
 let textureLoader = new THREE.TextureLoader();
 
-const KELP_COUNT = 300;
+const KELP_COUNT = 250;
 let instanceData = [];
 let kelpGeometry = null;
 let kelpMaterial = null;
