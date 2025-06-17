@@ -100,12 +100,19 @@ function logAssets(message) {
     console.log('[Assets] ' + message);
 }
 
-// Simplified materials
+// Simplified materials with better visibility
 function createRockMaterial() {
-    return new THREE.MeshBasicMaterial({
-        color: 0x555555,
-        fog: false // Disable fog for performance
+    return new THREE.MeshLambertMaterial({
+        color: 0x8B4513, // Brown color - more visible than gray
+        fog: false
     });
+}
+
+function createFallbackRockGeometry() {
+    // Create a simple rock-like shape if GLTF fails
+    const geometry = new THREE.DodecahedronGeometry(1, 0);
+    geometry.scale(1, 0.7, 1.2); // Make it more rock-like
+    return geometry;
 }
 
 function createFishMaterial(color = 0x4488bb) {
@@ -261,6 +268,16 @@ async function loadAssetModel(assetConfig, isRock = true) {
         }
         
         const loader = new THREE.GLTFLoader();
+        
+        // Suppress GLTF UV warnings
+        const originalWarn = console.warn;
+        console.warn = function(message) {
+            if (message.includes('Custom UV set') && message.includes('not yet supported')) {
+                return; // Suppress UV set warnings
+            }
+            originalWarn.apply(console, arguments);
+        };
+        
         logAssets(`Loading ${assetConfig.name}...`);
         
         loader.load(
@@ -290,13 +307,20 @@ async function loadAssetModel(assetConfig, isRock = true) {
                 });
                 
                 if (!geometry) {
-                    logAssets(`No geometry found in ${assetConfig.name}`);
-                    reject(new Error('No geometry found'));
-                    return;
+                    logAssets(`No geometry found in ${assetConfig.name}, using fallback`);
+                    // Use fallback geometry instead of rejecting
+                    if (isRock) {
+                        geometry = createFallbackRockGeometry();
+                        logAssets(`Using fallback rock geometry for ${assetConfig.name}`);
+                    } else {
+                        reject(new Error('No geometry found'));
+                        return;
+                    }
+                } else {
+                    logAssets(`Geometry found for ${assetConfig.name}: ${geometry.getAttribute('position').count} vertices`);
+                    // Optimize geometry and clean up UV issues
+                    geometry = optimizeGeometry(geometry);
                 }
-                
-                // Optimize geometry and clean up UV issues
-                geometry = optimizeGeometry(geometry);
                 
                 // Create simple, performance-optimized materials
                 let material;
@@ -331,22 +355,33 @@ async function loadAssetModel(assetConfig, isRock = true) {
                     scene.add(instancedMesh);
                     allInstancedMeshes.push(instancedMesh);
                     
+                    // Log position for debugging
+                    logAssets(`Added ${assetConfig.name} to scene at positions around origin`);
+                    
                     if (isRock) {
                         rockInstances.push({
                             name: assetConfig.name,
                             mesh: instancedMesh,
                             config: assetConfig
                         });
+                        logAssets(`Rock instances now: ${rockInstances.length}`);
                     } else {
                         fishInstances.push({
                             name: assetConfig.name,
                             mesh: instancedMesh,
                             config: assetConfig
                         });
+                        logAssets(`Fish instances now: ${fishInstances.length}`);
                     }
+                } else {
+                    logAssets(`ERROR: Scene not available when trying to add ${assetConfig.name}`);
                 }
                 
                 logAssets(`Created ${instanceCount} instances of ${assetConfig.name}`);
+                
+                // Restore console.warn
+                console.warn = originalWarn;
+                
                 resolve(instancedMesh);
             },
             function(progress) {
@@ -447,7 +482,7 @@ function updateRocksAndFish(deltaTime = 0.016) { // 60fps target
     updateAssets(deltaTime);
 }
 
-// Simplified export
+// Simplified export with debug info
 window.RocksAndFishSystem = {
     getRockInstances: () => rockInstances,
     getFishInstances: () => fishInstances,
@@ -455,7 +490,47 @@ window.RocksAndFishSystem = {
         (rockInstances.length * INSTANCES_PER_ROCK_MODEL) + 
         (fishInstances.length * INSTANCES_PER_FISH_MODEL),
     update: updateRocksAndFish,
-    getPerformanceInfo: () => ({ avgFPS, totalMeshes: allInstancedMeshes.length })
+    getPerformanceInfo: () => ({ avgFPS, totalMeshes: allInstancedMeshes.length }),
+    
+    // Debug functions
+    debugInfo: () => {
+        logAssets(`=== DEBUG INFO ===`);
+        logAssets(`Rock instances: ${rockInstances.length}`);
+        logAssets(`Fish instances: ${fishInstances.length}`);
+        logAssets(`Total meshes in scene: ${allInstancedMeshes.length}`);
+        logAssets(`Scene available: ${typeof scene !== 'undefined'}`);
+        
+        rockInstances.forEach((rock, i) => {
+            logAssets(`Rock ${i}: ${rock.name}, visible: ${rock.mesh.visible}, position count: ${rock.mesh.count}`);
+        });
+        
+        return {
+            rocks: rockInstances.length,
+            fish: fishInstances.length,
+            totalMeshes: allInstancedMeshes.length,
+            sceneAvailable: typeof scene !== 'undefined'
+        };
+    },
+    
+    // Force create test rocks
+    createTestRocks: () => {
+        if (typeof scene === 'undefined') {
+            logAssets('Scene not available for test rocks');
+            return;
+        }
+        
+        logAssets('Creating test rocks with fallback geometry...');
+        const testGeometry = createFallbackRockGeometry();
+        const testMaterial = createRockMaterial();
+        const testMesh = new THREE.InstancedMesh(testGeometry, testMaterial, 10);
+        
+        setupRockInstanceData(testGeometry, 10);
+        scene.add(testMesh);
+        allInstancedMeshes.push(testMesh);
+        
+        logAssets('Test rocks created and added to scene');
+        return testMesh;
+    }
 };
 
 // Performance-conscious callback registration
