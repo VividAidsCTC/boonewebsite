@@ -5,7 +5,7 @@ let allInstancedMeshes = [];
 
 // Configuration
 const INSTANCES_PER_MODEL = 50;
-const SPAWN_RADIUS = 500;
+const SPAWN_RADIUS = 200;
 
 // Model configurations - update these URLs to your GitHub paths
 const ASSET_CONFIG = {
