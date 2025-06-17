@@ -200,28 +200,54 @@ function setupFishInstanceData(geometry, count, config) {
     geometry.setAttribute('animationData', new THREE.InstancedBufferAttribute(animationData, 2));
 }
 
-// Optimized geometry processing
+// Optimized geometry processing with UV cleanup
 function optimizeGeometry(geometry) {
-    // Reduce geometry complexity for performance
-    if (geometry.index) {
-        const positionAttribute = geometry.getAttribute('position');
-        const indexAttribute = geometry.getIndex();
-        
-        // Simple decimation - keep every other triangle for distant objects
-        if (indexAttribute.count > 300) {
-            const newIndices = [];
-            for (let i = 0; i < indexAttribute.count; i += 6) { // Skip every other triangle
-                newIndices.push(indexAttribute.getX(i));
-                newIndices.push(indexAttribute.getX(i + 1));
-                newIndices.push(indexAttribute.getX(i + 2));
-            }
-            geometry.setIndex(newIndices);
+    // Clean up UV sets that cause warnings
+    geometry.deleteAttribute('uv1');  // Remove secondary UV sets
+    geometry.deleteAttribute('uv2');
+    geometry.deleteAttribute('uv3');
+    
+    // Remove other unnecessary attributes
+    geometry.deleteAttribute('color');
+    geometry.deleteAttribute('tangent');
+    
+    // Keep only essential attributes: position, normal, uv
+    const essentialAttributes = ['position', 'normal', 'uv'];
+    const attributesToRemove = [];
+    
+    for (const attributeName in geometry.attributes) {
+        if (!essentialAttributes.includes(attributeName)) {
+            attributesToRemove.push(attributeName);
         }
     }
     
-    // Remove unnecessary attributes
-    geometry.deleteAttribute('uv2');
-    geometry.deleteAttribute('color');
+    attributesToRemove.forEach(attr => {
+        geometry.deleteAttribute(attr);
+    });
+    
+    // Reduce geometry complexity for performance
+    if (geometry.index) {
+        const indexAttribute = geometry.getIndex();
+        
+        // Simple decimation - keep every other triangle for distant objects
+        if (indexAttribute.count > 600) {
+            const newIndices = [];
+            for (let i = 0; i < indexAttribute.count; i += 6) { // Skip every other triangle
+                if (i + 2 < indexAttribute.count) {
+                    newIndices.push(indexAttribute.getX(i));
+                    newIndices.push(indexAttribute.getX(i + 1));
+                    newIndices.push(indexAttribute.getX(i + 2));
+                }
+            }
+            geometry.setIndex(newIndices);
+            logAssets(`Decimated geometry: ${indexAttribute.count} → ${newIndices.length} indices`);
+        }
+    }
+    
+    // Recompute normals if needed
+    if (!geometry.getAttribute('normal')) {
+        geometry.computeVertexNormals();
+    }
     
     return geometry;
 }
@@ -241,25 +267,49 @@ async function loadAssetModel(assetConfig, isRock = true) {
             assetConfig.url,
             function(gltf) {
                 let geometry = null;
+                let originalMaterial = null;
+                
+                // Extract geometry and clean up materials
                 gltf.scene.traverse((child) => {
                     if (child.isMesh && child.geometry) {
                         if (!geometry) {
                             geometry = child.geometry.clone();
+                            originalMaterial = child.material;
+                        }
+                        
+                        // Clean up complex materials that cause warnings
+                        if (child.material) {
+                            // Remove problematic texture references
+                            child.material.metalnessMap = null;
+                            child.material.roughnessMap = null;
+                            child.material.normalMap = null;
+                            child.material.aoMap = null;
+                            child.material.emissiveMap = null;
                         }
                     }
                 });
                 
                 if (!geometry) {
+                    logAssets(`No geometry found in ${assetConfig.name}`);
                     reject(new Error('No geometry found'));
                     return;
                 }
                 
-                // Optimize geometry for performance
+                // Optimize geometry and clean up UV issues
                 geometry = optimizeGeometry(geometry);
                 
-                const material = isRock ? 
-                    createRockMaterial() : 
-                    createFishMaterial(0x4488bb);
+                // Create simple, performance-optimized materials
+                let material;
+                if (isRock) {
+                    material = createRockMaterial();
+                } else {
+                    // Use original material color if available
+                    let color = 0x4488bb;
+                    if (originalMaterial && originalMaterial.color) {
+                        color = originalMaterial.color.getHex();
+                    }
+                    material = createFishMaterial(color);
+                }
                 
                 const instanceCount = isRock ? INSTANCES_PER_ROCK_MODEL : INSTANCES_PER_FISH_MODEL;
                 const instancedMesh = new THREE.InstancedMesh(geometry, material, instanceCount);
@@ -299,7 +349,9 @@ async function loadAssetModel(assetConfig, isRock = true) {
                 logAssets(`Created ${instanceCount} instances of ${assetConfig.name}`);
                 resolve(instancedMesh);
             },
-            undefined,
+            function(progress) {
+                // Suppress progress logging to reduce console spam
+            },
             function(error) {
                 logAssets(`Error loading ${assetConfig.name}: ${error.message}`);
                 reject(error);
