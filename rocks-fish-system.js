@@ -12,19 +12,19 @@ const ASSET_CONFIG = {
     rocks: [
         {
             name: 'rock1',
-            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/ocean_models/rock1.glb',
+            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/ocean_models/rock1.glb',
             scale: { min: 0.5, max: 2.0 },
             yOffset: -1
         },
         {
             name: 'rock2', 
-            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/ocean_models/rock2.glb',
+            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/ocean_models/rock2.glb',
             scale: { min: 0.8, max: 1.5 },
             yOffset: -1
         },
         {
             name: 'rock3',
-            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/ocean_models/rock3.glb',
+            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/ocean_models/rock3.glb',
             scale: { min: 0.3, max: 1.8 },
             yOffset: -1
         }
@@ -32,14 +32,14 @@ const ASSET_CONFIG = {
     fish: [
         {
             name: 'fish1',
-            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/ocean_models/fish1.glb',
+            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/ocean_models/fish1.glb',
             scale: { min: 0.2, max: 0.6 },
             yOffset: 5,
             swimHeight: { min: 2, max: 15 }
         },
         {
             name: 'fish2',
-            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/ocean_models/fish2.glb',
+            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/ocean_models/fish2.glb',
             scale: { min: 0.3, max: 0.8 },
             yOffset: 8,
             swimHeight: { min: 3, max: 20 }
