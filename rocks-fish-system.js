@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // --- Module-level state variables ---
 let rockInstances = [];
