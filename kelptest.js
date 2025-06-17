@@ -564,6 +564,10 @@ function animate() {
         OscillatingPlane.update(0.01 * waveSpeed); 
     }
 
+    if (typeof window.RocksAndFishSystem !== 'undefined') {
+        window.RocksAndFishSystem.update(0.01 * waveSpeed);
+    }
+
     if (typeof OceanParticles !== 'undefined') {
         OceanParticles.update(0.01 * waveSpeed);
     }
