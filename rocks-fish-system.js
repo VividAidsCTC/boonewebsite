@@ -103,7 +103,7 @@ function logAssets(message) {
 // Simplified materials with better visibility
 function createRockMaterial() {
     return new THREE.MeshLambertMaterial({
-        color: 0x8B4513, // Brown color - more visible than gray
+        color: 0xFF6B35, // Bright orange - very visible for debugging
         fog: false
     });
 }
@@ -519,17 +519,38 @@ window.RocksAndFishSystem = {
             return;
         }
         
-        logAssets('Creating test rocks with fallback geometry...');
-        const testGeometry = createFallbackRockGeometry();
-        const testMaterial = createRockMaterial();
-        const testMesh = new THREE.InstancedMesh(testGeometry, testMaterial, 10);
+        logAssets('Creating large, bright test rocks near camera...');
+        const testGeometry = new THREE.BoxGeometry(2, 2, 2); // Simple box
+        const testMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x00FF00, // Bright green
+            wireframe: false 
+        });
         
-        setupRockInstanceData(testGeometry, 10);
-        scene.add(testMesh);
-        allInstancedMeshes.push(testMesh);
+        // Create individual rocks in obvious positions
+        for (let i = 0; i < 5; i++) {
+            const testMesh = new THREE.Mesh(testGeometry, testMaterial);
+            testMesh.position.set(i * 10 - 20, 2, 5); // Line them up in front of camera
+            scene.add(testMesh);
+            logAssets(`Test rock ${i} added at position: ${testMesh.position.x}, ${testMesh.position.y}, ${testMesh.position.z}`);
+        }
         
-        logAssets('Test rocks created and added to scene');
-        return testMesh;
+        logAssets('5 bright green test rocks created in a line');
+        return true;
+    },
+    
+    // Make all rocks bright and obvious
+    makeRocksVisible: () => {
+        logAssets('Making all rocks bright and obvious...');
+        rockInstances.forEach((rock, i) => {
+            // Change material to bright color
+            rock.mesh.material.color.setHex(0xFF0000); // Bright red
+            rock.mesh.material.needsUpdate = true;
+            
+            // Log bounding box
+            rock.mesh.geometry.computeBoundingBox();
+            const bbox = rock.mesh.geometry.boundingBox;
+            logAssets(`Rock ${i} (${rock.name}) bounding box: ${bbox.min.x.toFixed(1)}, ${bbox.min.y.toFixed(1)}, ${bbox.min.z.toFixed(1)} to ${bbox.max.x.toFixed(1)}, ${bbox.max.y.toFixed(1)}, ${bbox.max.z.toFixed(1)}`);
+        });
     }
 };
 
