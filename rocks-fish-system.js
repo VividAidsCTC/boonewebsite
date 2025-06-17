@@ -1,561 +1,278 @@
-// Global variables for rocks and fish system
-let rockInstances = [];
-let fishInstances = [];
-let allInstancedMeshes = [];
-
-// Performance-optimized configuration
-const INSTANCES_PER_ROCK_MODEL = 25; // Reduced from 50
-const INSTANCES_PER_FISH_MODEL = 15; // Reduced from 50
-const SPAWN_RADIUS = 150; // Reduced from 200
-const MAX_RENDER_DISTANCE = 100; // Culling distance
-const LOD_DISTANCE_NEAR = 30;
-const LOD_DISTANCE_FAR = 60;
-
-// Model configurations
-const ASSET_CONFIG = {
-    rocks: [
-        {
-            name: 'rock1',
-            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/ocean_models/rock1.glb',
-            scale: { min: 0.8, max: 1.5 }, // Reduced variation
-            yOffset: -1,
-            priority: 1 // Load order
-        },
-        {
-            name: 'rock2', 
-            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/ocean_models/rock2.glb',
-            scale: { min: 1.0, max: 1.8 },
-            yOffset: -1,
-            priority: 2
-        }
-        // Removed rock3 for performance - can re-add later if needed
-    ],
-    fish: [
-        {
-            name: 'fish1',
-            url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/ocean_models/fish1.glb',
-            scale: { min: 0.3, max: 0.7 },
-            yOffset: 5,
-            swimHeight: { min: 3, max: 12 },
-            priority: 1
-        }
-        // Removed fish2 for performance - can re-add later if needed
-    ]
-};
-
-// Simplified fish shader (reduced complexity)
-const fishVertexShader = `
-    attribute vec3 instancePosition;
-    attribute vec4 instanceRotation;
-    attribute vec3 instanceScale;
-    attribute vec2 animationData; // swimSpeed, phaseOffset only
-    
-    uniform float time;
-    uniform float globalSwimSpeed;
-    
-    varying vec3 vNormal;
-    
-    vec3 applyQuaternion(vec3 v, vec4 q) {
-        return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
-    }
-    
-    void main() {
-        vec3 pos = position;
-        
-        float swimSpeed = animationData.x;
-        float phaseOffset = animationData.y;
-        
-        // Simplified swimming motion
-        float t = time * globalSwimSpeed * swimSpeed + phaseOffset;
-        float swimOffset = sin(t) * 2.0;
-        
-        pos.x += swimOffset * 0.5;
-        pos.y += cos(t * 1.5) * 0.3;
-        
-        vec3 scaledPos = pos * instanceScale;
-        vec3 rotatedPos = applyQuaternion(scaledPos, instanceRotation);
-        vec3 worldPos = rotatedPos + instancePosition;
-        
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPos, 1.0);
-        vNormal = normalize(normalMatrix * normal);
-    }
-`;
-
-const fishFragmentShader = `
-    uniform vec3 diffuse;
-    varying vec3 vNormal;
-    
-    void main() {
-        float dotNL = max(dot(normalize(vNormal), vec3(0.5, 1.0, 0.3)), 0.2);
-        gl_FragColor = vec4(diffuse * dotNL, 0.9);
-    }
-`;
-
-// Performance monitoring
-let lastFrameTime = performance.now();
-let frameCount = 0;
-let avgFPS = 60;
-
-function logAssets(message) {
-    console.log('[Assets] ' + message);
-}
-
-// Simplified materials with better visibility
-function createRockMaterial() {
-    return new THREE.MeshLambertMaterial({
-        color: 0xFF6B35, // Bright orange - very visible for debugging
-        fog: false
-    });
-}
-
-function createFallbackRockGeometry() {
-    // Create a simple rock-like shape if GLTF fails
-    const geometry = new THREE.DodecahedronGeometry(1, 0);
-    geometry.scale(1, 0.7, 1.2); // Make it more rock-like
-    return geometry;
-}
-
-function createFishMaterial(color = 0x4488bb) {
-    return new THREE.ShaderMaterial({
-        uniforms: {
-            time: { value: 0 },
-            globalSwimSpeed: { value: 0.5 }, // Slower default
-            diffuse: { value: new THREE.Color(color) }
-        },
-        vertexShader: fishVertexShader,
-        fragmentShader: fishFragmentShader,
-        transparent: false, // Disable transparency for performance
-        fog: false
-    });
-}
-
-// Optimized positioning with better distribution
-function getRandomPosition(yOffset = 0, heightRange = null) {
-    // Use square distribution for better performance
-    const x = (Math.random() - 0.5) * SPAWN_RADIUS * 2;
-    const z = (Math.random() - 0.5) * SPAWN_RADIUS * 2;
-    
-    let y = yOffset;
-    if (heightRange) {
-        y += Math.random() * (heightRange.max - heightRange.min) + heightRange.min;
-    }
-    
-    return { x, y, z };
-}
-
-// Simplified rock instance data
-function setupRockInstanceData(geometry, count) {
-    const instancePositions = new Float32Array(count * 3);
-    const instanceRotations = new Float32Array(count * 4);
-    const instanceScales = new Float32Array(count * 3);
-    
-    for (let i = 0; i < count; i++) {
-        const pos = getRandomPosition(-1);
-        instancePositions[i * 3] = pos.x;
-        instancePositions[i * 3 + 1] = pos.y;
-        instancePositions[i * 3 + 2] = pos.z;
-        
-        const rotation = Math.random() * Math.PI * 2;
-        instanceRotations[i * 4] = 0;
-        instanceRotations[i * 4 + 1] = Math.sin(rotation / 2);
-        instanceRotations[i * 4 + 2] = 0;
-        instanceRotations[i * 4 + 3] = Math.cos(rotation / 2);
-        
-        const scale = 1.0 + Math.random() * 0.5; // Less variation
-        instanceScales[i * 3] = scale;
-        instanceScales[i * 3 + 1] = scale;
-        instanceScales[i * 3 + 2] = scale;
-    }
-    
-    geometry.setAttribute('instancePosition', new THREE.InstancedBufferAttribute(instancePositions, 3));
-    geometry.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(instanceRotations, 4));
-    geometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(instanceScales, 3));
-}
-
-// Simplified fish instance data
-function setupFishInstanceData(geometry, count, config) {
-    const instancePositions = new Float32Array(count * 3);
-    const instanceRotations = new Float32Array(count * 4);
-    const instanceScales = new Float32Array(count * 3);
-    const animationData = new Float32Array(count * 2); // Reduced from 4+2
-    
-    for (let i = 0; i < count; i++) {
-        const pos = getRandomPosition(config.yOffset, config.swimHeight);
-        instancePositions[i * 3] = pos.x;
-        instancePositions[i * 3 + 1] = pos.y;
-        instancePositions[i * 3 + 2] = pos.z;
-        
-        const rotation = Math.random() * Math.PI * 2;
-        instanceRotations[i * 4] = 0;
-        instanceRotations[i * 4 + 1] = Math.sin(rotation / 2);
-        instanceRotations[i * 4 + 2] = 0;
-        instanceRotations[i * 4 + 3] = Math.cos(rotation / 2);
-        
-        const scale = config.scale.min + Math.random() * (config.scale.max - config.scale.min);
-        instanceScales[i * 3] = scale;
-        instanceScales[i * 3 + 1] = scale;
-        instanceScales[i * 3 + 2] = scale;
-        
-        // Simplified animation data
-        animationData[i * 2] = 0.5 + Math.random() * 0.5; // swimSpeed
-        animationData[i * 2 + 1] = Math.random() * Math.PI * 2; // phaseOffset
-    }
-    
-    geometry.setAttribute('instancePosition', new THREE.InstancedBufferAttribute(instancePositions, 3));
-    geometry.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(instanceRotations, 4));
-    geometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(instanceScales, 3));
-    geometry.setAttribute('animationData', new THREE.InstancedBufferAttribute(animationData, 2));
-}
-
-// Optimized geometry processing with UV cleanup
-function optimizeGeometry(geometry) {
-    // Clean up UV sets that cause warnings
-    geometry.deleteAttribute('uv1');  // Remove secondary UV sets
-    geometry.deleteAttribute('uv2');
-    geometry.deleteAttribute('uv3');
-    
-    // Remove other unnecessary attributes
-    geometry.deleteAttribute('color');
-    geometry.deleteAttribute('tangent');
-    
-    // Keep only essential attributes: position, normal, uv
-    const essentialAttributes = ['position', 'normal', 'uv'];
-    const attributesToRemove = [];
-    
-    for (const attributeName in geometry.attributes) {
-        if (!essentialAttributes.includes(attributeName)) {
-            attributesToRemove.push(attributeName);
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Optimized Rocks and Fish</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
         }
     }
-    
-    attributesToRemove.forEach(attr => {
-        geometry.deleteAttribute(attr);
-    });
-    
-    // Reduce geometry complexity for performance
-    if (geometry.index) {
-        const indexAttribute = geometry.getIndex();
-        
-        // Simple decimation - keep every other triangle for distant objects
-        if (indexAttribute.count > 600) {
-            const newIndices = [];
-            for (let i = 0; i < indexAttribute.count; i += 6) { // Skip every other triangle
-                if (i + 2 < indexAttribute.count) {
-                    newIndices.push(indexAttribute.getX(i));
-                    newIndices.push(indexAttribute.getX(i + 1));
-                    newIndices.push(indexAttribute.getX(i + 2));
-                }
-            }
-            geometry.setIndex(newIndices);
-            logAssets(`Decimated geometry: ${indexAttribute.count} → ${newIndices.length} indices`);
-        }
-    }
-    
-    // Recompute normals if needed
-    if (!geometry.getAttribute('normal')) {
-        geometry.computeVertexNormals();
-    }
-    
-    return geometry;
-}
+    </script>
 
-async function loadAssetModel(assetConfig, isRock = true) {
-    return new Promise((resolve, reject) => {
-        if (typeof THREE.GLTFLoader === 'undefined') {
-            logAssets(`GLTFLoader not available for ${assetConfig.name}`);
-            reject(new Error('GLTFLoader not available'));
-            return;
-        }
-        
-        const loader = new THREE.GLTFLoader();
-        
-        // Suppress GLTF UV warnings
-        const originalWarn = console.warn;
-        console.warn = function(message) {
-            if (message.includes('Custom UV set') && message.includes('not yet supported')) {
-                return; // Suppress UV set warnings
-            }
-            originalWarn.apply(console, arguments);
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Global Variables (scoped to this module) ---
+        let scene, camera, renderer, controls;
+        let rockInstances = [];
+        let fishInstances = [];
+        let allInstancedMeshes = [];
+        const clock = new THREE.Clock();
+
+        // --- Performance-optimized configuration ---
+        const INSTANCES_PER_ROCK_MODEL = 25;
+        const INSTANCES_PER_FISH_MODEL = 15;
+        const SPAWN_RADIUS = 150;
+
+        // --- Model configurations ---
+        const ASSET_CONFIG = {
+            rocks: [{
+                name: 'rock1',
+                url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/ocean_models/rock1.glb',
+                scale: { min: 0.8, max: 1.5 },
+                yOffset: -1,
+            }, {
+                name: 'rock2',
+                url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/ocean_models/rock2.glb',
+                scale: { min: 1.0, max: 1.8 },
+                yOffset: -1,
+            }],
+            fish: [{
+                name: 'fish1',
+                url: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/ocean_models/fish1.glb',
+                scale: { min: 0.3, max: 0.7 },
+                yOffset: 5,
+                swimHeight: { min: 3, max: 12 },
+            }]
         };
-        
-        logAssets(`Loading ${assetConfig.name}...`);
-        
-        loader.load(
-            assetConfig.url,
-            function(gltf) {
-                let geometry = null;
-                let originalMaterial = null;
-                
-                // Extract geometry and clean up materials
-                gltf.scene.traverse((child) => {
-                    if (child.isMesh && child.geometry) {
-                        if (!geometry) {
-                            geometry = child.geometry.clone();
-                            originalMaterial = child.material;
-                        }
-                        
-                        // Clean up complex materials that cause warnings
-                        if (child.material) {
-                            // Remove problematic texture references
-                            child.material.metalnessMap = null;
-                            child.material.roughnessMap = null;
-                            child.material.normalMap = null;
-                            child.material.aoMap = null;
-                            child.material.emissiveMap = null;
-                        }
-                    }
-                });
-                
-                if (!geometry) {
-                    logAssets(`No geometry found in ${assetConfig.name}, using fallback`);
-                    // Use fallback geometry instead of rejecting
-                    if (isRock) {
-                        geometry = createFallbackRockGeometry();
-                        logAssets(`Using fallback rock geometry for ${assetConfig.name}`);
-                    } else {
-                        reject(new Error('No geometry found'));
-                        return;
-                    }
-                } else {
-                    logAssets(`Geometry found for ${assetConfig.name}: ${geometry.getAttribute('position').count} vertices`);
-                    // Optimize geometry and clean up UV issues
-                    geometry = optimizeGeometry(geometry);
-                }
-                
-                // Create simple, performance-optimized materials
-                let material;
-                if (isRock) {
-                    material = createRockMaterial();
-                } else {
-                    // Use original material color if available
-                    let color = 0x4488bb;
-                    if (originalMaterial && originalMaterial.color) {
-                        color = originalMaterial.color.getHex();
-                    }
-                    material = createFishMaterial(color);
-                }
-                
-                const instanceCount = isRock ? INSTANCES_PER_ROCK_MODEL : INSTANCES_PER_FISH_MODEL;
-                const instancedMesh = new THREE.InstancedMesh(geometry, material, instanceCount);
-                
-                // Disable shadows for performance
-                instancedMesh.castShadow = false;
-                instancedMesh.receiveShadow = false;
-                
-                // Setup frustum culling
-                instancedMesh.frustumCulled = true;
-                
-                if (isRock) {
-                    setupRockInstanceData(geometry, instanceCount);
-                } else {
-                    setupFishInstanceData(geometry, instanceCount, assetConfig);
-                }
-                
-                if (typeof scene !== 'undefined') {
-                    scene.add(instancedMesh);
-                    allInstancedMeshes.push(instancedMesh);
-                    
-                    // Log position for debugging
-                    logAssets(`Added ${assetConfig.name} to scene at positions around origin`);
-                    
-                    if (isRock) {
-                        rockInstances.push({
-                            name: assetConfig.name,
-                            mesh: instancedMesh,
-                            config: assetConfig
-                        });
-                        logAssets(`Rock instances now: ${rockInstances.length}`);
-                    } else {
-                        fishInstances.push({
-                            name: assetConfig.name,
-                            mesh: instancedMesh,
-                            config: assetConfig
-                        });
-                        logAssets(`Fish instances now: ${fishInstances.length}`);
-                    }
-                } else {
-                    logAssets(`ERROR: Scene not available when trying to add ${assetConfig.name}`);
-                }
-                
-                logAssets(`Created ${instanceCount} instances of ${assetConfig.name}`);
-                
-                // Restore console.warn
-                console.warn = originalWarn;
-                
-                resolve(instancedMesh);
-            },
-            function(progress) {
-                // Suppress progress logging to reduce console spam
-            },
-            function(error) {
-                logAssets(`Error loading ${assetConfig.name}: ${error.message}`);
-                reject(error);
-            }
-        );
-    });
-}
 
-// Load assets sequentially to avoid overwhelming the system
-async function loadAllAssets() {
-    logAssets('Loading assets sequentially for better performance...');
-    
-    try {
-        // Load rocks first (higher priority, less complex)
-        for (const rockConfig of ASSET_CONFIG.rocks) {
-            await loadAssetModel(rockConfig, true);
-            // Small delay to prevent blocking
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        // Then load fish
-        for (const fishConfig of ASSET_CONFIG.fish) {
-            await loadAssetModel(fishConfig, false);
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        const totalInstances = 
-            (rockInstances.length * INSTANCES_PER_ROCK_MODEL) + 
-            (fishInstances.length * INSTANCES_PER_FISH_MODEL);
+        // --- Simplified Fish Shaders (now using instanceMatrix) ---
+        const fishVertexShader = `
+            // instanceMatrix is provided automatically by InstancedMesh
+            attribute vec2 animationData; // swimSpeed, phaseOffset
             
-        logAssets(`All assets loaded! Total instances: ${totalInstances}`);
-        startAssetAnimation();
-        
-    } catch (error) {
-        logAssets(`Error loading assets: ${error.message}`);
-    }
-}
-
-// Performance-conscious update function
-let updateCounter = 0;
-function updateAssets(deltaTime) {
-    updateCounter++;
-    
-    // Update fish animations less frequently
-    if (updateCounter % 2 === 0) { // Every other frame
-        fishInstances.forEach(fishInstance => {
-            if (fishInstance.mesh.material.uniforms) {
-                fishInstance.mesh.material.uniforms.time.value += deltaTime;
+            uniform float time;
+            uniform float globalSwimSpeed;
+            
+            varying vec3 vNormal;
+            
+            void main() {
+                vec3 pos = position;
+                
+                float swimSpeed = animationData.x;
+                float phaseOffset = animationData.y;
+                
+                // Simplified swimming motion
+                float t = time * globalSwimSpeed * swimSpeed + phaseOffset;
+                pos.x += sin(t) * 0.5; // Bend the body
+                pos.y += cos(t * 1.5) * 0.2; // Gentle up/down bob
+                
+                // The instanceMatrix already contains position, rotation, and scale
+                vec4 modelViewPosition = modelViewMatrix * instanceMatrix * vec4(pos, 1.0);
+                gl_Position = projectionMatrix * modelViewPosition;
+                
+                // Correctly transform the normal
+                vNormal = normalize( normalMatrix * mat3(instanceMatrix) * normal );
             }
-        });
-    }
-    
-    // Performance monitoring
-    if (updateCounter % 60 === 0) { // Every 60 frames
-        const currentTime = performance.now();
-        const deltaFrameTime = currentTime - lastFrameTime;
-        avgFPS = 1000 / (deltaFrameTime / 60);
-        lastFrameTime = currentTime;
-        
-        // Adaptive performance scaling
-        if (avgFPS < 30) {
-            // Reduce fish animation speed if performance is poor
-            fishInstances.forEach(fish => {
-                if (fish.mesh.material.uniforms) {
-                    fish.mesh.material.uniforms.globalSwimSpeed.value = 0.3;
+        `;
+
+        const fishFragmentShader = `
+            uniform vec3 diffuse;
+            varying vec3 vNormal;
+            
+            void main() {
+                // Simplified lighting
+                float dotNL = max(dot(normalize(vNormal), normalize(vec3(0.5, 1.0, 0.3))), 0.2);
+                gl_FragColor = vec4(diffuse * dotNL, 1.0); // Use 1.0 alpha
+            }
+        `;
+
+        // --- Initialization ---
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050A1A); // Dark blue background
+            scene.fog = new THREE.Fog(0x050A1A, 50, 200);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 40);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.target.set(0, 5, 0);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404060, 2); // Soft ambient light
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
+            directionalLight.position.set(10, 30, 20);
+            scene.add(directionalLight);
+            
+            // Start asset loading
+            loadAllAssets(scene);
+
+            // Handle window resizing
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Start the animation loop
+            animate();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- Asset Loading and Setup ---
+        async function loadAllAssets(scene) {
+            console.log('[Assets] Loading assets sequentially...');
+            try {
+                for (const rockConfig of ASSET_CONFIG.rocks) {
+                    await loadAssetModel(scene, rockConfig, true);
+                }
+                for (const fishConfig of ASSET_CONFIG.fish) {
+                    await loadAssetModel(scene, fishConfig, false);
+                }
+                const totalInstances = (rockInstances.length * INSTANCES_PER_ROCK_MODEL) + (fishInstances.length * INSTANCES_PER_FISH_MODEL);
+                console.log(`[Assets] All assets loaded! Total instances: ${totalInstances}`);
+            } catch (error) {
+                console.error(`[Assets] Error loading assets: ${error.message}`);
+            }
+        }
+
+        async function loadAssetModel(scene, assetConfig, isRock) {
+            const loader = new GLTFLoader();
+            const gltf = await loader.loadAsync(assetConfig.url);
+            
+            let geometry = null;
+            gltf.scene.traverse((child) => {
+                if (child.isMesh && !geometry) {
+                    geometry = child.geometry;
+                }
+            });
+
+            if (!geometry) {
+                console.error(`No geometry found in ${assetConfig.name}`);
+                // Use a fallback so the app doesn't crash
+                geometry = new THREE.BoxGeometry(1, 1, 1);
+            }
+            
+            // --- Material Creation ---
+            let material;
+            const instanceCount = isRock ? INSTANCES_PER_ROCK_MODEL : INSTANCES_PER_FISH_MODEL;
+            
+            if (isRock) {
+                material = new THREE.MeshLambertMaterial({ color: 0x605550 }); // A more rock-like color
+            } else {
+                // For fish, we add the animation attributes to the geometry
+                setupFishAnimationData(geometry, instanceCount);
+                material = new THREE.ShaderMaterial({
+                    uniforms: {
+                        time: { value: 0 },
+                        globalSwimSpeed: { value: 0.5 },
+                        diffuse: { value: new THREE.Color(0x4488bb) }
+                    },
+                    vertexShader: fishVertexShader,
+                    fragmentShader: fishFragmentShader,
+                    fog: true // Allow fog to affect fish
+                });
+            }
+
+            const instancedMesh = new THREE.InstancedMesh(geometry, material, instanceCount);
+            
+            // --- Instancing Logic using setMatrixAt ---
+            const matrix = new THREE.Matrix4();
+            for (let i = 0; i < instanceCount; i++) {
+                const position = new THREE.Vector3();
+                const rotation = new THREE.Quaternion();
+                const scale = new THREE.Vector3();
+
+                // Position
+                const x = (Math.random() - 0.5) * SPAWN_RADIUS * 2;
+                const z = (Math.random() - 0.5) * SPAWN_RADIUS * 2;
+                let y = assetConfig.yOffset;
+                if (assetConfig.swimHeight) {
+                    y += assetConfig.swimHeight.min + Math.random() * (assetConfig.swimHeight.max - assetConfig.swimHeight.min);
+                }
+                position.set(x, y, z);
+
+                // Rotation
+                rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI * 2);
+
+                // Scale
+                const scaleVal = assetConfig.scale.min + Math.random() * (assetConfig.scale.max - assetConfig.scale.min);
+                scale.set(scaleVal, scaleVal, scaleVal);
+
+                // Compose matrix and set it for the instance
+                matrix.compose(position, rotation, scale);
+                instancedMesh.setMatrixAt(i, matrix);
+            }
+            instancedMesh.instanceMatrix.needsUpdate = true;
+            
+            scene.add(instancedMesh);
+            allInstancedMeshes.push(instancedMesh);
+
+            if (isRock) {
+                rockInstances.push({ mesh: instancedMesh });
+            } else {
+                fishInstances.push({ mesh: instancedMesh });
+            }
+            console.log(`[Assets] Created ${instanceCount} instances of ${assetConfig.name}`);
+        }
+
+        function setupFishAnimationData(geometry, count) {
+            const animationData = new Float32Array(count * 2);
+            for (let i = 0; i < count; i++) {
+                // swimSpeed
+                animationData[i * 2 + 0] = 0.5 + Math.random() * 0.5;
+                // phaseOffset
+                animationData[i * 2 + 1] = Math.random() * Math.PI * 2;
+            }
+            geometry.setAttribute('animationData', new THREE.InstancedBufferAttribute(animationData, 2));
+        }
+
+        // --- Animation Loop ---
+        function updateAssets(deltaTime) {
+            // Update fish shader time uniform
+            fishInstances.forEach(fishInstance => {
+                if (fishInstance.mesh.material.uniforms) {
+                    fishInstance.mesh.material.uniforms.time.value += deltaTime;
                 }
             });
         }
-    }
-}
 
-function startAssetAnimation() {
-    logAssets('Asset animation system started with performance optimizations');
-}
-
-function initializeRocksAndFish() {
-    logAssets('Initializing optimized Rocks and Fish system...');
-    
-    if (typeof scene === 'undefined') {
-        setTimeout(initializeRocksAndFish, 1000);
-        return;
-    }
-    
-    loadAllAssets();
-}
-
-// Delayed initialization to ensure main scene is ready
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(initializeRocksAndFish, 3000); // Increased delay
-});
-
-function updateRocksAndFish(deltaTime = 0.016) { // 60fps target
-    updateAssets(deltaTime);
-}
-
-// Simplified export with debug info
-window.RocksAndFishSystem = {
-    getRockInstances: () => rockInstances,
-    getFishInstances: () => fishInstances,
-    getTotalInstances: () => 
-        (rockInstances.length * INSTANCES_PER_ROCK_MODEL) + 
-        (fishInstances.length * INSTANCES_PER_FISH_MODEL),
-    update: updateRocksAndFish,
-    getPerformanceInfo: () => ({ avgFPS, totalMeshes: allInstancedMeshes.length }),
-    
-    // Debug functions
-    debugInfo: () => {
-        logAssets(`=== DEBUG INFO ===`);
-        logAssets(`Rock instances: ${rockInstances.length}`);
-        logAssets(`Fish instances: ${fishInstances.length}`);
-        logAssets(`Total meshes in scene: ${allInstancedMeshes.length}`);
-        logAssets(`Scene available: ${typeof scene !== 'undefined'}`);
-        
-        rockInstances.forEach((rock, i) => {
-            logAssets(`Rock ${i}: ${rock.name}, visible: ${rock.mesh.visible}, position count: ${rock.mesh.count}`);
-        });
-        
-        return {
-            rocks: rockInstances.length,
-            fish: fishInstances.length,
-            totalMeshes: allInstancedMeshes.length,
-            sceneAvailable: typeof scene !== 'undefined'
-        };
-    },
-    
-    // Force create test rocks
-    createTestRocks: () => {
-        if (typeof scene === 'undefined') {
-            logAssets('Scene not available for test rocks');
-            return;
-        }
-        
-        logAssets('Creating large, bright test rocks near camera...');
-        const testGeometry = new THREE.BoxGeometry(2, 2, 2); // Simple box
-        const testMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x00FF00, // Bright green
-            wireframe: false 
-        });
-        
-        // Create individual rocks in obvious positions
-        for (let i = 0; i < 5; i++) {
-            const testMesh = new THREE.Mesh(testGeometry, testMaterial);
-            testMesh.position.set(i * 10 - 20, 2, 5); // Line them up in front of camera
-            scene.add(testMesh);
-            logAssets(`Test rock ${i} added at position: ${testMesh.position.x}, ${testMesh.position.y}, ${testMesh.position.z}`);
-        }
-        
-        logAssets('5 bright green test rocks created in a line');
-        return true;
-    },
-    
-    // Make all rocks bright and obvious
-    makeRocksVisible: () => {
-        logAssets('Making all rocks bright and obvious...');
-        rockInstances.forEach((rock, i) => {
-            // Change material to bright color
-            rock.mesh.material.color.setHex(0xFF0000); // Bright red
-            rock.mesh.material.needsUpdate = true;
+        function animate() {
+            requestAnimationFrame(animate);
             
-            // Log bounding box
-            rock.mesh.geometry.computeBoundingBox();
-            const bbox = rock.mesh.geometry.boundingBox;
-            logAssets(`Rock ${i} (${rock.name}) bounding box: ${bbox.min.x.toFixed(1)}, ${bbox.min.y.toFixed(1)}, ${bbox.min.z.toFixed(1)} to ${bbox.max.x.toFixed(1)}, ${bbox.max.y.toFixed(1)}, ${bbox.max.z.toFixed(1)}`);
-        });
-    }
-};
+            const deltaTime = clock.getDelta();
+            
+            controls.update();
+            updateAssets(deltaTime);
 
-// Performance-conscious callback registration
-if (typeof window.AssetUpdateCallbacks === 'undefined') {
-    window.AssetUpdateCallbacks = [];
-}
-window.AssetUpdateCallbacks.push(updateRocksAndFish);
+            renderer.render(scene, camera);
+        }
+
+        // --- Start Everything ---
+        init();
+
+    </script>
+</body>
+</html>
