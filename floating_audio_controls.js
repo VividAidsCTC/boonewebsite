@@ -15,7 +15,7 @@ const BUTTON_SIZE = 1.2; // Larger buttons
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
-const SCREEN_SPREAD = 30; // How spread out across screen (higher = more spread)
+const SCREEN_SPREAD = 60; // How spread out across screen (higher = more spread)
 
 // Track configuration
 const TRACK_NAMES = [
