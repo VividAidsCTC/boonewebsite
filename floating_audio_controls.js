@@ -211,7 +211,7 @@ function updateButtonVisual(index, isActive) {
     if (index < 0 || index >= buttonMeshes.length) return;
     
     const buttonData = buttonMeshes[index];
-    const color = isActive ? 0x0099FF : 0x666666;
+    const color = isActive ? 0x006400 : 0x666666;
     const opacity = isActive ? 0.9 : 0.6;
     
     // Update button material
