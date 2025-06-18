@@ -56,7 +56,7 @@ function createTextTexture(text, isActive = true) {
     canvas.height = 128;
     
     // Background
-    context.fillStyle = isActive ? 'rgba(0, 150, 255, 0.8)' : 'rgba(100, 100, 100, 0.6)';
+    context.fillStyle = isActive ? 'rgba(0, 100, 0, 0.8)' : 'rgba(0, 100, 0, 0.6)';
     context.fillRect(0, 0, canvas.width, canvas.height);
     
     // Border
