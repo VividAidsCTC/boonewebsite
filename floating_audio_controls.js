@@ -53,12 +53,12 @@ function createTextTexture(text, isActive = true) {
     context.fillRect(0, 0, canvas.width, canvas.height);
     
     // Border
-    context.strokeStyle = isActive ? '#00AAFF' : '#666666';
+    context.strokeStyle = isActive ? '#FFFFFF' : '#666666';
     context.lineWidth = 4;
     context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
     
     // Text
-    context.fillStyle = isActive ? '#FFFFFF' : '#CCCCCC';
+    context.fillStyle = isActive ? '#000000' : '#000000';
     context.font = 'bold 32px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
