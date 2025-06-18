@@ -79,7 +79,6 @@ function createButtonMesh(index, trackName) {
     // Button base (sphere)
     const buttonGeometry = new THREE.CylinderGeometry(1, 1, 2, 16, 4);
     const buttonMaterial = new THREE.MeshLambertMaterial({
-    buttonMesh.rotation.z = Math.PI / 2; // Lay cylinder on its side
 
         color: buttonStates[index] ? 0x06402B : 0x666666,
         transparent: true,
