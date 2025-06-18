@@ -569,7 +569,7 @@ function animate() {
     camera.position.set(0, 10, 30);
 
     // Apply rotation to camera
-    camera.rotation.x = rotationX;
+    camera.rotation.x = 0;
     camera.rotation.y = rotationY;
 
     renderer.render(scene, camera);
