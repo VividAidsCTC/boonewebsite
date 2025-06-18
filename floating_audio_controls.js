@@ -9,11 +9,13 @@ let isInteractionEnabled = true;
 
 // Configuration
 const BUTTON_COUNT = 8;
-const BUTTON_RADIUS = 12; // Distance in front of camera
+const BUTTON_RADIUS = 8; // Distance in front of camera
 const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
-const BUTTON_SIZE = 1; // Larger buttons
+const BUTTON_SIZE = 1.2; // Larger buttons
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
+const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
+const SCREEN_SPREAD = 6; // How spread out across screen (higher = more spread)
 
 // Track configuration
 const TRACK_NAMES = [
@@ -27,9 +29,12 @@ const TRACK_NAMES = [
     "Effects"
 ];
 
-// Button states
+// Button states and positioning
 let buttonStates = new Array(BUTTON_COUNT).fill(true); // All active by default
 let animationTime = 0;
+let buttonTargetPositions = []; // Where buttons want to be
+let buttonCurrentPositions = []; // Where buttons currently are
+let randomOffsets = []; // Random spread for each button
 
 // Debug logging
 function logAudio(message) {
@@ -53,13 +58,13 @@ function createTextTexture(text, isActive = true) {
     context.fillRect(0, 0, canvas.width, canvas.height);
     
     // Border
-    context.strokeStyle = isActive ? '#FFFFFF' : '#666666';
+    context.strokeStyle = isActive ? '#00AAFF' : '#666666';
     context.lineWidth = 4;
     context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
     
     // Text
     context.fillStyle = isActive ? '#000000' : '#000000';
-    context.font = 'bold 32px Arial';
+    context.font = 'bold 48px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText(text, canvas.width / 2, canvas.height / 2);
@@ -72,9 +77,9 @@ function createTextTexture(text, isActive = true) {
 // Create button geometry and material
 function createButtonMesh(index, trackName) {
     // Button base (sphere)
-    const buttonGeometry = new THREE.CylinderGeometry(3, 3, 1)
+    const buttonGeometry = new THREE.CylinderGeometry(3, 1, 1)
     const buttonMaterial = new THREE.MeshLambertMaterial({
-        color: buttonStates[index] ? 0xFFFFFF : 0x666666,
+        color: buttonStates[index] ? 0x0099FF : 0x666666,
         transparent: true,
         opacity: buttonStates[index] ? 0.9 : 0.6
     });
@@ -107,23 +112,25 @@ function createButtonMesh(index, trackName) {
     return { group: buttonGroup, button: buttonMesh, text: textMesh };
 }
 
-// Position buttons in front of camera in a spread pattern
+// Position buttons randomly spread in front of camera with trailing
 function calculateButtonPosition(index, camera) {
     const floatOffset = Math.sin(animationTime + index) * FLOAT_AMPLITUDE;
     
-    // Create a spread pattern in front of camera
-    const gridSize = Math.ceil(Math.sqrt(BUTTON_COUNT)); // 3x3 grid for 8 buttons
-    const row = Math.floor(index / gridSize);
-    const col = index % gridSize;
+    // Get or create random offset for this button
+    if (!randomOffsets[index]) {
+        randomOffsets[index] = {
+            x: (Math.random() - 0.5) * SCREEN_SPREAD,
+            y: (Math.random() - 0.5) * SCREEN_SPREAD * 0.7, // Less vertical spread
+            z: (Math.random() - 0.5) * 2 // Small depth variation
+        };
+    }
     
-    // Center the grid
-    const offsetX = (col - (gridSize - 1) / 2) * 15; // 8 units apart horizontally
-    const offsetY = (row - (gridSize - 1) / 2) * 10 + floatOffset; // 8 units apart vertically
+    const offset = randomOffsets[index];
     
-    // Position in front of camera (local space)
-    const localX = offsetX;
-    const localY = offsetY;
-    const localZ = -BUTTON_RADIUS; // In front of camera
+    // Position in front of camera (local space) with random spread
+    const localX = offset.x;
+    const localY = offset.y + floatOffset;
+    const localZ = -BUTTON_RADIUS + offset.z; // In front of camera with depth variation
     
     // Get camera's world position and rotation
     const cameraPosition = camera.position.clone();
@@ -136,18 +143,29 @@ function calculateButtonPosition(index, camera) {
     localPosition.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraRotation.y);
     
     // Add to camera position to get world position
-    const worldPosition = cameraPosition.clone().add(localPosition);
+    const targetWorldPosition = cameraPosition.clone().add(localPosition);
     
-    return worldPosition;
+    return targetWorldPosition;
 }
 
-// Update button positions relative to camera
+// Update button positions with trailing effect
 function updateButtonPositions(camera) {
     if (!camera || buttonMeshes.length === 0) return;
     
     buttonMeshes.forEach((buttonData, index) => {
-        const worldPosition = calculateButtonPosition(index, camera);
-        buttonData.group.position.copy(worldPosition);
+        // Calculate where button wants to be
+        const targetPosition = calculateButtonPosition(index, camera);
+        
+        // Initialize current position if needed
+        if (!buttonCurrentPositions[index]) {
+            buttonCurrentPositions[index] = targetPosition.clone();
+        }
+        
+        // Slowly move current position toward target (trailing effect)
+        buttonCurrentPositions[index].lerp(targetPosition, TRAIL_SPEED);
+        
+        // Set button to current position
+        buttonData.group.position.copy(buttonCurrentPositions[index]);
         
         // Make buttons face the camera
         buttonData.group.lookAt(camera.position);
@@ -252,7 +270,7 @@ function setupInteraction() {
 
 // Create all audio control buttons
 function createAudioButtons() {
-    logAudio('Creating 8 floating audio control buttons in front of camera...');
+    logAudio('Creating 8 floating audio control buttons with random spread...');
     
     if (typeof scene === 'undefined') {
         logAudio('Scene not available, retrying...');
@@ -260,7 +278,7 @@ function createAudioButtons() {
         return;
     }
     
-    // Clear existing buttons
+    // Clear existing buttons and reset positions
     buttonMeshes.forEach(buttonData => {
         scene.remove(buttonData.group);
         // Clean up materials and textures
@@ -269,6 +287,8 @@ function createAudioButtons() {
         if (buttonData.text.material) buttonData.text.material.dispose();
     });
     buttonMeshes = [];
+    buttonCurrentPositions = [];
+    randomOffsets = [];
     
     // Create new buttons
     for (let i = 0; i < BUTTON_COUNT; i++) {
@@ -280,12 +300,13 @@ function createAudioButtons() {
         if (typeof camera !== 'undefined') {
             const position = calculateButtonPosition(i, camera);
             buttonData.group.position.copy(position);
+            buttonCurrentPositions[i] = position.clone();
         }
         
-        logAudio(`Created button ${i}: ${TRACK_NAMES[i]}`);
+        logAudio(`Created button ${i}: ${TRACK_NAMES[i]} at random position`);
     }
     
-    logAudio(`Successfully created ${BUTTON_COUNT} audio control buttons in front view`);
+    logAudio(`Successfully created ${BUTTON_COUNT} randomly spread audio control buttons`);
 }
 
 // Animation update function
