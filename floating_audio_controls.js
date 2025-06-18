@@ -140,7 +140,7 @@ function calculateButtonPosition(index, camera) {
                         Math.pow(newOffset.z - randomOffsets[i].z, 2)
                     );
                     
-                    if (distance < 2) { // Minimum 2 units apart
+                    if (distance < 8) { // Minimum 2 units apart
                         validPosition = false;
                         break;
                     }
