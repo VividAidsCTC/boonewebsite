@@ -11,11 +11,11 @@ let isInteractionEnabled = true;
 const BUTTON_COUNT = 8;
 const BUTTON_RADIUS = 8; // Distance in front of camera
 const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
-const BUTTON_SIZE = 1.2; // Larger buttons
+const BUTTON_SIZE = 1; // Larger buttons
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
-const SCREEN_SPREAD = 35; // How spread out across screen (higher = more spread)
+const SCREEN_SPREAD = 25; // How spread out across screen (higher = more spread)
 
 // Track configuration
 const TRACK_NAMES = [
@@ -64,7 +64,7 @@ function createTextTexture(text, isActive = true) {
 
     // Text
     context.fillStyle = isActive ? '#FFFFFF' : '#CCCCCC';
-    context.font = 'bold 32px Arial';
+    context.font = 'bold 48px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText(text, canvas.width / 2, canvas.height / 2);
