@@ -9,8 +9,8 @@ let isInteractionEnabled = true;
 
 // Configuration
 const BUTTON_COUNT = 8;
-const BUTTON_RADIUS = 12; // Distance from camera
-const BUTTON_SIZE = 0.8;
+const BUTTON_RADIUS = 5; // Distance from camera
+const BUTTON_SIZE = 3;
 const FLOAT_AMPLITUDE = 0.3;
 const FLOAT_SPEED = 1.5;
 
