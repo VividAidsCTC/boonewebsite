@@ -60,7 +60,7 @@ function createTextTexture(text, isActive = true) {
     context.fillRect(0, 0, canvas.width, canvas.height);
     
     // Border
-    context.strokeStyle = isActive ? '#00AAFF' : '#666666';
+    context.strokeStyle = isActive ? '#00AAFF' : '#006400';
     context.lineWidth = 4;
     context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
     
@@ -81,7 +81,7 @@ function createButtonMesh(index, trackName) {
     // Button base (sphere)
     const buttonGeometry = new THREE.SphereGeometry(BUTTON_SIZE, 16, 12);
     const buttonMaterial = new THREE.MeshLambertMaterial({
-        color: buttonStates[index] ? 0x006400 : 0x666666,
+        color: buttonStates[index] ? 0x006400 : 0x006400,
         transparent: true,
         opacity: buttonStates[index] ? 0.9 : 0.6
     });
@@ -213,7 +213,7 @@ function updateButtonVisual(index, isActive) {
     if (index < 0 || index >= buttonMeshes.length) return;
     
     const buttonData = buttonMeshes[index];
-    const color = isActive ? 0x006400 : 0x666666;
+    const color = isActive ? 0x006400 : 0x006400;
     const opacity = isActive ? 0.9 : 0.6;
     
     // Update button material
