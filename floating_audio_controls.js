@@ -15,7 +15,7 @@ const BUTTON_SIZE = 1.2; // Larger buttons
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
-const SCREEN_SPREAD = 6; // How spread out across screen (higher = more spread)
+const SCREEN_SPREAD = 12; // How spread out across screen (higher = more spread)
 
 // Track configuration
 const TRACK_NAMES = [
@@ -61,7 +61,7 @@ function createTextTexture(text, isActive = true) {
     context.strokeStyle = isActive ? '#00AAFF' : '#666666';
     context.lineWidth = 4;
     context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
-    
+
     // Text
     context.fillStyle = isActive ? '#FFFFFF' : '#CCCCCC';
     context.font = 'bold 32px Arial';
@@ -147,7 +147,7 @@ function calculateButtonPosition(index, camera) {
                         Math.pow(newOffset.y - randomOffsets[i].y, 2)
                     );
                     
-                    if (distance3D < 6 || distance2D < 5) { // Increased minimum distances
+                    if (distance3D < 7 || distance2D < 6) { // Increased minimum distances
                         validPosition = false;
                         break;
                     }
