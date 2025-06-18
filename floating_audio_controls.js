@@ -122,7 +122,7 @@ function calculateButtonPosition(index, camera) {
         let validPosition = false;
         let newOffset;
         
-        // Try to find a position that's at least 2 units away from other buttons
+        // Try to find a position that's at least 4 units away from other buttons
         while (!validPosition && attempts < 50) {
             newOffset = {
                 x: (Math.random() - 0.5) * SCREEN_SPREAD,
@@ -130,17 +130,24 @@ function calculateButtonPosition(index, camera) {
                 z: (Math.random() - 0.5) * 2 // Small depth variation
             };
             
-            // Check distance from other buttons
+            // Check distance from other buttons (use larger minimum for visual separation)
             validPosition = true;
             for (let i = 0; i < index; i++) {
                 if (randomOffsets[i]) {
-                    const distance = Math.sqrt(
+                    // Check both 3D distance and 2D screen distance
+                    const distance3D = Math.sqrt(
                         Math.pow(newOffset.x - randomOffsets[i].x, 2) +
                         Math.pow(newOffset.y - randomOffsets[i].y, 2) +
                         Math.pow(newOffset.z - randomOffsets[i].z, 2)
                     );
                     
-                    if (distance < 4) { // Minimum 2 units apart
+                    // Also check 2D distance (more important for visual separation)
+                    const distance2D = Math.sqrt(
+                        Math.pow(newOffset.x - randomOffsets[i].x, 2) +
+                        Math.pow(newOffset.y - randomOffsets[i].y, 2)
+                    );
+                    
+                    if (distance3D < 6 || distance2D < 5) { // Increased minimum distances
                         validPosition = false;
                         break;
                     }
