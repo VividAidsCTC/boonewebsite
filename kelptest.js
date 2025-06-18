@@ -581,7 +581,7 @@ function animate() {
     rotationY += (targetRotationY - rotationY) * 0.1;
 
     camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
-    camera.position.y = Math.sin(rotationX) * distance + 3;
+    camera.position.y = Math.sin(rotationX) * distance + 10;
     camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
     camera.lookAt(0, 5, 5);
 
