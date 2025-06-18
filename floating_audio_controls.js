@@ -9,9 +9,9 @@ let isInteractionEnabled = true;
 
 // Configuration
 const BUTTON_COUNT = 8;
-const BUTTON_RADIUS = 8; // Distance in front of camera
+const BUTTON_RADIUS = 12; // Distance in front of camera
 const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
-const BUTTON_SIZE = 1.2; // Larger buttons
+const BUTTON_SIZE = 1; // Larger buttons
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 
@@ -117,8 +117,8 @@ function calculateButtonPosition(index, camera) {
     const col = index % gridSize;
     
     // Center the grid
-    const offsetX = (col - (gridSize - 1) / 2) * 3; // 3 units apart horizontally
-    const offsetY = (row - (gridSize - 1) / 2) * 2 + floatOffset; // 2 units apart vertically
+    const offsetX = (col - (gridSize - 1) / 2) * 8; // 8 units apart horizontally
+    const offsetY = (row - (gridSize - 1) / 2) * 8 + floatOffset; // 8 units apart vertically
     
     // Position in front of camera (local space)
     const localX = offsetX;
