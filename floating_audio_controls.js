@@ -11,11 +11,11 @@ let isInteractionEnabled = true;
 const BUTTON_COUNT = 8;
 const BUTTON_RADIUS = 8; // Distance in front of camera
 const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
-const BUTTON_SIZE = 1.2; // Larger buttons
+const BUTTON_SIZE = 1; // Larger buttons
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
-const SCREEN_SPREAD = 6; // How spread out across screen (higher = more spread)
+const SCREEN_SPREAD = 25; // How spread out across screen (higher = more spread)
 
 // Track configuration
 const TRACK_NAMES = [
@@ -81,7 +81,7 @@ function createButtonMesh(index, trackName) {
     // Button base (sphere)
     const buttonGeometry = new THREE.SphereGeometry(BUTTON_SIZE, 16, 12);
     const buttonMaterial = new THREE.MeshLambertMaterial({
-        color: buttonStates[index] ? 0x0099FF : 0x666666,
+        color: buttonStates[index] ? 0x006400 : 0x666666,
         transparent: true,
         opacity: buttonStates[index] ? 0.9 : 0.6
     });
@@ -213,7 +213,7 @@ function updateButtonVisual(index, isActive) {
     if (index < 0 || index >= buttonMeshes.length) return;
     
     const buttonData = buttonMeshes[index];
-    const color = isActive ? 0x0099FF : 0x666666;
+    const color = isActive ? 0x006400 : 0x666666;
     const opacity = isActive ? 0.9 : 0.6;
     
     // Update button material
