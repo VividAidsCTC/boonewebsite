@@ -14,8 +14,8 @@ const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
 const BUTTON_SIZE = 1.2; // Larger buttons
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
-const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
-const SCREEN_SPREAD = 6; // How spread out across screen (higher = more spread)
+const TRAIL_SPEED = 0.05; // How slowly buttons follow camera (lower = more trailing)
+const SCREEN_SPREAD = 20; // How spread out across screen (higher = more spread)
 
 // Track configuration
 const TRACK_NAMES = [
@@ -77,7 +77,7 @@ function createTextTexture(text, isActive = true) {
 // Create button geometry and material
 function createButtonMesh(index, trackName) {
     // Button base (sphere)
-    const buttonGeometry = new THREE.CylinderGeometry(3, 1, 1)
+    const buttonGeometry = new THREE.CapsuleGeometry(1, 2, 4, 8);    
     const buttonMaterial = new THREE.MeshLambertMaterial({
         color: buttonStates[index] ? 0x0099FF : 0x666666,
         transparent: true,
