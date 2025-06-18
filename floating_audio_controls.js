@@ -361,7 +361,7 @@ function updateAudioControls(deltaTime = 0.016) {
     // Handle fade-in effect
     if (isFadingIn) {
         const elapsed = (performance.now() - fadeStartTime) / 1000; // Convert to seconds
-        const fadeProgress = Math.min(elapsed / FADE_IN_DURATION, 1.0); // 0 to 1
+        const fadeProgress = Math.min(elapsed / 2.0, 1.0); // 2 second fade duration
         
         // Update opacity for all buttons
         buttonMeshes.forEach((buttonData, index) => {
