@@ -72,7 +72,7 @@ function createTextTexture(text, isActive = true) {
 // Create button geometry and material
 function createButtonMesh(index, trackName) {
     // Button base (sphere)
-    const buttonGeometry = new THREE.CylinderGeometry(3, 1, 1)
+    const buttonGeometry = new THREE.CylinderGeometry(3, 3, 1)
     const buttonMaterial = new THREE.MeshLambertMaterial({
         color: buttonStates[index] ? 0xFFFFFF : 0x666666,
         transparent: true,
@@ -118,7 +118,7 @@ function calculateButtonPosition(index, camera) {
     
     // Center the grid
     const offsetX = (col - (gridSize - 1) / 2) * 15; // 8 units apart horizontally
-    const offsetY = (row - (gridSize - 1) / 2) * 15 + floatOffset; // 8 units apart vertically
+    const offsetY = (row - (gridSize - 1) / 2) * 10 + floatOffset; // 8 units apart vertically
     
     // Position in front of camera (local space)
     const localX = offsetX;
