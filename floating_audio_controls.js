@@ -15,7 +15,7 @@ const BUTTON_SIZE = 1.2; // Larger buttons
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.05; // How slowly buttons follow camera (lower = more trailing)
-const SCREEN_SPREAD = 20; // How spread out across screen (higher = more spread)
+const SCREEN_SPREAD = 40; // How spread out across screen (higher = more spread)
 
 // Track configuration
 const TRACK_NAMES = [
@@ -79,7 +79,9 @@ function createButtonMesh(index, trackName) {
     // Button base (sphere)
     const buttonGeometry = new THREE.CylinderGeometry(1, 1, 2, 16, 4);
     const buttonMaterial = new THREE.MeshLambertMaterial({
-        color: buttonStates[index] ? 0x0099FF : 0x666666,
+    buttonMesh.rotation.z = Math.PI / 2; // Lay cylinder on its side
+
+        color: buttonStates[index] ? 0x06402B : 0x666666,
         transparent: true,
         opacity: buttonStates[index] ? 0.9 : 0.6
     });
@@ -91,6 +93,8 @@ function createButtonMesh(index, trackName) {
         trackName: trackName,
         isActive: buttonStates[index]
     };
+
+    
     
     // Text plane
     const textGeometry = new THREE.PlaneGeometry(3, 1.5);
