@@ -496,9 +496,7 @@ if (isMouseDown) {
 targetRotationY += event.movementX * 0.01;
 targetRotationX += event.movementY * 0.01;
 
-            const maxRotation = 15 * (Math.PI / 180);
-            targetRotationY = Math.max(-maxRotation, Math.min(maxRotation, targetRotationY));
-            targetRotationX = Math.max(-maxRotation, Math.min(maxRotation, targetRotationX));
+
             //const maxRotation = 15 * (Math.PI / 180);
             //targetRotationY = Math.max(-maxRotation, Math.min(maxRotation, targetRotationY));
             //targetRotationX = Math.max(-maxRotation, Math.min(maxRotation, targetRotationX));
@@ -579,17 +577,18 @@ if (typeof OceanSurface !== 'undefined') {
 OceanSurface.update(0.01 * waveSpeed);
 }
 
-// Update camera
+// Update camera (fixed position, free rotation)
 rotationX += (targetRotationX - rotationX) * 0.1;
 rotationY += (targetRotationY - rotationY) * 0.1;
 
-camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
-camera.position.y = Math.sin(rotationX) * distance + 10;
-camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
-camera.lookAt(0, 5, 5);
+// Keep camera at fixed position
+camera.position.set(0, 10, 30); // Or whatever position you want
 
-renderer.render(scene, camera);
+// Rotate camera freely
+camera.rotation.x = rotationX;
+camera.rotation.y = rotationY;
 }
+
 
 function startAnimation() {
 log('Starting animation...');
