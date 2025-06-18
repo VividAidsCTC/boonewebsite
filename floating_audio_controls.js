@@ -11,11 +11,11 @@ let isInteractionEnabled = true;
 const BUTTON_COUNT = 8;
 const BUTTON_RADIUS = 8; // Distance in front of camera
 const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
-const BUTTON_SIZE = 1; // Larger buttons
+const BUTTON_SIZE = 1.2; // Larger buttons
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
-const SCREEN_SPREAD = 25; // How spread out across screen (higher = more spread)
+const SCREEN_SPREAD = 6; // How spread out across screen (higher = more spread)
 
 // Track configuration
 const TRACK_NAMES = [
@@ -35,6 +35,8 @@ let animationTime = 0;
 let buttonTargetPositions = []; // Where buttons want to be
 let buttonCurrentPositions = []; // Where buttons currently are
 let randomOffsets = []; // Random spread for each button
+let fadeStartTime = 0; // When fade-in started
+let isFadingIn = false; // Whether buttons are currently fading in
 
 // Debug logging
 function logAudio(message) {
@@ -54,17 +56,17 @@ function createTextTexture(text, isActive = true) {
     canvas.height = 128;
     
     // Background
-    context.fillStyle = isActive ? 'rgba(0, 100, 0, 0.8)' : 'rgba(0, 1000, 0, 0.6)';
+    context.fillStyle = isActive ? 'rgba(0, 150, 255, 0.8)' : 'rgba(100, 100, 100, 0.6)';
     context.fillRect(0, 0, canvas.width, canvas.height);
     
     // Border
-    context.strokeStyle = isActive ? '#006400' : '#666666';
+    context.strokeStyle = isActive ? '#00AAFF' : '#666666';
     context.lineWidth = 4;
     context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
-
+    
     // Text
     context.fillStyle = isActive ? '#FFFFFF' : '#CCCCCC';
-    context.font = 'bold 48px Arial';
+    context.font = 'bold 32px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText(text, canvas.width / 2, canvas.height / 2);
@@ -79,7 +81,7 @@ function createButtonMesh(index, trackName) {
     // Button base (sphere)
     const buttonGeometry = new THREE.SphereGeometry(BUTTON_SIZE, 16, 12);
     const buttonMaterial = new THREE.MeshLambertMaterial({
-        color: buttonStates[index] ? 0x006400 : 0x666666,
+        color: buttonStates[index] ? 0x0099FF : 0x666666,
         transparent: true,
         opacity: buttonStates[index] ? 0.9 : 0.6
     });
@@ -147,7 +149,7 @@ function calculateButtonPosition(index, camera) {
                         Math.pow(newOffset.y - randomOffsets[i].y, 2)
                     );
                     
-                    if (distance3D < 7 || distance2D < 6) { // Increased minimum distances
+                    if (distance3D < 6 || distance2D < 5) { // Increased minimum distances
                         validPosition = false;
                         break;
                     }
@@ -211,7 +213,7 @@ function updateButtonVisual(index, isActive) {
     if (index < 0 || index >= buttonMeshes.length) return;
     
     const buttonData = buttonMeshes[index];
-    const color = isActive ? 0x006400 : 0x666666;
+    const color = isActive ? 0x0099FF : 0x666666;
     const opacity = isActive ? 0.9 : 0.6;
     
     // Update button material
@@ -304,7 +306,7 @@ function setupInteraction() {
 
 // Create all audio control buttons
 function createAudioButtons() {
-    logAudio('Creating 8 floating audio control buttons with random spread...');
+    logAudio('Creating 8 floating audio control buttons with fade-in effect...');
     
     if (typeof scene === 'undefined') {
         logAudio('Scene not available, retrying...');
@@ -324,9 +326,18 @@ function createAudioButtons() {
     buttonCurrentPositions = [];
     randomOffsets = [];
     
-    // Create new buttons
+    // Start fade-in effect
+    fadeStartTime = performance.now();
+    isFadingIn = true;
+    
+    // Create new buttons (initially invisible)
     for (let i = 0; i < BUTTON_COUNT; i++) {
         const buttonData = createButtonMesh(i, TRACK_NAMES[i]);
+        
+        // Set initial opacity to 0 for fade-in
+        buttonData.button.material.opacity = 0;
+        buttonData.text.material.opacity = 0;
+        
         buttonMeshes.push(buttonData);
         scene.add(buttonData.group);
         
@@ -337,15 +348,36 @@ function createAudioButtons() {
             buttonCurrentPositions[i] = position.clone();
         }
         
-        logAudio(`Created button ${i}: ${TRACK_NAMES[i]} at random position`);
+        logAudio(`Created button ${i}: ${TRACK_NAMES[i]} (fading in)`);
     }
     
-    logAudio(`Successfully created ${BUTTON_COUNT} randomly spread audio control buttons`);
+    logAudio(`Successfully created ${BUTTON_COUNT} buttons with fade-in effect`);
 }
 
 // Animation update function
 function updateAudioControls(deltaTime = 0.016) {
     animationTime += deltaTime * FLOAT_SPEED;
+    
+    // Handle fade-in effect
+    if (isFadingIn) {
+        const elapsed = (performance.now() - fadeStartTime) / 1000; // Convert to seconds
+        const fadeProgress = Math.min(elapsed / FADE_IN_DURATION, 1.0); // 0 to 1
+        
+        // Update opacity for all buttons
+        buttonMeshes.forEach((buttonData, index) => {
+            const targetButtonOpacity = buttonStates[index] ? 0.9 : 0.6;
+            const targetTextOpacity = 1.0;
+            
+            buttonData.button.material.opacity = fadeProgress * targetButtonOpacity;
+            buttonData.text.material.opacity = fadeProgress * targetTextOpacity;
+        });
+        
+        // Stop fading when complete
+        if (fadeProgress >= 1.0) {
+            isFadingIn = false;
+            logAudio('Fade-in complete');
+        }
+    }
     
     // Update button positions relative to camera
     if (typeof camera !== 'undefined') {
@@ -372,7 +404,7 @@ function initializeAudioControls() {
 // DOM ready handler
 document.addEventListener('DOMContentLoaded', function() {
     // Wait for main scene to be ready
-    setTimeout(initializeAudioControls, 1000);
+    setTimeout(initializeAudioControls, 4000);
 });
 
 // Export system for external access
