@@ -496,9 +496,9 @@ function setupControls() {
             targetRotationY += event.movementX * 0.01;
             targetRotationX += event.movementY * 0.01;
             
-            const maxRotation = 15 * (Math.PI / 180);
-            targetRotationY = Math.max(-maxRotation, Math.min(maxRotation, targetRotationY));
-            targetRotationX = Math.max(-maxRotation, Math.min(maxRotation, targetRotationX));
+            //const maxRotation = 15 * (Math.PI / 180);
+            //targetRotationY = Math.max(-maxRotation, Math.min(maxRotation, targetRotationY));
+            //targetRotationX = Math.max(-maxRotation, Math.min(maxRotation, targetRotationX));
         }
     });
 
