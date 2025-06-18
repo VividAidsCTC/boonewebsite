@@ -77,7 +77,7 @@ function createTextTexture(text, isActive = true) {
 // Create button geometry and material
 function createButtonMesh(index, trackName) {
     // Button base (sphere)
-    const buttonGeometry = new THREE.CapsuleGeometry(1, 2, 4, 8);    
+    const buttonGeometry = new THREE.CylinderGeometry(1, 1, 2, 16, 4);
     const buttonMaterial = new THREE.MeshLambertMaterial({
         color: buttonStates[index] ? 0x0099FF : 0x666666,
         transparent: true,
