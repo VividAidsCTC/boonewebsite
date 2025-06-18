@@ -372,7 +372,7 @@ function initializeAudioControls() {
 // DOM ready handler
 document.addEventListener('DOMContentLoaded', function() {
     // Wait for main scene to be ready
-    setTimeout(initializeAudioControls, 4000);
+    setTimeout(initializeAudioControls, 1000);
 });
 
 // Export system for external access
