@@ -9,10 +9,10 @@ let isInteractionEnabled = true;
 
 // Configuration
 const BUTTON_COUNT = 8;
-const BUTTON_RADIUS = 5; // Distance from camera
-const BUTTON_SIZE = 3;
-const FLOAT_AMPLITUDE = 0.3;
-const FLOAT_SPEED = 1.5;
+const BUTTON_RADIUS = 8; // Closer to camera
+const BUTTON_SIZE = 1.2; // Larger buttons
+const FLOAT_AMPLITUDE = 0.2; // Less floating
+const FLOAT_SPEED = 0.8; // Slower floating
 
 // Track configuration
 const TRACK_NAMES = [
@@ -111,15 +111,23 @@ function calculateButtonPosition(index, camera) {
     const angle = (index / BUTTON_COUNT) * Math.PI * 2;
     const floatOffset = Math.sin(animationTime + index) * FLOAT_AMPLITUDE;
     
-    // Position relative to camera
-    const relativePosition = new THREE.Vector3(
-        Math.cos(angle) * BUTTON_RADIUS,
-        2 + floatOffset, // Slight upward offset with floating
-        Math.sin(angle) * BUTTON_RADIUS
-    );
+    // Create position in camera's local space
+    const localX = Math.cos(angle) * BUTTON_RADIUS;
+    const localY = 3 + floatOffset; // Higher up relative to camera
+    const localZ = Math.sin(angle) * BUTTON_RADIUS;
     
-    // Convert to world position
-    const worldPosition = relativePosition.clone().applyMatrix4(camera.matrixWorld);
+    // Get camera's world position and rotation
+    const cameraPosition = camera.position.clone();
+    const cameraRotation = camera.rotation.clone();
+    
+    // Create local position vector
+    const localPosition = new THREE.Vector3(localX, localY, localZ);
+    
+    // Rotate the local position by camera's Y rotation only (so buttons stay level)
+    localPosition.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraRotation.y);
+    
+    // Add to camera position to get world position
+    const worldPosition = cameraPosition.clone().add(localPosition);
     
     return worldPosition;
 }
@@ -246,6 +254,10 @@ function createAudioButtons() {
     // Clear existing buttons
     buttonMeshes.forEach(buttonData => {
         scene.remove(buttonData.group);
+        // Clean up materials and textures
+        if (buttonData.button.material) buttonData.button.material.dispose();
+        if (buttonData.text.material.map) buttonData.text.material.map.dispose();
+        if (buttonData.text.material) buttonData.text.material.dispose();
     });
     buttonMeshes = [];
     
@@ -254,6 +266,12 @@ function createAudioButtons() {
         const buttonData = createButtonMesh(i, TRACK_NAMES[i]);
         buttonMeshes.push(buttonData);
         scene.add(buttonData.group);
+        
+        // Set initial position
+        if (typeof camera !== 'undefined') {
+            const position = calculateButtonPosition(i, camera);
+            buttonData.group.position.copy(position);
+        }
         
         logAudio(`Created button ${i}: ${TRACK_NAMES[i]}`);
     }
@@ -334,13 +352,27 @@ window.AudioControlSystem = {
         logAudio('=== AUDIO CONTROLS DEBUG ===');
         logAudio(`Buttons created: ${buttonMeshes.length}`);
         logAudio(`Interaction enabled: ${isInteractionEnabled}`);
+        logAudio(`Camera available: ${typeof camera !== 'undefined'}`);
+        logAudio(`Scene available: ${typeof scene !== 'undefined'}`);
         logAudio(`Button states: ${buttonStates.map((active, i) => `${TRACK_NAMES[i]}: ${active}`).join(', ')}`);
+        
+        if (buttonMeshes.length > 0 && typeof camera !== 'undefined') {
+            buttonMeshes.forEach((buttonData, i) => {
+                logAudio(`Button ${i} position: ${buttonData.group.position.x.toFixed(1)}, ${buttonData.group.position.y.toFixed(1)}, ${buttonData.group.position.z.toFixed(1)}`);
+            });
+        }
         
         return {
             buttonCount: buttonMeshes.length,
             interactionEnabled: isInteractionEnabled,
+            cameraAvailable: typeof camera !== 'undefined',
             states: buttonStates
         };
+    },
+    
+    // Force recreate buttons (useful for debugging)
+    recreateButtons: () => {
+        createAudioButtons();
     }
 };
 
