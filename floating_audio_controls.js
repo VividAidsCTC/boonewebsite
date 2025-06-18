@@ -60,7 +60,7 @@ function createTextTexture(text, isActive = true) {
     context.fillRect(0, 0, canvas.width, canvas.height);
     
     // Border
-    context.strokeStyle = isActive ? '#00AAFF' : '#006400';
+    context.strokeStyle = isActive ? '#006400' : '#006400';
     context.lineWidth = 4;
     context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
     
