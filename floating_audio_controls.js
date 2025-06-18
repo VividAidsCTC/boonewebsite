@@ -66,7 +66,7 @@ function createTextTexture(text, isActive = true) {
     
     // Text
     context.fillStyle = isActive ? '#FFFFFF' : '#CCCCCC';
-    context.font = 'bold 32px Arial';
+    context.font = 'bold 48px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText(text, canvas.width / 2, canvas.height / 2);
