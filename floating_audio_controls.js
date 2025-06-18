@@ -9,7 +9,8 @@ let isInteractionEnabled = true;
 
 // Configuration
 const BUTTON_COUNT = 8;
-const BUTTON_RADIUS = 8; // Closer to camera
+const BUTTON_RADIUS = 8; // Distance in front of camera
+const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
 const BUTTON_SIZE = 1.2; // Larger buttons
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
@@ -106,15 +107,23 @@ function createButtonMesh(index, trackName) {
     return { group: buttonGroup, button: buttonMesh, text: textMesh };
 }
 
-// Position buttons in a circle around camera
+// Position buttons in front of camera in a spread pattern
 function calculateButtonPosition(index, camera) {
-    const angle = (index / BUTTON_COUNT) * Math.PI * 2;
     const floatOffset = Math.sin(animationTime + index) * FLOAT_AMPLITUDE;
     
-    // Create position in camera's local space
-    const localX = Math.cos(angle) * BUTTON_RADIUS;
-    const localY = 3 + floatOffset; // Higher up relative to camera
-    const localZ = Math.sin(angle) * BUTTON_RADIUS;
+    // Create a spread pattern in front of camera
+    const gridSize = Math.ceil(Math.sqrt(BUTTON_COUNT)); // 3x3 grid for 8 buttons
+    const row = Math.floor(index / gridSize);
+    const col = index % gridSize;
+    
+    // Center the grid
+    const offsetX = (col - (gridSize - 1) / 2) * 3; // 3 units apart horizontally
+    const offsetY = (row - (gridSize - 1) / 2) * 2 + floatOffset; // 2 units apart vertically
+    
+    // Position in front of camera (local space)
+    const localX = offsetX;
+    const localY = offsetY;
+    const localZ = -BUTTON_RADIUS; // In front of camera
     
     // Get camera's world position and rotation
     const cameraPosition = camera.position.clone();
@@ -243,7 +252,7 @@ function setupInteraction() {
 
 // Create all audio control buttons
 function createAudioButtons() {
-    logAudio('Creating 8 floating audio control buttons...');
+    logAudio('Creating 8 floating audio control buttons in front of camera...');
     
     if (typeof scene === 'undefined') {
         logAudio('Scene not available, retrying...');
@@ -276,7 +285,7 @@ function createAudioButtons() {
         logAudio(`Created button ${i}: ${TRACK_NAMES[i]}`);
     }
     
-    logAudio(`Successfully created ${BUTTON_COUNT} audio control buttons`);
+    logAudio(`Successfully created ${BUTTON_COUNT} audio control buttons in front view`);
 }
 
 // Animation update function
