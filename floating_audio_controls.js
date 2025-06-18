@@ -14,8 +14,8 @@ const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
 const BUTTON_SIZE = 1.2; // Larger buttons
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
-const TRAIL_SPEED = 0.05; // How slowly buttons follow camera (lower = more trailing)
-const SCREEN_SPREAD = 40; // How spread out across screen (higher = more spread)
+const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
+const SCREEN_SPREAD = 6; // How spread out across screen (higher = more spread)
 
 // Track configuration
 const TRACK_NAMES = [
@@ -63,8 +63,8 @@ function createTextTexture(text, isActive = true) {
     context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
     
     // Text
-    context.fillStyle = isActive ? '#000000' : '#000000';
-    context.font = 'bold 48px Arial';
+    context.fillStyle = isActive ? '#FFFFFF' : '#CCCCCC';
+    context.font = 'bold 32px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText(text, canvas.width / 2, canvas.height / 2);
@@ -77,10 +77,9 @@ function createTextTexture(text, isActive = true) {
 // Create button geometry and material
 function createButtonMesh(index, trackName) {
     // Button base (sphere)
-    const buttonGeometry = new THREE.CylinderGeometry(1, 1, 2, 16, 4);
+    const buttonGeometry = new THREE.SphereGeometry(BUTTON_SIZE, 16, 12);
     const buttonMaterial = new THREE.MeshLambertMaterial({
-
-        color: buttonStates[index] ? 0x06402B : 0x666666,
+        color: buttonStates[index] ? 0x0099FF : 0x666666,
         transparent: true,
         opacity: buttonStates[index] ? 0.9 : 0.6
     });
@@ -92,8 +91,6 @@ function createButtonMesh(index, trackName) {
         trackName: trackName,
         isActive: buttonStates[index]
     };
-
-    
     
     // Text plane
     const textGeometry = new THREE.PlaneGeometry(3, 1.5);
@@ -121,11 +118,38 @@ function calculateButtonPosition(index, camera) {
     
     // Get or create random offset for this button
     if (!randomOffsets[index]) {
-        randomOffsets[index] = {
-            x: (Math.random() - 0.5) * SCREEN_SPREAD,
-            y: (Math.random() - 0.5) * SCREEN_SPREAD * 0.7, // Less vertical spread
-            z: (Math.random() - 0.5) * 2 // Small depth variation
-        };
+        let attempts = 0;
+        let validPosition = false;
+        let newOffset;
+        
+        // Try to find a position that's at least 2 units away from other buttons
+        while (!validPosition && attempts < 50) {
+            newOffset = {
+                x: (Math.random() - 0.5) * SCREEN_SPREAD,
+                y: (Math.random() - 0.5) * SCREEN_SPREAD * 0.7, // Less vertical spread
+                z: (Math.random() - 0.5) * 2 // Small depth variation
+            };
+            
+            // Check distance from other buttons
+            validPosition = true;
+            for (let i = 0; i < index; i++) {
+                if (randomOffsets[i]) {
+                    const distance = Math.sqrt(
+                        Math.pow(newOffset.x - randomOffsets[i].x, 2) +
+                        Math.pow(newOffset.y - randomOffsets[i].y, 2) +
+                        Math.pow(newOffset.z - randomOffsets[i].z, 2)
+                    );
+                    
+                    if (distance < 2) { // Minimum 2 units apart
+                        validPosition = false;
+                        break;
+                    }
+                }
+            }
+            attempts++;
+        }
+        
+        randomOffsets[index] = newOffset;
     }
     
     const offset = randomOffsets[index];
