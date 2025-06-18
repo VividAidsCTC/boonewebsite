@@ -1,4 +1,8 @@
-// Global variables
+const lookAtX = Math.sin(rotationY) * 10; // Look direction, not position
+const lookAtY = 5 + Math.sin(rotationX) * 10;
+const lookAtZ = 5 + Math.cos(rotationY) * 10;
+camera.lookAt(lookAtX, lookAtY, lookAtZ);
+camera.lookAt(lookAtX, lookAtY, lookAtZ);// Global variables
 let scene, camera, renderer;
 let kelpInstances = [];
 let instancedKelp = null;
