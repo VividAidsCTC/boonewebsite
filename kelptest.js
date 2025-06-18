@@ -9,7 +9,6 @@ let time = 0;
 
 let targetRotationX = 0, targetRotationY = 0;
 let rotationX = 0, rotationY = 0;
-let distance = 30;
 let isMouseDown = false;
 
 let floorTextures = { diffuse: null, normal: null, roughness: null, displacement: null };
@@ -22,103 +21,103 @@ let kelpMaterial = null;
 
 // Vertex shader with simple shadow support
 const kelpVertexShader = `
-    #include <common>
-    #include <fog_pars_vertex>
-    
-    attribute vec3 instancePosition;
-    attribute vec4 instanceRotation;
-    attribute vec3 instanceScale;
-    attribute vec4 animationData;
-    attribute vec4 animationData2;
-    attribute vec2 animationData3;
-    
-    uniform float time;
-    uniform float waveSpeed;
-    uniform float waveIntensity;
-    uniform float currentDirection;
-    uniform float baseY;
-    uniform float kelpHeight;
+   #include <common>
+   #include <fog_pars_vertex>
+   
+   attribute vec3 instancePosition;
+   attribute vec4 instanceRotation;
+   attribute vec3 instanceScale;
+   attribute vec4 animationData;
+   attribute vec4 animationData2;
+   attribute vec2 animationData3;
+   
+   uniform float time;
+   uniform float waveSpeed;
+   uniform float waveIntensity;
+   uniform float currentDirection;
+   uniform float baseY;
+   uniform float kelpHeight;
 
-    varying vec3 vNormal;
-    varying vec3 vWorldPosition;
+   varying vec3 vNormal;
+   varying vec3 vWorldPosition;
 
-    vec3 applyQuaternion(vec3 v, vec4 q) {
-        return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
-    }
+   vec3 applyQuaternion(vec3 v, vec4 q) {
+       return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+   }
 
-    void main() {
-        // Per-instance animation params
-        float offset1 = animationData.x;
+   void main() {
+       // Per-instance animation params
+       float offset1 = animationData.x;
 
-        // Vertex local position
-        vec3 pos = position;
+       // Vertex local position
+       vec3 pos = position;
 
-        // Height factor: 0 at baseY, 1 at top
-        float heightFactor = (pos.y - baseY) / kelpHeight;
-        heightFactor = clamp(heightFactor, 0.0, 1.0);
+       // Height factor: 0 at baseY, 1 at top
+       float heightFactor = (pos.y - baseY) / kelpHeight;
+       heightFactor = clamp(heightFactor, 0.0, 1.0);
 
-        // Sine wave for swaying
-        float dirRad = radians(currentDirection);
-        float wave = sin(time * waveSpeed + pos.y * 0.3 + offset1) * waveIntensity * heightFactor;
+       // Sine wave for swaying
+       float dirRad = radians(currentDirection);
+       float wave = sin(time * waveSpeed + pos.y * 0.3 + offset1) * waveIntensity * heightFactor;
 
-        float bendX = wave * cos(dirRad);
-        float bendZ = wave * sin(dirRad);
+       float bendX = wave * cos(dirRad);
+       float bendZ = wave * sin(dirRad);
 
-        // Deform only upper parts
-        pos.x += bendX * heightFactor;
-        pos.z += bendZ * heightFactor;
+       // Deform only upper parts
+       pos.x += bendX * heightFactor;
+       pos.z += bendZ * heightFactor;
 
-        // Apply scale, rotation, and position
-        vec3 scaledPos = pos * instanceScale;
-        vec3 rotatedPos = applyQuaternion(scaledPos, instanceRotation);
-        vec3 worldPos = rotatedPos + instancePosition;
-        
-        // Store world position for fragment shader
-        vWorldPosition = worldPos;
+       // Apply scale, rotation, and position
+       vec3 scaledPos = pos * instanceScale;
+       vec3 rotatedPos = applyQuaternion(scaledPos, instanceRotation);
+       vec3 worldPos = rotatedPos + instancePosition;
+       
+       // Store world position for fragment shader
+       vWorldPosition = worldPos;
 
-        // Final projection
-        vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
-        gl_Position = projectionMatrix * mvPosition;
+       // Final projection
+       vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
+       gl_Position = projectionMatrix * mvPosition;
 
-        // Transform normal
-        vNormal = normalize(normalMatrix * normal);
-        
-        #include <fog_vertex>
-    }
+       // Transform normal
+       vNormal = normalize(normalMatrix * normal);
+       
+       #include <fog_vertex>
+   }
 `;
 
 // Fragment shader with simple lighting
 const kelpFragmentShader = `
-    #include <common>
-    #include <fog_pars_fragment>
-    
-    uniform vec3 diffuse;
-    uniform float opacity;
-    uniform vec3 lightDirection;
-    uniform vec3 lightColor;
-    
-    varying vec3 vNormal;
-    varying vec3 vWorldPosition;
+   #include <common>
+   #include <fog_pars_fragment>
+   
+   uniform vec3 diffuse;
+   uniform float opacity;
+   uniform vec3 lightDirection;
+   uniform vec3 lightColor;
+   
+   varying vec3 vNormal;
+   varying vec3 vWorldPosition;
 
-    void main() {
-        // Simple directional lighting
-        vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
-        float dotNL = max(dot(normalize(vNormal), lightDir), 0.0);
-        
-        // Simple shadow approximation based on world position and normal
-        float shadowFactor = 1.0;
-        float distanceFromCenter = length(vWorldPosition.xz);
-        float heightFactor = (vWorldPosition.y + 1.0) / 20.0; // Assuming kelp height of ~20
-        
-        // Create simple shadow effect - kelp further from center and higher up cast less shadow
-        shadowFactor = mix(0.3, 1.0, min(1.0, distanceFromCenter / 30.0 + heightFactor * 0.5));
-        
-        // Apply lighting with shadow approximation
-        vec3 color = diffuse * (0.2 + 0.8 * dotNL * shadowFactor);
-        
-        gl_FragColor = vec4(color, opacity);
-        #include <fog_fragment>
-    }
+   void main() {
+       // Simple directional lighting
+       vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
+       float dotNL = max(dot(normalize(vNormal), lightDir), 0.0);
+       
+       // Simple shadow approximation based on world position and normal
+       float shadowFactor = 1.0;
+       float distanceFromCenter = length(vWorldPosition.xz);
+       float heightFactor = (vWorldPosition.y + 1.0) / 20.0; // Assuming kelp height of ~20
+       
+       // Create simple shadow effect - kelp further from center and higher up cast less shadow
+       shadowFactor = mix(0.3, 1.0, min(1.0, distanceFromCenter / 30.0 + heightFactor * 0.5));
+       
+       // Apply lighting with shadow approximation
+       vec3 color = diffuse * (0.2 + 0.8 * dotNL * shadowFactor);
+       
+       gl_FragColor = vec4(color, opacity);
+       #include <fog_fragment>
+   }
 `;
 
 // Create material function
@@ -146,7 +145,7 @@ function createKelpMaterial(kelpHeight = 20, baseY = -10) {
     });
 }
 
-// Texture loading functions (kept the same)
+// Texture loading functions
 function createTexturedFloor() {
     log('Creating textured seafloor...');
     
@@ -154,14 +153,14 @@ function createTexturedFloor() {
     
     let floorMaterial = new THREE.MeshLambertMaterial({ 
         color: 0x302114,
-        fog: true // IMPORTANT: Enable fog for compatibility
+        fog: true
     });
     
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -1;
-    floor.receiveShadow = true; // Enable shadow receiving on the seafloor
-    floor.castShadow = false; // Floor doesn't cast shadows
+    floor.receiveShadow = true;
+    floor.castShadow = false;
     scene.add(floor);
     
     window.seafloor = floor;
@@ -195,8 +194,6 @@ function loadGroundTextures(texturePaths) {
         loadPromises.push(diffusePromise);
     }
     
-    // ... (other texture loading code remains the same)
-    
     Promise.allSettled(loadPromises).then(() => {
         updateFloorMaterial();
     });
@@ -212,7 +209,7 @@ function updateFloorMaterial() {
     
     const materialProps = {
         color: floorTextures.diffuse ? 0xffffff : 0x302114,
-        fog: true // IMPORTANT: Enable fog for compatibility
+        fog: true
     };
     
     if (floorTextures.diffuse) {
@@ -264,7 +261,7 @@ function initializeScene() {
     
     // Enable shadow mapping for GPU-accelerated shadows
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows for better quality
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.shadowMap.autoUpdate = true;
 
     // Create blue gradient background
@@ -280,16 +277,19 @@ function initializeScene() {
     const container = document.getElementById('container');
     container.appendChild(renderer.domElement);
 
+    // Set fixed camera position
+    camera.position.set(0, 10, 30);
+
     // Lighting setup with shadow-casting sun light
-    const ambientLight = new THREE.AmbientLight(0x6699bb, 0.2); // Reduced ambient for better shadow contrast
+    const ambientLight = new THREE.AmbientLight(0x6699bb, 0.2);
     scene.add(ambientLight);
 
     const sunLight = new THREE.DirectionalLight(0xaaccdd, 0.9);
-    sunLight.position.set(30, 80, 40); // Positioned for good shadow angles
-    sunLight.castShadow = true; // Enable shadow casting
+    sunLight.position.set(30, 80, 40);
+    sunLight.castShadow = true;
     
     // Configure shadow camera for better coverage
-    sunLight.shadow.mapSize.width = 4096;  // High resolution shadow map
+    sunLight.shadow.mapSize.width = 4096;
     sunLight.shadow.mapSize.height = 4096;
     sunLight.shadow.camera.near = 0.5;
     sunLight.shadow.camera.far = 200;
@@ -297,12 +297,12 @@ function initializeScene() {
     sunLight.shadow.camera.right = 100;
     sunLight.shadow.camera.top = 100;
     sunLight.shadow.camera.bottom = -100;
-    sunLight.shadow.bias = -0.0001; // Reduce shadow acne
-    sunLight.shadow.radius = 8; // Soft shadow radius
+    sunLight.shadow.bias = -0.0001;
+    sunLight.shadow.radius = 8;
     
     scene.add(sunLight);
 
-    // Additional rim lights (non-shadow casting)
+    // Additional rim lights
     const rimLight1 = new THREE.DirectionalLight(0x7799cc, 0.2);
     rimLight1.position.set(20, 20, 0);
     scene.add(rimLight1);
@@ -326,29 +326,24 @@ function initializeScene() {
 function createGPUKelp() {
     log('Creating GPU-instanced kelp...');
 
-    // Create base geometry - simple kelp shape
     const baseKelpHeight = 20;
-    const segments = 32; // Higher for smoother deformation
+    const segments = 32;
     const radialSegments = 8;
     
     kelpGeometry = new THREE.CylinderGeometry(0.2, 0.4, baseKelpHeight, radialSegments, segments);
     
-    // Create material
     kelpMaterial = createKelpMaterial(baseKelpHeight, -10);
 
-    // Create instanced mesh
     instancedKelp = new THREE.InstancedMesh(kelpGeometry, kelpMaterial, KELP_COUNT);
-    instancedKelp.castShadow = true; // Enable shadow casting
-    instancedKelp.receiveShadow = false; // Kelp doesn't need to receive shadows from other kelp
+    instancedKelp.castShadow = true;
+    instancedKelp.receiveShadow = false;
     
-    // Set up instance data
     setupInstanceData(baseKelpHeight);
 
     scene.add(instancedKelp);
     
     log(`Created ${KELP_COUNT} GPU-instanced kelp plants`);
     
-    // Make sure fog system knows about this material
     if (typeof window.FogSystem !== 'undefined') {
         log('Fog system detected - kelp material fog compatibility enabled');
     }
@@ -373,7 +368,6 @@ function loadGLTFKelp() {
         function(gltf) {
             log('GLTF model loaded successfully, converting to GPU instances...');
             
-            // Extract geometry from GLTF
             let gltfGeometry = null;
             gltf.scene.traverse((child) => {
                 if (child.isMesh && child.geometry) {
@@ -384,10 +378,8 @@ function loadGLTFKelp() {
             });
 
             if (gltfGeometry) {
-                // Use GLTF geometry instead of cylinder
                 kelpGeometry = gltfGeometry;
 
-                // Get bounds for height calculations
                 gltfGeometry.computeBoundingBox();
                 const bbox = gltfGeometry.boundingBox;
                 const height = bbox.max.y - bbox.min.y;
@@ -395,15 +387,12 @@ function loadGLTFKelp() {
                 
                 log(`Using GLTF geometry with height: ${height.toFixed(2)}, baseY: ${baseY.toFixed(2)}`);
                 
-                // Create material with proper height and baseY values
                 kelpMaterial = createKelpMaterial(height, baseY);
 
-                // Create instanced mesh with GLTF geometry
                 instancedKelp = new THREE.InstancedMesh(kelpGeometry, kelpMaterial, KELP_COUNT);
-                instancedKelp.castShadow = true; // Enable shadow casting
-                instancedKelp.receiveShadow = false; // Kelp doesn't need to receive shadows from other kelp
+                instancedKelp.castShadow = true;
+                instancedKelp.receiveShadow = false;
                 
-                // Set up instance data with GLTF height
                 setupInstanceData(height);
                 
                 scene.add(instancedKelp);
@@ -437,7 +426,6 @@ function setupInstanceData(baseHeight = 20) {
     const animationData3 = new Float32Array(KELP_COUNT * 2);
 
     for (let i = 0; i < KELP_COUNT; i++) {
-        // Position
         const x = (Math.random() - 0.5) * 175;
         const z = (Math.random() - 0.5) * 175;
         const y = -1;
@@ -446,20 +434,17 @@ function setupInstanceData(baseHeight = 20) {
         instancePositions[i * 3 + 1] = y;
         instancePositions[i * 3 + 2] = z;
 
-        // Rotation
         const rotation = Math.random() * Math.PI * 2;
         instanceRotations[i * 4] = 0;
         instanceRotations[i * 4 + 1] = Math.sin(rotation / 2);
         instanceRotations[i * 4 + 2] = 0;
         instanceRotations[i * 4 + 3] = Math.cos(rotation / 2);
 
-        // Scale
         const scale = 4 + Math.random() * 20;
         instanceScales[i * 3] = scale;
         instanceScales[i * 3 + 1] = scale;
         instanceScales[i * 3 + 2] = scale;
 
-        // Animation data
         animationData[i * 4] = Math.random() * Math.PI * 2;
         animationData[i * 4 + 1] = 0.8 + Math.random() * 0.6;
         animationData[i * 4 + 2] = 0.8 + Math.random() * 0.6;
@@ -480,7 +465,6 @@ function setupInstanceData(baseHeight = 20) {
         };
     }
 
-    // Set attributes
     kelpGeometry.setAttribute('instancePosition', new THREE.InstancedBufferAttribute(instancePositions, 3));
     kelpGeometry.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(instanceRotations, 4));
     kelpGeometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(instanceScales, 3));
@@ -489,20 +473,18 @@ function setupInstanceData(baseHeight = 20) {
     kelpGeometry.setAttribute('animationData3', new THREE.InstancedBufferAttribute(animationData3, 2));
 }
 
-// Setup controls
+// Setup controls for fixed camera rotation
 function setupControls() {
     document.addEventListener('mousemove', function(event) {
         if (isMouseDown) {
             targetRotationY += event.movementX * 0.01;
             targetRotationX += event.movementY * 0.01;
             
-            const maxRotation = 15 * (Math.PI / 180);
-            targetRotationY = Math.max(-maxRotation, Math.min(maxRotation, targetRotationY));
-            targetRotationX = Math.max(-maxRotation, Math.min(maxRotation, targetRotationX));
+            // No rotation limits - full 360 degree rotation
         }
     });
 
-    log('Manual camera controls initialized successfully');
+    log('Fixed position camera controls initialized successfully');
 
     // Slider controls
     const waveSpeedSlider = document.getElementById('waveSpeed');
@@ -534,7 +516,6 @@ function setupControls() {
                 instancedKelp.material.uniforms.currentDirection.value = currentDirection;
             }
             
-            // Update particle direction if available
             if (typeof OceanParticles !== 'undefined') {
                 const radians = (currentDirection * Math.PI) / 180;
                 const x = Math.cos(radians);
@@ -545,7 +526,7 @@ function setupControls() {
     }
 }
 
-// Animation loop
+// Animation loop with fixed camera position
 function animate() {
     requestAnimationFrame(animate);
 
@@ -576,22 +557,27 @@ function animate() {
         OceanSurface.update(0.01 * waveSpeed);
     }
 
-    // Update camera
+    if (typeof window.AudioControlSystem !== 'undefined') {
+        window.AudioControlSystem.update(0.01 * waveSpeed);
+    }
+
+    // Update camera rotation only (position stays fixed)
     rotationX += (targetRotationX - rotationX) * 0.1;
     rotationY += (targetRotationY - rotationY) * 0.1;
 
-    camera.position.x = Math.sin(rotationY) * Math.cos(rotationX) * distance;
-    camera.position.y = Math.sin(rotationX) * distance + 10;
-    camera.position.z = Math.cos(rotationY) * Math.cos(rotationX) * distance;
-    camera.lookAt(0, 5, 5);
+    // Keep camera at fixed position
+    camera.position.set(0, 10, 30);
+
+    // Apply rotation to camera
+    camera.rotation.x = rotationX;
+    camera.rotation.y = rotationY;
 
     renderer.render(scene, camera);
 }
 
 function startAnimation() {
-    log('Starting animation...');
+    log('Starting animation with fixed camera position...');
 
-    // Hide debug info after successful start
     const debugDiv = document.getElementById('debug');
     if (debugDiv) {
         setTimeout(() => {
@@ -604,7 +590,7 @@ function startAnimation() {
 
 // DOM ready handler
 document.addEventListener('DOMContentLoaded', function() {
-    log('DOM loaded, initializing GPU kelp forest...');
+    log('DOM loaded, initializing GPU kelp forest with fixed camera...');
 
     if (typeof THREE === 'undefined') {
         console.error('Three.js not loaded');
@@ -614,7 +600,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeScene();
     setupControls();
 
-    // Try to load GLTF first, fallback to GPU cylinders if it fails
     setTimeout(() => {
         loadGLTFKelp();
     }, 500);
