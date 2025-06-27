@@ -416,15 +416,18 @@ function setupMultiModelInstanceData() {
             instanceRotations[i * 4 + 2] = 0;
             instanceRotations[i * 4 + 3] = Math.cos(rotation / 2);
 
-            const scale = 4 + Math.random() * 20;
-            instanceScales[i * 3] = scale;
-            instanceScales[i * 3 + 1] = scale;
-            instanceScales[i * 3 + 2] = scale;
+            // More reasonable scaling for kelp models
+            const baseScale = 0.8 + Math.random() * 1.2; // Scale between 0.8 and 2.0
+            const scaleVariation = 0.8 + Math.random() * 0.4; // Additional per-axis variation
+            
+            instanceScales[i * 3] = baseScale * scaleVariation; // X scale
+            instanceScales[i * 3 + 1] = baseScale * (0.9 + Math.random() * 0.3); // Y scale (height)
+            instanceScales[i * 3 + 2] = baseScale * scaleVariation; // Z scale
 
             animationData[i * 4] = Math.random() * Math.PI * 2;
             animationData[i * 4 + 1] = 0.8 + Math.random() * 0.6;
             animationData[i * 4 + 2] = 0.8 + Math.random() * 0.6;
-            animationData[i * 4 + 3] = baseHeight * scale;
+            animationData[i * 4 + 3] = baseHeight * baseScale;
 
             animationData2[i * 4] = Math.random() * Math.PI * 2;
             animationData2[i * 4 + 1] = 1.1 + Math.random() * 0.8;
@@ -436,7 +439,7 @@ function setupMultiModelInstanceData() {
 
             instanceData[instanceIndex + i] = {
                 position: { x, y, z },
-                scale: scale,
+                scale: baseScale,
                 rotation: rotation,
                 modelIndex: modelIndex
             };
