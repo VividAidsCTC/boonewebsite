@@ -1,7 +1,8 @@
-// Global variablesMore actions
+// Global variables
 let scene, camera, renderer;
 let kelpInstances = [];
 let instancedKelp = null;
+let instancedKelp2 = null; // Second kelp model
 let waveSpeed = 1.2;
 let waveIntensity = 0.6;
 let currentDirection = 45;
@@ -15,9 +16,19 @@ let floorTextures = { diffuse: null, normal: null, roughness: null, displacement
 let textureLoader = new THREE.TextureLoader();
 
 const KELP_COUNT = 175;
+const KELP2_COUNT = 100; // Count for second kelp type
 let instanceData = [];
+let instanceData2 = []; // Data for second kelp type
 let kelpGeometry = null;
+let kelpGeometry2 = null; // Second kelp geometry
 let kelpMaterial = null;
+let kelpMaterial2 = null; // Second kelp material
+
+// Kelp model URLs
+const KELP_MODELS = {
+    primary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp4.glb',
+    secondary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/smallkelp.glb' // Add your second model URL here
+};
 
 // Vertex shader with simple shadow support
 const kelpVertexShader = `
@@ -120,8 +131,13 @@ const kelpFragmentShader = `
    }
 `;
 
-// Create material function
-function createKelpMaterial(kelpHeight = 20, baseY = -10) {
+// Create material function with color variation support
+function createKelpMaterial(kelpHeight = 20, baseY = -10, colorVariant = 'primary') {
+    const colors = {
+        primary: new THREE.Color(0x735F1D), // Dark green-brown
+        secondary: new THREE.Color(0x4A6741) // Slightly different green
+    };
+
     return new THREE.ShaderMaterial({
         uniforms: THREE.UniformsUtils.merge([
             THREE.UniformsLib.fog,
@@ -130,7 +146,7 @@ function createKelpMaterial(kelpHeight = 20, baseY = -10) {
                 waveSpeed: { value: waveSpeed },
                 waveIntensity: { value: waveIntensity },
                 currentDirection: { value: currentDirection },
-                diffuse: { value: new THREE.Color(0x735F1D) }, // Dark green-brown
+                diffuse: { value: colors[colorVariant] || colors.primary },
                 opacity: { value: 0.85 },
                 kelpHeight: { value: kelpHeight },
                 baseY: { value: baseY },
@@ -322,112 +338,183 @@ function initializeScene() {
     }, 1000);
 }
 
-// Create GPU-instanced kelp
-function createGPUKelp() {
-    log('Creating GPU-instanced kelp...');
+// Create GPU-instanced kelp with fallback geometry
+function createGPUKelp(isSecondary = false) {
+    const kelpType = isSecondary ? 'secondary' : 'primary';
+    log(`Creating GPU-instanced ${kelpType} kelp...`);
 
     const baseKelpHeight = 20;
     const segments = 32;
     const radialSegments = 8;
 
-    kelpGeometry = new THREE.CylinderGeometry(0.2, 0.4, baseKelpHeight, radialSegments, segments);
+    const geometry = new THREE.CylinderGeometry(0.2, 0.4, baseKelpHeight, radialSegments, segments);
+    const material = createKelpMaterial(baseKelpHeight, -10, kelpType);
+    const count = isSecondary ? KELP2_COUNT : KELP_COUNT;
 
-    kelpMaterial = createKelpMaterial(baseKelpHeight, -10);
+    const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
+    instancedMesh.castShadow = true;
+    instancedMesh.receiveShadow = false;
 
-    instancedKelp = new THREE.InstancedMesh(kelpGeometry, kelpMaterial, KELP_COUNT);
-    instancedKelp.castShadow = true;
-    instancedKelp.receiveShadow = false;
+    if (isSecondary) {
+        kelpGeometry2 = geometry;
+        kelpMaterial2 = material;
+        instancedKelp2 = instancedMesh;
+        setupInstanceData(baseKelpHeight, true);
+    } else {
+        kelpGeometry = geometry;
+        kelpMaterial = material;
+        instancedKelp = instancedMesh;
+        setupInstanceData(baseKelpHeight, false);
+    }
 
-    setupInstanceData(baseKelpHeight);
+    scene.add(instancedMesh);
 
-    scene.add(instancedKelp);
-
-    log(`Created ${KELP_COUNT} GPU-instanced kelp plants`);
+    log(`Created ${count} GPU-instanced ${kelpType} kelp plants`);
 
     if (typeof window.FogSystem !== 'undefined') {
-        log('Fog system detected - kelp material fog compatibility enabled');
+        log(`Fog system detected - ${kelpType} kelp material fog compatibility enabled`);
     }
 }
 
-// Load GLTF kelp or create fallback
+// Enhanced GLTF loading function to handle multiple models
 function loadGLTFKelp() {
-    log('Attempting to load GLTF kelp model...');
+    log('Attempting to load GLTF kelp models...');
 
     if (typeof THREE.GLTFLoader === 'undefined') {
         log('ERROR: GLTFLoader not available, using GPU cylinder kelp');
-        createGPUKelp();
+        createGPUKelp(false); // Primary kelp
+        createGPUKelp(true);  // Secondary kelp
         startAnimation();
         return;
     }
 
     const loader = new THREE.GLTFLoader();
-    const kelpURL = 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp4.glb';
+    let modelsLoaded = 0;
+    const totalModels = 2;
 
+    // Load primary kelp model
     loader.load(
-        kelpURL,
+        KELP_MODELS.primary,
         function(gltf) {
-            log('GLTF model loaded successfully, converting to GPU instances...');
-
-            let gltfGeometry = null;
-            gltf.scene.traverse((child) => {
-                if (child.isMesh && child.geometry) {
-                    if (!gltfGeometry) {
-                        gltfGeometry = child.geometry.clone();
-                    }
-                }
-            });
-
-            if (gltfGeometry) {
-                kelpGeometry = gltfGeometry;
-
-                gltfGeometry.computeBoundingBox();
-                const bbox = gltfGeometry.boundingBox;
-                const height = bbox.max.y - bbox.min.y;
-                const baseY = bbox.min.y;
-
-                log(`Using GLTF geometry with height: ${height.toFixed(2)}, baseY: ${baseY.toFixed(2)}`);
-
-                kelpMaterial = createKelpMaterial(height, baseY);
-
-                instancedKelp = new THREE.InstancedMesh(kelpGeometry, kelpMaterial, KELP_COUNT);
-                instancedKelp.castShadow = true;
-                instancedKelp.receiveShadow = false;
-
-                setupInstanceData(height);
-
-                scene.add(instancedKelp);
-                log(`Created ${KELP_COUNT} GPU-instanced GLTF kelp plants`);
-            } else {
-                log('No geometry found in GLTF, using fallback');
-                createGPUKelp();
-            }
-
-            startAnimation();
+            log('Primary GLTF model loaded successfully, converting to GPU instances...');
+            processGLTFModel(gltf, false);
+            modelsLoaded++;
+            if (modelsLoaded === totalModels) startAnimation();
         },
         function(progress) {
             if (progress.total > 0) {
-                log(`Loading progress: ${Math.round((progress.loaded / progress.total) * 100)}%`);
+                log(`Primary kelp loading progress: ${Math.round((progress.loaded / progress.total) * 100)}%`);
             }
         },
         function(error) {
-            log('ERROR loading GLTF: ' + error.message);
-            createGPUKelp();
-            startAnimation();
+            log('ERROR loading primary GLTF: ' + error.message);
+            createGPUKelp(false);
+            modelsLoaded++;
+            if (modelsLoaded === totalModels) startAnimation();
+        }
+    );
+
+    // Load secondary kelp model
+    loader.load(
+        KELP_MODELS.secondary,
+        function(gltf) {
+            log('Secondary GLTF model loaded successfully, converting to GPU instances...');
+            processGLTFModel(gltf, true);
+            modelsLoaded++;
+            if (modelsLoaded === totalModels) startAnimation();
+        },
+        function(progress) {
+            if (progress.total > 0) {
+                log(`Secondary kelp loading progress: ${Math.round((progress.loaded / progress.total) * 100)}%`);
+            }
+        },
+        function(error) {
+            log('ERROR loading secondary GLTF: ' + error.message);
+            createGPUKelp(true);
+            modelsLoaded++;
+            if (modelsLoaded === totalModels) startAnimation();
         }
     );
 }
 
-function setupInstanceData(baseHeight = 20) {
-    const instancePositions = new Float32Array(KELP_COUNT * 3);
-    const instanceRotations = new Float32Array(KELP_COUNT * 4);
-    const instanceScales = new Float32Array(KELP_COUNT * 3);
-    const animationData = new Float32Array(KELP_COUNT * 4);
-    const animationData2 = new Float32Array(KELP_COUNT * 4);
-    const animationData3 = new Float32Array(KELP_COUNT * 2);
+// Process GLTF model for instancing
+function processGLTFModel(gltf, isSecondary = false) {
+    const kelpType = isSecondary ? 'secondary' : 'primary';
+    let gltfGeometry = null;
+    
+    gltf.scene.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+            if (!gltfGeometry) {
+                gltfGeometry = child.geometry.clone();
+            }
+        }
+    });
 
-    for (let i = 0; i < KELP_COUNT; i++) {
-        const x = (Math.random() - 0.5) * 175;
-        const z = (Math.random() - 0.5) * 175;
+    if (gltfGeometry) {
+        gltfGeometry.computeBoundingBox();
+        const bbox = gltfGeometry.boundingBox;
+        const height = bbox.max.y - bbox.min.y;
+        const baseY = bbox.min.y;
+
+        log(`Using ${kelpType} GLTF geometry with height: ${height.toFixed(2)}, baseY: ${baseY.toFixed(2)}`);
+
+        const material = createKelpMaterial(height, baseY, kelpType);
+        const count = isSecondary ? KELP2_COUNT : KELP_COUNT;
+        const instancedMesh = new THREE.InstancedMesh(gltfGeometry, material, count);
+        instancedMesh.castShadow = true;
+        instancedMesh.receiveShadow = false;
+
+        if (isSecondary) {
+            kelpGeometry2 = gltfGeometry;
+            kelpMaterial2 = material;
+            instancedKelp2 = instancedMesh;
+            setupInstanceData(height, true);
+        } else {
+            kelpGeometry = gltfGeometry;
+            kelpMaterial = material;
+            instancedKelp = instancedMesh;
+            setupInstanceData(height, false);
+        }
+
+        scene.add(instancedMesh);
+        log(`Created ${count} GPU-instanced ${kelpType} GLTF kelp plants`);
+    } else {
+        log(`No geometry found in ${kelpType} GLTF, using fallback`);
+        createGPUKelp(isSecondary);
+    }
+}
+
+// Enhanced instance data setup
+function setupInstanceData(baseHeight = 20, isSecondary = false) {
+    const count = isSecondary ? KELP2_COUNT : KELP_COUNT;
+    const geometry = isSecondary ? kelpGeometry2 : kelpGeometry;
+    const dataArray = isSecondary ? instanceData2 : instanceData;
+    
+    const instancePositions = new Float32Array(count * 3);
+    const instanceRotations = new Float32Array(count * 4);
+    const instanceScales = new Float32Array(count * 3);
+    const animationData = new Float32Array(count * 4);
+    const animationData2 = new Float32Array(count * 4);
+    const animationData3 = new Float32Array(count * 2);
+
+    // Clear the data array
+    if (isSecondary) {
+        instanceData2.length = 0;
+    } else {
+        instanceData.length = 0;
+    }
+
+    for (let i = 0; i < count; i++) {
+        // Position distribution - secondary kelp uses different areas
+        let x, z;
+        if (isSecondary) {
+            // Place secondary kelp in different zones or mixed with primary
+            x = (Math.random() - 0.5) * 150; // Slightly smaller area
+            z = (Math.random() - 0.5) * 150;
+        } else {
+            x = (Math.random() - 0.5) * 175;
+            z = (Math.random() - 0.5) * 175;
+        }
         const y = -1;
 
         instancePositions[i * 3] = x;
@@ -440,7 +527,11 @@ function setupInstanceData(baseHeight = 20) {
         instanceRotations[i * 4 + 2] = 0;
         instanceRotations[i * 4 + 3] = Math.cos(rotation / 2);
 
-        const scale = 4 + Math.random() * 20;
+        // Scale variation - secondary kelp can have different scale range
+        const scaleMin = isSecondary ? 3 : 4;
+        const scaleMax = isSecondary ? 15 : 20;
+        const scale = scaleMin + Math.random() * (scaleMax - scaleMin);
+        
         instanceScales[i * 3] = scale;
         instanceScales[i * 3 + 1] = scale;
         instanceScales[i * 3 + 2] = scale;
@@ -458,19 +549,19 @@ function setupInstanceData(baseHeight = 20) {
         animationData3[i * 2] = 0.5 + Math.random() * 0.4;
         animationData3[i * 2 + 1] = 0.4 + Math.random() * 0.3;
 
-        instanceData[i] = {
+        dataArray[i] = {
             position: { x, y, z },
             scale: scale,
             rotation: rotation
         };
     }
 
-    kelpGeometry.setAttribute('instancePosition', new THREE.InstancedBufferAttribute(instancePositions, 3));
-    kelpGeometry.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(instanceRotations, 4));
-    kelpGeometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(instanceScales, 3));
-    kelpGeometry.setAttribute('animationData', new THREE.InstancedBufferAttribute(animationData, 4));
-    kelpGeometry.setAttribute('animationData2', new THREE.InstancedBufferAttribute(animationData2, 4));
-    kelpGeometry.setAttribute('animationData3', new THREE.InstancedBufferAttribute(animationData3, 2));
+    geometry.setAttribute('instancePosition', new THREE.InstancedBufferAttribute(instancePositions, 3));
+    geometry.setAttribute('instanceRotation', new THREE.InstancedBufferAttribute(instanceRotations, 4));
+    geometry.setAttribute('instanceScale', new THREE.InstancedBufferAttribute(instanceScales, 3));
+    geometry.setAttribute('animationData', new THREE.InstancedBufferAttribute(animationData, 4));
+    geometry.setAttribute('animationData2', new THREE.InstancedBufferAttribute(animationData2, 4));
+    geometry.setAttribute('animationData3', new THREE.InstancedBufferAttribute(animationData3, 2));
 }
 
 // Setup controls for fixed camera rotation
@@ -494,8 +585,12 @@ function setupControls() {
     if (waveSpeedSlider) {
         waveSpeedSlider.addEventListener('input', function(e) {
             waveSpeed = parseFloat(e.target.value);
+            // Update both kelp materials
             if (instancedKelp && instancedKelp.material.uniforms) {
                 instancedKelp.material.uniforms.waveSpeed.value = waveSpeed;
+            }
+            if (instancedKelp2 && instancedKelp2.material.uniforms) {
+                instancedKelp2.material.uniforms.waveSpeed.value = waveSpeed;
             }
         });
     }
@@ -503,8 +598,12 @@ function setupControls() {
     if (waveIntensitySlider) {
         waveIntensitySlider.addEventListener('input', function(e) {
             waveIntensity = parseFloat(e.target.value);
+            // Update both kelp materials
             if (instancedKelp && instancedKelp.material.uniforms) {
                 instancedKelp.material.uniforms.waveIntensity.value = waveIntensity;
+            }
+            if (instancedKelp2 && instancedKelp2.material.uniforms) {
+                instancedKelp2.material.uniforms.waveIntensity.value = waveIntensity;
             }
         });
     }
@@ -512,8 +611,12 @@ function setupControls() {
     if (currentDirectionSlider) {
         currentDirectionSlider.addEventListener('input', function(e) {
             currentDirection = parseFloat(e.target.value);
+            // Update both kelp materials
             if (instancedKelp && instancedKelp.material.uniforms) {
                 instancedKelp.material.uniforms.currentDirection.value = currentDirection;
+            }
+            if (instancedKelp2 && instancedKelp2.material.uniforms) {
+                instancedKelp2.material.uniforms.currentDirection.value = currentDirection;
             }
 
             if (typeof OceanParticles !== 'undefined') {
@@ -526,18 +629,26 @@ function setupControls() {
     }
 }
 
-// Animation loop with fixed camera position
+// Enhanced animation loop with dual kelp support
 function animate() {
     requestAnimationFrame(animate);
 
     time += 0.01 * waveSpeed;
 
-    // Update GPU kelp shader uniforms
+    // Update primary GPU kelp shader uniforms
     if (instancedKelp && instancedKelp.material.uniforms) {
         instancedKelp.material.uniforms.time.value = time;
         instancedKelp.material.uniforms.waveSpeed.value = waveSpeed;
         instancedKelp.material.uniforms.waveIntensity.value = waveIntensity;
         instancedKelp.material.uniforms.currentDirection.value = currentDirection;
+    }
+
+    // Update secondary GPU kelp shader uniforms
+    if (instancedKelp2 && instancedKelp2.material.uniforms) {
+        instancedKelp2.material.uniforms.time.value = time * 0.8; // Slightly different timing
+        instancedKelp2.material.uniforms.waveSpeed.value = waveSpeed * 0.9; // Slightly different speed
+        instancedKelp2.material.uniforms.waveIntensity.value = waveIntensity * 1.1; // Slightly different intensity
+        instancedKelp2.material.uniforms.currentDirection.value = currentDirection + 15; // Slightly different direction
     }
 
     // Update other systems
@@ -576,7 +687,7 @@ function animate() {
 }
 
 function startAnimation() {
-    log('Starting animation with fixed camera position...');
+    log('Starting animation with dual kelp models and fixed camera position...');
 
     const debugDiv = document.getElementById('debug');
     if (debugDiv) {
@@ -590,7 +701,7 @@ function startAnimation() {
 
 // DOM ready handler
 document.addEventListener('DOMContentLoaded', function() {
-    log('DOM loaded, initializing GPU kelp forest with fixed camera...');
+    log('DOM loaded, initializing dual GPU kelp forest with fixed camera...');
 
     if (typeof THREE === 'undefined') {
         console.error('Three.js not loaded');
@@ -623,14 +734,11 @@ document.addEventListener('mouseup', function(event) {
     isMouseDown = false;
 });
 
-// Export for compatibility with other systems
+// Enhanced export for compatibility with other systems
 window.KelpSystem = {
-    getInstancedMesh: () => instancedKelp,
-    getInstanceCount: () => KELP_COUNT,
-    getInstanceData: () => instanceData,
-    updateUniforms: (uniforms) => {
-        if (instancedKelp && instancedKelp.material.uniforms) {
-            Object.assign(instancedKelp.material.uniforms, uniforms);
-        }
-    }
-};
+    getPrimaryInstancedMesh: () => instancedKelp,
+    getSecondaryInstancedMesh: () => instancedKelp2,
+    getPrimaryInstanceCount: () => KELP_COUNT,
+    getSecondaryInstanceCount: () => KELP2_COUNT,
+    getPrimaryInstanceData: () => instanceData,
+    getSecondaryInstanceData
