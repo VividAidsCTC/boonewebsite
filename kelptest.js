@@ -392,6 +392,12 @@ function loadGLTFKelp() {
     let modelsLoaded = 0;
     const totalModels = 2;
 
+    function checkCompletion() {
+        if (modelsLoaded >= totalModels) {
+            startAnimation();
+        }
+    }
+
     // Load primary kelp model
     loader.load(
         KELP_MODELS.primary,
@@ -399,7 +405,7 @@ function loadGLTFKelp() {
             log('Primary GLTF model loaded successfully, converting to GPU instances...');
             processGLTFModel(gltf, false);
             modelsLoaded++;
-            if (modelsLoaded === totalModels) startAnimation();
+            checkCompletion();
         },
         function(progress) {
             if (progress.total > 0) {
@@ -407,10 +413,10 @@ function loadGLTFKelp() {
             }
         },
         function(error) {
-            log('ERROR loading primary GLTF: ' + error.message);
+            log('ERROR loading primary GLTF: ' + error.message + ' - using fallback');
             createGPUKelp(false);
             modelsLoaded++;
-            if (modelsLoaded === totalModels) startAnimation();
+            checkCompletion();
         }
     );
 
@@ -421,7 +427,7 @@ function loadGLTFKelp() {
             log('Secondary GLTF model loaded successfully, converting to GPU instances...');
             processGLTFModel(gltf, true);
             modelsLoaded++;
-            if (modelsLoaded === totalModels) startAnimation();
+            checkCompletion();
         },
         function(progress) {
             if (progress.total > 0) {
@@ -429,10 +435,10 @@ function loadGLTFKelp() {
             }
         },
         function(error) {
-            log('ERROR loading secondary GLTF: ' + error.message);
+            log('ERROR loading secondary GLTF: ' + error.message + ' - using fallback');
             createGPUKelp(true);
             modelsLoaded++;
-            if (modelsLoaded === totalModels) startAnimation();
+            checkCompletion();
         }
     );
 }
@@ -741,4 +747,29 @@ window.KelpSystem = {
     getPrimaryInstanceCount: () => KELP_COUNT,
     getSecondaryInstanceCount: () => KELP2_COUNT,
     getPrimaryInstanceData: () => instanceData,
-    getSecondaryInstanceData
+    getSecondaryInstanceData: () => instanceData2,
+    // Backwards compatibility methods
+    getInstancedMesh: () => instancedKelp,
+    getInstanceCount: () => KELP_COUNT,
+    getInstanceData: () => instanceData,
+    updateUniforms: (uniforms) => {
+        if (instancedKelp && instancedKelp.material.uniforms) {
+            Object.assign(instancedKelp.material.uniforms, uniforms);
+        }
+        if (instancedKelp2 && instancedKelp2.material.uniforms) {
+            Object.assign(instancedKelp2.material.uniforms, uniforms);
+        }
+    },
+    // Additional utility methods
+    getBothInstancedMeshes: () => [instancedKelp, instancedKelp2].filter(mesh => mesh !== null),
+    getTotalInstanceCount: () => {
+        let total = 0;
+        if (instancedKelp) total += KELP_COUNT;
+        if (instancedKelp2) total += KELP2_COUNT;
+        return total;
+    },
+    setKelpVisibility: (primaryVisible = true, secondaryVisible = true) => {
+        if (instancedKelp) instancedKelp.visible = primaryVisible;
+        if (instancedKelp2) instancedKelp2.visible = secondaryVisible;
+    }
+};
