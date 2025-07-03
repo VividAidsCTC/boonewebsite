@@ -26,8 +26,8 @@ let kelpMaterial2 = null; // Second kelp material
 
 // Kelp model URLs
 const KELP_MODELS = {
-    primary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/nouveaukelp4.glb',
-    secondary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/smallkelp2.glb' // Add your second model URL here
+    primary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/nouveaukelp4.glb',
+    secondary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/smallkelp2.glb' // Add your second model URL here
 };
 
 // Vertex shader with simple shadow support
