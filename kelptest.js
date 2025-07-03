@@ -534,7 +534,7 @@ function setupInstanceData(baseHeight = 20, isSecondary = false) {
         instanceRotations[i * 4 + 3] = Math.cos(rotation / 2);
 
         // Scale variation - secondary kelp can have different scale range
-        const scaleMin = isSecondary ? 3 : 4;
+        const scaleMin = isSecondary ? 7 : 8;
         const scaleMax = isSecondary ? 15 : 20;
         const scale = scaleMin + Math.random() * (scaleMax - scaleMin);
         
