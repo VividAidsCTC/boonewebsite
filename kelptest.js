@@ -27,7 +27,7 @@ let kelpMaterial2 = null; // Second kelp material
 // Kelp model URLs
 const KELP_MODELS = {
     primary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/nouveaukelp4.glb',
-    secondary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/smallkelp2.glb' // Add your second model URL here
+    secondary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/smallkelp.glb' // Add your second model URL here
 };
 
 // Vertex shader with simple shadow support
@@ -514,9 +514,9 @@ function setupInstanceData(baseHeight = 20, isSecondary = false) {
         // Position distribution - secondary kelp uses different areas
         let x, z;
         if (isSecondary) {
-            // Place secondary kelp in different zones or mixed with primary
-            x = (Math.random() - 0.5) * 150; // Slightly smaller area
-            z = (Math.random() - 0.5) * 150;
+            // Place secondary kelp spread out more than primary
+            x = (Math.random() - 0.5) * 220; // Larger area than primary
+            z = (Math.random() - 0.5) * 220;
         } else {
             x = (Math.random() - 0.5) * 175;
             z = (Math.random() - 0.5) * 175;
@@ -651,10 +651,10 @@ function animate() {
 
     // Update secondary GPU kelp shader uniforms
     if (instancedKelp2 && instancedKelp2.material.uniforms) {
-        instancedKelp2.material.uniforms.time.value = time * 0.8; // Slightly different timing
-        instancedKelp2.material.uniforms.waveSpeed.value = waveSpeed * 0.9; // Slightly different speed
-        instancedKelp2.material.uniforms.waveIntensity.value = waveIntensity * 1.1; // Slightly different intensity
-        instancedKelp2.material.uniforms.currentDirection.value = currentDirection + 15; // Slightly different direction
+        instancedKelp2.material.uniforms.time.value = time * 0.6; // Slower timing for smaller kelp
+        instancedKelp2.material.uniforms.waveSpeed.value = waveSpeed * 0.7; // Slower speed
+        instancedKelp2.material.uniforms.waveIntensity.value = waveIntensity * 0.4; // Much less intensity for smaller kelp
+        instancedKelp2.material.uniforms.currentDirection.value = currentDirection + 10; // Slightly different direction
     }
 
     // Update other systems
