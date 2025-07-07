@@ -15,7 +15,7 @@ const BUTTON_SIZE = 1; // Default size multiplier for custom models
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
-const SCREEN_SPREAD = 22; // How spread out across screen (reduced from 25)
+const SCREEN_SPREAD = 18; // How spread out across screen (reduced from 25)
 const MIN_BUTTON_DISTANCE = 8.5; // Minimum distance between buttons (reduced from 10)
 
 // Track configuration with individual 3D models
@@ -45,7 +45,7 @@ const TRACK_CONFIG = [
         name: "Vocals",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal.glb",
         scale: 3,
-        rotation: { x: Math.PI, y: Math.PI / 2, z: 0 },
+        rotation: { x: 3 * Math.PI, y: Math.PI / 2, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
@@ -71,7 +71,65 @@ const TRACK_CONFIG = [
     }
 ];
 
-
+// Track configuration with individual 3D models
+const TRACK_CONFIG = [
+    {
+        name: "Guitar",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/white_mesh.glb",
+        scale: 3.0,
+        rotation: { x: 0, y: 0, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Bass",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/bass.glb",
+        scale: 3,
+        rotation: { x: 0, y: Math.PI / 4, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Drums",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/drum.glb",
+        scale: 3,
+        rotation: { x: 0, y: 0, z: 0 },
+        offset: { x: 0, y: -0.5, z: 0 }
+    },
+    {
+        name: "Vocals",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal.glb",
+        scale: 5,
+        rotation: { x: Math.PI / 3, y: Math.PI / 4, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Piano",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/piano.glb",
+        scale: 3,
+        rotation: { x: Math.PI, y: Math.PI, z: Math.PI / 4 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Strings",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/string.glb",
+        scale: 2.2,
+        rotation: { x: Math.PI / 6, y: 0, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Synth",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/synths.glb",
+        scale: 2.5,
+        rotation: { x: Math.PI / 2, y: Math.PI / 2, z: Math.PI },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Effects",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/effects.glb",
+        scale: 1.1,
+        rotation: { x: 0, y: Math.PI / 8, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    }
+];
 
 // Button states and positioning
 let buttonStates = new Array(BUTTON_COUNT).fill(true); // All active by default
@@ -369,23 +427,23 @@ function isValidPosition(newPosition, existingPositions, minDistance = MIN_BUTTO
 
 // Generate a grid-based position to ensure better spacing
 function generateGridPosition(index, totalButtons) {
-    // Use a more spread out arrangement
+    // Use a more compact arrangement that stays above ground
     const positions = [
-        { x: -12, y: 8 },   // Top left
-        { x: 0, y: 12 },    // Top center
-        { x: 12, y: 8 },    // Top right
-        { x: -8, y: 0 },    // Middle left
-        { x: 8, y: 0 },     // Middle right
-        { x: -12, y: -8 },  // Bottom left
-        { x: 0, y: -12 },   // Bottom center
-        { x: 12, y: -8 }    // Bottom right
+        { x: -8, y: 6 },    // Top left
+        { x: 0, y: 8 },     // Top center
+        { x: 8, y: 6 },     // Top right
+        { x: -6, y: 2 },    // Mid left
+        { x: 6, y: 2 },     // Mid right
+        { x: -8, y: -2 },   // Lower left
+        { x: 0, y: -4 },    // Lower center
+        { x: 8, y: -2 }     // Lower right
     ];
     
     // Use predefined positions if available, otherwise fall back to grid
     if (index < positions.length) {
         return {
             x: positions[index].x,
-            y: positions[index].y,
+            y: Math.max(positions[index].y, 0), // Ensure Y is never negative (below ground)
             z: (Math.random() - 0.5) * 2
         };
     }
@@ -399,11 +457,11 @@ function generateGridPosition(index, totalButtons) {
     
     const spacing = MIN_BUTTON_DISTANCE;
     const startX = -(cols - 1) * spacing / 2;
-    const startY = -(rows - 1) * spacing / 2;
+    const startY = Math.max(-(rows - 1) * spacing / 2, 0); // Keep above ground
     
     return {
         x: startX + col * spacing,
-        y: startY + row * spacing,
+        y: Math.max(startY + row * spacing, 0), // Ensure positive Y
         z: (Math.random() - 0.5) * 2
     };
 }
@@ -436,7 +494,7 @@ function calculateButtonPosition(index, camera) {
         while (!validPosition && attempts < 100) {
             newOffset = {
                 x: (Math.random() - 0.5) * SCREEN_SPREAD,
-                y: (Math.random() - 0.5) * SCREEN_SPREAD * 0.6, // Reduced vertical spread
+                y: Math.max((Math.random() - 0.3) * SCREEN_SPREAD * 0.6, 0), // Bias upward, never below ground
                 z: (Math.random() - 0.5) * 2 // Smaller depth variation
             };
             
@@ -453,11 +511,11 @@ function calculateButtonPosition(index, camera) {
         if (!validPosition) {
             logAudio(`Could not find valid random position for button ${index}, using fallback`);
             const angle = (index / BUTTON_COUNT) * Math.PI * 2;
-            const radius = MIN_BUTTON_DISTANCE * 1.5; // Ensure adequate spacing
+            const radius = MIN_BUTTON_DISTANCE * 1.2; // Reasonable spacing
             
             newOffset = {
                 x: Math.cos(angle) * radius,
-                y: Math.sin(angle) * radius * 0.6,
+                y: Math.max(Math.sin(angle) * radius * 0.3 + 3, 0), // Keep above ground with minimum height
                 z: (Math.random() - 0.5) * 2
             };
         }
@@ -863,11 +921,5 @@ if (typeof window.AssetUpdateCallbacks === 'undefined') {
     window.AssetUpdateCallbacks = [];
 }
 window.AssetUpdateCallbacks.push(updateAudioControls);
-
-
-
-
-
-
 
 
