@@ -68,13 +68,6 @@ const TRACK_CONFIG = [
         scale: 2.5,
         rotation: { x: Math.PI / 2, y: Math.PI / 2, z: Math.PI },
         offset: { x: 0, y: 0, z: 0 }
-    },
-    {
-        name: "Effects",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/effects.glb",
-        scale: 1.1,
-        rotation: { x: 0, y: Math.PI / 8, z: 0 },
-        offset: { x: 0, y: 0, z: 0 }
     }
 ];
 
