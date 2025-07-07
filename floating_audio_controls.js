@@ -11,22 +11,70 @@ let isInteractionEnabled = true;
 const BUTTON_COUNT = 8;
 const BUTTON_RADIUS = 8; // Distance in front of camera
 const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
-const BUTTON_SIZE = 1; // Larger buttons
+const BUTTON_SIZE = 1; // Default size multiplier for custom models
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
 const SCREEN_SPREAD = 25; // How spread out across screen (higher = more spread)
 
-// Track configuration
-const TRACK_NAMES = [
-    "Guitar",
-    "Bass", 
-    "Drums",
-    "Vocals",
-    "Piano",
-    "Strings",
-    "Synth",
-    "Effects"
+// Track configuration with individual 3D models
+const TRACK_CONFIG = [
+    {
+        name: "Guitar",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/models/white_mesh.glb",
+        scale: 1.0,
+        rotation: { x: 0, y: 0, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Bass",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/models/bass.glb",
+        scale: 1.2,
+        rotation: { x: 0, y: Math.PI / 4, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Drums",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/models/drums.glb",
+        scale: 0.8,
+        rotation: { x: 0, y: 0, z: 0 },
+        offset: { x: 0, y: -0.5, z: 0 }
+    },
+    {
+        name: "Vocals",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/models/microphone.glb",
+        scale: 1.5,
+        rotation: { x: 0, y: 0, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Piano",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/models/piano.glb",
+        scale: 0.6,
+        rotation: { x: 0, y: Math.PI / 2, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Strings",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/models/violin.glb",
+        scale: 1.3,
+        rotation: { x: Math.PI / 6, y: 0, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Synth",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/models/synthesizer.glb",
+        scale: 0.9,
+        rotation: { x: 0, y: 0, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Effects",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/models/effects.glb",
+        scale: 1.1,
+        rotation: { x: 0, y: Math.PI / 8, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    }
 ];
 
 // Button states and positioning
@@ -37,6 +85,8 @@ let buttonCurrentPositions = []; // Where buttons currently are
 let randomOffsets = []; // Random spread for each button
 let fadeStartTime = 0; // When fade-in started
 let isFadingIn = false; // Whether buttons are currently fading in
+let loadedModels = {}; // Cache for loaded 3D models
+let loadingModels = {}; // Track which models are currently loading
 
 // Debug logging
 function logAudio(message) {
@@ -66,7 +116,7 @@ function createTextTexture(text, isActive = true) {
     
     // Text
     context.fillStyle = isActive ? '#FFFFFF' : '#CCCCCC';
-    context.font = 'bold 48px Arial';
+    context.font = 'bold 32px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText(text, canvas.width / 2, canvas.height / 2);
@@ -76,27 +126,170 @@ function createTextTexture(text, isActive = true) {
     return texture;
 }
 
-// Create button geometry and material
-function createButtonMesh(index, trackName) {
-    // Button base (sphere)
-    const buttonGeometry = new THREE.SphereGeometry(BUTTON_SIZE, 16, 12);
-    const buttonMaterial = new THREE.MeshLambertMaterial({
-        color: buttonStates[index] ? 0x006400 : 0xCCCCCC,
+// Load 3D model for button
+async function load3DModel(config, index) {
+    const { modelUrl, name } = config;
+    
+    // Check if already loaded
+    if (loadedModels[modelUrl]) {
+        logAudio(`Using cached model for ${name}`);
+        return loadedModels[modelUrl].clone();
+    }
+    
+    // Check if currently loading
+    if (loadingModels[modelUrl]) {
+        logAudio(`Waiting for ${name} model to finish loading...`);
+        return new Promise((resolve) => {
+            const checkLoaded = setInterval(() => {
+                if (loadedModels[modelUrl]) {
+                    clearInterval(checkLoaded);
+                    resolve(loadedModels[modelUrl].clone());
+                }
+            }, 100);
+        });
+    }
+    
+    // Start loading
+    loadingModels[modelUrl] = true;
+    logAudio(`Loading 3D model for ${name}: ${modelUrl}`);
+    
+    return new Promise((resolve, reject) => {
+        if (typeof THREE.GLTFLoader === 'undefined') {
+            logAudio(`GLTFLoader not available for ${name}, using fallback sphere`);
+            delete loadingModels[modelUrl];
+            resolve(createFallbackButton(config));
+            return;
+        }
+        
+        const loader = new THREE.GLTFLoader();
+        loader.load(
+            modelUrl,
+            (gltf) => {
+                logAudio(`Successfully loaded 3D model for ${name}`);
+                
+                // Extract the main mesh from the GLTF scene
+                let modelMesh = null;
+                gltf.scene.traverse((child) => {
+                    if (child.isMesh && !modelMesh) {
+                        modelMesh = child.clone();
+                        // Ensure the model has proper materials
+                        if (!modelMesh.material) {
+                            modelMesh.material = new THREE.MeshLambertMaterial({ color: 0x666666 });
+                        }
+                    }
+                });
+                
+                if (!modelMesh) {
+                    logAudio(`No mesh found in ${name} model, using fallback`);
+                    modelMesh = createFallbackButton(config);
+                }
+                
+                // Cache the loaded model
+                loadedModels[modelUrl] = modelMesh;
+                delete loadingModels[modelUrl];
+                
+                resolve(modelMesh.clone());
+            },
+            (progress) => {
+                if (progress.total > 0) {
+                    const percent = Math.round((progress.loaded / progress.total) * 100);
+                    logAudio(`Loading ${name}: ${percent}%`);
+                }
+            },
+            (error) => {
+                logAudio(`Error loading ${name} model: ${error.message}, using fallback`);
+                delete loadingModels[modelUrl];
+                resolve(createFallbackButton(config));
+            }
+        );
+    });
+}
+
+// Create fallback button (sphere) when 3D model fails to load
+function createFallbackButton(config) {
+    const geometry = new THREE.SphereGeometry(BUTTON_SIZE, 16, 12);
+    const material = new THREE.MeshLambertMaterial({
+        color: 0x666666,
         transparent: true,
-        opacity: buttonStates[index] ? 0.9 : 0.6
+        opacity: 0.8
     });
     
-    const buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial);
-    buttonMesh.userData = { 
-        type: 'audioButton', 
-        index: index, 
-        trackName: trackName,
-        isActive: buttonStates[index]
+    const mesh = new THREE.Mesh(geometry, material);
+    logAudio(`Created fallback sphere for ${config.name}`);
+    return mesh;
+}
+
+// Apply configuration to 3D model
+function configureModel(modelMesh, config, index, isActive) {
+    // Apply scale
+    const scale = config.scale * BUTTON_SIZE;
+    modelMesh.scale.setScalar(scale);
+    
+    // Apply rotation
+    if (config.rotation) {
+        modelMesh.rotation.set(
+            config.rotation.x || 0,
+            config.rotation.y || 0,
+            config.rotation.z || 0
+        );
+    }
+    
+    // Apply offset (will be used in positioning)
+    if (config.offset) {
+        modelMesh.userData.offset = config.offset;
+    }
+    
+    // Set user data
+    modelMesh.userData = {
+        ...modelMesh.userData,
+        type: 'audioButton',
+        index: index,
+        trackName: config.name,
+        isActive: isActive,
+        config: config
     };
     
-    // Text plane
+    // Update material based on active state
+    updateModelMaterial(modelMesh, isActive);
+    
+    return modelMesh;
+}
+
+// Update model material based on active state
+function updateModelMaterial(modelMesh, isActive) {
+    if (modelMesh.material) {
+        // Store original color if not already stored
+        if (!modelMesh.userData.originalColor && modelMesh.material.color) {
+            modelMesh.userData.originalColor = modelMesh.material.color.getHex();
+        }
+        
+        if (isActive) {
+            // Active state - use original color or default
+            const originalColor = modelMesh.userData.originalColor || 0x666666;
+            modelMesh.material.color.setHex(originalColor);
+            modelMesh.material.opacity = 0.9;
+        } else {
+            // Inactive state - make it grayer and more transparent
+            modelMesh.material.color.setHex(0x999999);
+            modelMesh.material.opacity = 0.5;
+        }
+        
+        // Ensure transparency is enabled
+        modelMesh.material.transparent = true;
+    }
+}
+
+// Create button with 3D model
+async function createButtonMesh(index, config) {
+    // Load the 3D model
+    const modelMesh = await load3DModel(config, index);
+    
+    // Configure the model
+    const configuredModel = configureModel(modelMesh, config, index, buttonStates[index]);
+    
+    // Create text plane
     const textGeometry = new THREE.PlaneGeometry(3, 1.5);
-    const textTexture = createTextTexture(trackName, buttonStates[index]);
+    const textTexture = createTextTexture(config.name, buttonStates[index]);
     const textMaterial = new THREE.MeshBasicMaterial({
         map: textTexture,
         transparent: true,
@@ -104,14 +297,23 @@ function createButtonMesh(index, trackName) {
     });
     
     const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-    textMesh.position.set(0, -1.5, 0); // Below the button
+    textMesh.position.set(0, -2.5, 0); // Below the button, adjusted for potentially larger models
     
     // Group button and text
     const buttonGroup = new THREE.Group();
-    buttonGroup.add(buttonMesh);
+    buttonGroup.add(configuredModel);
     buttonGroup.add(textMesh);
     
-    return { group: buttonGroup, button: buttonMesh, text: textMesh };
+    // Apply any offset from config
+    if (config.offset) {
+        buttonGroup.position.set(
+            config.offset.x || 0,
+            config.offset.y || 0,
+            config.offset.z || 0
+        );
+    }
+    
+    return { group: buttonGroup, button: configuredModel, text: textMesh };
 }
 
 // Position buttons randomly spread in front of camera with trailing
@@ -149,7 +351,7 @@ function calculateButtonPosition(index, camera) {
                         Math.pow(newOffset.y - randomOffsets[i].y, 2)
                     );
                     
-                    if (distance3D < 6 || distance2D < 5) { // Increased minimum distances
+                    if (distance3D < 8 || distance2D < 6) { // Increased minimum distances for larger models
                         validPosition = false;
                         break;
                     }
@@ -203,8 +405,10 @@ function updateButtonPositions(camera) {
         // Set button to current position
         buttonData.group.position.copy(buttonCurrentPositions[index]);
         
-        // Make buttons face the camera
-        buttonData.group.lookAt(camera.position);
+        // Make buttons face the camera (optional, can be disabled for specific models)
+        if (!buttonData.button.userData.config.noAutoRotate) {
+            buttonData.group.lookAt(camera.position);
+        }
     });
 }
 
@@ -213,21 +417,18 @@ function updateButtonVisual(index, isActive) {
     if (index < 0 || index >= buttonMeshes.length) return;
     
     const buttonData = buttonMeshes[index];
-    const color = isActive ? 0x006400 : 0x006400;
-    const opacity = isActive ? 0.9 : 0.6;
     
-    // Update button material
-    buttonData.button.material.color.setHex(color);
-    buttonData.button.material.opacity = opacity;
+    // Update 3D model material
+    updateModelMaterial(buttonData.button, isActive);
     buttonData.button.userData.isActive = isActive;
     
     // Update text texture
-    const newTexture = createTextTexture(TRACK_NAMES[index], isActive);
+    const newTexture = createTextTexture(TRACK_CONFIG[index].name, isActive);
     buttonData.text.material.map.dispose(); // Clean up old texture
     buttonData.text.material.map = newTexture;
     buttonData.text.material.needsUpdate = true;
     
-    logAudio(`Button ${index} (${TRACK_NAMES[index]}) set to ${isActive ? 'active' : 'inactive'}`);
+    logAudio(`Button ${index} (${TRACK_CONFIG[index].name}) set to ${isActive ? 'active' : 'inactive'}`);
 }
 
 // Handle button clicks
@@ -236,13 +437,13 @@ function onButtonClick(index) {
     updateButtonVisual(index, buttonStates[index]);
     
     // TODO: Add audio track control here
-    logAudio(`Track ${TRACK_NAMES[index]} ${buttonStates[index] ? 'enabled' : 'disabled'}`);
+    logAudio(`Track ${TRACK_CONFIG[index].name} ${buttonStates[index] ? 'enabled' : 'disabled'}`);
     
     // Emit custom event for audio system
     window.dispatchEvent(new CustomEvent('trackToggle', {
         detail: { 
             trackIndex: index, 
-            trackName: TRACK_NAMES[index], 
+            trackName: TRACK_CONFIG[index].name, 
             active: buttonStates[index] 
         }
     }));
@@ -271,18 +472,18 @@ function setupInteraction() {
                 if (hoveredButton !== newHovered) {
                     // Reset previous hovered button
                     if (hoveredButton) {
-                        hoveredButton.scale.setScalar(1);
+                        hoveredButton.scale.multiplyScalar(1 / 1.1); // Reset scale
                     }
                     
                     // Set new hovered button
                     hoveredButton = newHovered;
-                    hoveredButton.scale.setScalar(1.1); // Slight scale up
+                    hoveredButton.scale.multiplyScalar(1.1); // Slight scale up
                     document.body.style.cursor = 'pointer';
                 }
             } else {
                 // No hover
                 if (hoveredButton) {
-                    hoveredButton.scale.setScalar(1);
+                    hoveredButton.scale.multiplyScalar(1 / 1.1); // Reset scale
                     hoveredButton = null;
                     document.body.style.cursor = 'default';
                 }
@@ -304,9 +505,9 @@ function setupInteraction() {
     logAudio('Mouse interaction setup complete');
 }
 
-// Create all audio control buttons
-function createAudioButtons() {
-    logAudio('Creating 8 floating audio control buttons with fade-in effect...');
+// Create all audio control buttons with 3D models
+async function createAudioButtons() {
+    logAudio('Creating 8 floating audio control buttons with custom 3D models...');
     
     if (typeof scene === 'undefined') {
         logAudio('Scene not available, retrying...');
@@ -331,27 +532,38 @@ function createAudioButtons() {
     isFadingIn = true;
     
     // Create new buttons (initially invisible)
+    logAudio('Loading 3D models for each button...');
+    
     for (let i = 0; i < BUTTON_COUNT; i++) {
-        const buttonData = createButtonMesh(i, TRACK_NAMES[i]);
+        const config = TRACK_CONFIG[i];
+        logAudio(`Creating button ${i}: ${config.name}`);
         
-        // Set initial opacity to 0 for fade-in
-        buttonData.button.material.opacity = 0;
-        buttonData.text.material.opacity = 0;
-        
-        buttonMeshes.push(buttonData);
-        scene.add(buttonData.group);
-        
-        // Set initial position
-        if (typeof camera !== 'undefined') {
-            const position = calculateButtonPosition(i, camera);
-            buttonData.group.position.copy(position);
-            buttonCurrentPositions[i] = position.clone();
+        try {
+            const buttonData = await createButtonMesh(i, config);
+            
+            // Set initial opacity to 0 for fade-in
+            if (buttonData.button.material) {
+                buttonData.button.material.opacity = 0;
+            }
+            buttonData.text.material.opacity = 0;
+            
+            buttonMeshes.push(buttonData);
+            scene.add(buttonData.group);
+            
+            // Set initial position
+            if (typeof camera !== 'undefined') {
+                const position = calculateButtonPosition(i, camera);
+                buttonData.group.position.copy(position);
+                buttonCurrentPositions[i] = position.clone();
+            }
+            
+            logAudio(`Successfully created button ${i}: ${config.name}`);
+        } catch (error) {
+            logAudio(`Error creating button ${i}: ${error.message}`);
         }
-        
-        logAudio(`Created button ${i}: ${TRACK_NAMES[i]} (fading in)`);
     }
     
-    logAudio(`Successfully created ${BUTTON_COUNT} buttons with fade-in effect`);
+    logAudio(`Successfully created ${buttonMeshes.length} buttons with custom 3D models`);
 }
 
 // Animation update function
@@ -361,14 +573,16 @@ function updateAudioControls(deltaTime = 0.016) {
     // Handle fade-in effect
     if (isFadingIn) {
         const elapsed = (performance.now() - fadeStartTime) / 1000; // Convert to seconds
-        const fadeProgress = Math.min(elapsed / 2.0, 1.0); // 2 second fade duration
+        const fadeProgress = Math.min(elapsed / 3.0, 1.0); // 3 second fade duration for loading models
         
         // Update opacity for all buttons
         buttonMeshes.forEach((buttonData, index) => {
-            const targetButtonOpacity = buttonStates[index] ? 0.9 : 0.6;
+            const targetButtonOpacity = buttonStates[index] ? 0.9 : 0.5;
             const targetTextOpacity = 1.0;
             
-            buttonData.button.material.opacity = fadeProgress * targetButtonOpacity;
+            if (buttonData.button.material) {
+                buttonData.button.material.opacity = fadeProgress * targetButtonOpacity;
+            }
             buttonData.text.material.opacity = fadeProgress * targetTextOpacity;
         });
         
@@ -387,7 +601,7 @@ function updateAudioControls(deltaTime = 0.016) {
 
 // Initialize the audio control system
 function initializeAudioControls() {
-    logAudio('Initializing floating audio controls system...');
+    logAudio('Initializing floating audio controls system with custom 3D models...');
     
     if (typeof scene === 'undefined' || typeof camera === 'undefined') {
         logAudio('Scene or camera not ready, retrying in 1 second...');
@@ -411,6 +625,7 @@ document.addEventListener('DOMContentLoaded', function() {
 window.AudioControlSystem = {
     getButtons: () => buttonMeshes,
     getButtonStates: () => [...buttonStates], // Return copy
+    getTrackConfig: () => [...TRACK_CONFIG], // Return copy of track configuration
     
     setButtonState: (index, active) => {
         if (index >= 0 && index < BUTTON_COUNT) {
@@ -433,6 +648,29 @@ window.AudioControlSystem = {
         logAudio(`All tracks set to ${active ? 'active' : 'inactive'}`);
     },
     
+    // Update individual track configuration
+    updateTrackConfig: (index, newConfig) => {
+        if (index >= 0 && index < BUTTON_COUNT) {
+            TRACK_CONFIG[index] = { ...TRACK_CONFIG[index], ...newConfig };
+            logAudio(`Updated configuration for track ${index}: ${TRACK_CONFIG[index].name}`);
+            // Note: You'll need to call recreateButtons() to see the changes
+        }
+    },
+    
+    // Update model URL for a specific track
+    updateTrackModel: (index, modelUrl, config = {}) => {
+        if (index >= 0 && index < BUTTON_COUNT) {
+            TRACK_CONFIG[index].modelUrl = modelUrl;
+            if (config.scale !== undefined) TRACK_CONFIG[index].scale = config.scale;
+            if (config.rotation) TRACK_CONFIG[index].rotation = config.rotation;
+            if (config.offset) TRACK_CONFIG[index].offset = config.offset;
+            
+            logAudio(`Updated model for track ${index}: ${TRACK_CONFIG[index].name} -> ${modelUrl}`);
+            // Clear cache for this model
+            delete loadedModels[modelUrl];
+        }
+    },
+    
     update: updateAudioControls,
     
     // Configuration
@@ -441,16 +679,18 @@ window.AudioControlSystem = {
         logAudio(`Interaction ${enabled ? 'enabled' : 'disabled'}`);
     },
     
-    getTrackNames: () => [...TRACK_NAMES],
+    getTrackNames: () => TRACK_CONFIG.map(config => config.name),
     
     // Debug functions
     debugInfo: () => {
         logAudio('=== AUDIO CONTROLS DEBUG ===');
         logAudio(`Buttons created: ${buttonMeshes.length}`);
+        logAudio(`Models loaded: ${Object.keys(loadedModels).length}`);
+        logAudio(`Models loading: ${Object.keys(loadingModels).length}`);
         logAudio(`Interaction enabled: ${isInteractionEnabled}`);
         logAudio(`Camera available: ${typeof camera !== 'undefined'}`);
         logAudio(`Scene available: ${typeof scene !== 'undefined'}`);
-        logAudio(`Button states: ${buttonStates.map((active, i) => `${TRACK_NAMES[i]}: ${active}`).join(', ')}`);
+        logAudio(`Button states: ${buttonStates.map((active, i) => `${TRACK_CONFIG[i].name}: ${active}`).join(', ')}`);
         
         if (buttonMeshes.length > 0 && typeof camera !== 'undefined') {
             buttonMeshes.forEach((buttonData, i) => {
@@ -460,15 +700,26 @@ window.AudioControlSystem = {
         
         return {
             buttonCount: buttonMeshes.length,
+            modelsLoaded: Object.keys(loadedModels).length,
+            modelsLoading: Object.keys(loadingModels).length,
             interactionEnabled: isInteractionEnabled,
             cameraAvailable: typeof camera !== 'undefined',
-            states: buttonStates
+            states: buttonStates,
+            trackConfig: TRACK_CONFIG
         };
     },
     
-    // Force recreate buttons (useful for debugging)
+    // Force recreate buttons (useful for debugging or applying config changes)
     recreateButtons: () => {
+        // Clear model cache if needed
+        // loadedModels = {};
         createAudioButtons();
+    },
+    
+    // Clear model cache
+    clearModelCache: () => {
+        loadedModels = {};
+        logAudio('Model cache cleared');
     }
 };
 
