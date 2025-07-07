@@ -21,7 +21,7 @@ const SCREEN_SPREAD = 25; // How spread out across screen (higher = more spread)
 const TRACK_CONFIG = [
     {
         name: "Guitar",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/models/white_mesh.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/white_mesh.glb",
         scale: 1.0,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
