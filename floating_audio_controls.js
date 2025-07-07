@@ -16,6 +16,7 @@ const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
 const SCREEN_SPREAD = 25; // How spread out across screen (higher = more spread)
+const MIN_BUTTON_DISTANCE = 10; // Minimum distance between buttons (increased from 8)
 
 // Track configuration with individual 3D models
 const TRACK_CONFIG = [
@@ -347,6 +348,43 @@ function makeModelsGreen() {
 // Call this after your audio controls are loaded
 setTimeout(makeModelsGreen, 5000); // Wait 5 seconds for models to load, then make them green
 
+// Check if a position is valid (not too close to existing buttons)
+function isValidPosition(newPosition, existingPositions, minDistance = MIN_BUTTON_DISTANCE) {
+    for (let i = 0; i < existingPositions.length; i++) {
+        if (existingPositions[i]) {
+            const distance = Math.sqrt(
+                Math.pow(newPosition.x - existingPositions[i].x, 2) +
+                Math.pow(newPosition.y - existingPositions[i].y, 2) +
+                Math.pow(newPosition.z - existingPositions[i].z, 2)
+            );
+            
+            if (distance < minDistance) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Generate a grid-based position to ensure better spacing
+function generateGridPosition(index, totalButtons) {
+    const cols = Math.ceil(Math.sqrt(totalButtons));
+    const rows = Math.ceil(totalButtons / cols);
+    
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    
+    // Center the grid
+    const startX = -(cols - 1) * MIN_BUTTON_DISTANCE / 2;
+    const startY = -(rows - 1) * MIN_BUTTON_DISTANCE / 2;
+    
+    return {
+        x: startX + col * MIN_BUTTON_DISTANCE,
+        y: startY + row * MIN_BUTTON_DISTANCE,
+        z: (Math.random() - 0.5) * 4 // Small random depth variation
+    };
+}
+
 // Position buttons randomly spread in front of camera with trailing
 function calculateButtonPosition(index, camera) {
     const floatOffset = Math.sin(animationTime + index) * FLOAT_AMPLITUDE;
@@ -357,41 +395,53 @@ function calculateButtonPosition(index, camera) {
         let validPosition = false;
         let newOffset;
         
-        // Try to find a position that's at least 4 units away from other buttons
-        while (!validPosition && attempts < 50) {
+        // First try grid-based positioning for better initial spread
+        if (attempts === 0) {
+            newOffset = generateGridPosition(index, BUTTON_COUNT);
+            
+            // Add some randomness to the grid position
+            newOffset.x += (Math.random() - 0.5) * (MIN_BUTTON_DISTANCE * 0.3);
+            newOffset.y += (Math.random() - 0.5) * (MIN_BUTTON_DISTANCE * 0.3);
+            
+            // Check if this grid position is valid
+            if (isValidPosition(newOffset, randomOffsets, MIN_BUTTON_DISTANCE)) {
+                validPosition = true;
+            }
+        }
+        
+        // If grid position failed, try random positioning with better collision detection
+        while (!validPosition && attempts < 100) {
             newOffset = {
                 x: (Math.random() - 0.5) * SCREEN_SPREAD,
                 y: (Math.random() - 0.5) * SCREEN_SPREAD * 0.7, // Less vertical spread
-                z: (Math.random() - 0.5) * 2 // Small depth variation
+                z: (Math.random() - 0.5) * 4 // Small depth variation
             };
             
-            // Check distance from other buttons (use larger minimum for visual separation)
-            validPosition = true;
-            for (let i = 0; i < index; i++) {
-                if (randomOffsets[i]) {
-                    // Check both 3D distance and 2D screen distance
-                    const distance3D = Math.sqrt(
-                        Math.pow(newOffset.x - randomOffsets[i].x, 2) +
-                        Math.pow(newOffset.y - randomOffsets[i].y, 2) +
-                        Math.pow(newOffset.z - randomOffsets[i].z, 2)
-                    );
-                    
-                    // Also check 2D distance (more important for visual separation)
-                    const distance2D = Math.sqrt(
-                        Math.pow(newOffset.x - randomOffsets[i].x, 2) +
-                        Math.pow(newOffset.y - randomOffsets[i].y, 2)
-                    );
-                    
-                    if (distance3D < 8 || distance2D < 6) { // Increased minimum distances for larger models
-                        validPosition = false;
-                        break;
-                    }
-                }
+            // Check if this position is valid
+            if (isValidPosition(newOffset, randomOffsets, MIN_BUTTON_DISTANCE)) {
+                validPosition = true;
+                logAudio(`Found valid position for button ${index} after ${attempts + 1} attempts`);
             }
+            
             attempts++;
         }
         
+        // If we still can't find a valid position, use a fallback with increased spacing
+        if (!validPosition) {
+            logAudio(`Could not find valid random position for button ${index}, using fallback`);
+            const fallbackSpacing = MIN_BUTTON_DISTANCE * 1.5;
+            const angle = (index / BUTTON_COUNT) * Math.PI * 2;
+            const radius = fallbackSpacing * Math.ceil(BUTTON_COUNT / 6); // Arrange in rough circle
+            
+            newOffset = {
+                x: Math.cos(angle) * radius,
+                y: Math.sin(angle) * radius * 0.7, // Less vertical spread
+                z: (Math.random() - 0.5) * 4
+            };
+        }
+        
         randomOffsets[index] = newOffset;
+        logAudio(`Button ${index} positioned at: ${newOffset.x.toFixed(1)}, ${newOffset.y.toFixed(1)}, ${newOffset.z.toFixed(1)}`);
     }
     
     const offset = randomOffsets[index];
@@ -556,7 +606,7 @@ async function createAudioButtons() {
     });
     buttonMeshes = [];
     buttonCurrentPositions = [];
-    randomOffsets = [];
+    randomOffsets = []; // Clear the random offsets to force regeneration
     
     // Start fade-in effect
     fadeStartTime = performance.now();
@@ -679,6 +729,13 @@ window.AudioControlSystem = {
         logAudio(`All tracks set to ${active ? 'active' : 'inactive'}`);
     },
     
+    // Force regenerate button positions (useful if you want to reshuffle)
+    regeneratePositions: () => {
+        randomOffsets = []; // Clear existing positions
+        buttonCurrentPositions = []; // Clear current positions
+        logAudio('Button positions regenerated');
+    },
+    
     // Update individual track configuration
     updateTrackConfig: (index, newConfig) => {
         if (index >= 0 && index < BUTTON_COUNT) {
@@ -727,6 +784,21 @@ window.AudioControlSystem = {
             buttonMeshes.forEach((buttonData, i) => {
                 logAudio(`Button ${i} position: ${buttonData.group.position.x.toFixed(1)}, ${buttonData.group.position.y.toFixed(1)}, ${buttonData.group.position.z.toFixed(1)}`);
             });
+            
+            // Check distances between buttons
+            logAudio('=== BUTTON DISTANCES ===');
+            for (let i = 0; i < buttonMeshes.length; i++) {
+                for (let j = i + 1; j < buttonMeshes.length; j++) {
+                    const pos1 = buttonMeshes[i].group.position;
+                    const pos2 = buttonMeshes[j].group.position;
+                    const distance = Math.sqrt(
+                        Math.pow(pos1.x - pos2.x, 2) +
+                        Math.pow(pos1.y - pos2.y, 2) +
+                        Math.pow(pos1.z - pos2.z, 2)
+                    );
+                    logAudio(`Distance between ${i} and ${j}: ${distance.toFixed(2)} (min required: ${MIN_BUTTON_DISTANCE})`);
+                }
+            }
         }
         
         return {
@@ -736,7 +808,8 @@ window.AudioControlSystem = {
             interactionEnabled: isInteractionEnabled,
             cameraAvailable: typeof camera !== 'undefined',
             states: buttonStates,
-            trackConfig: TRACK_CONFIG
+            trackConfig: TRACK_CONFIG,
+            minDistance: MIN_BUTTON_DISTANCE
         };
     },
     
@@ -751,6 +824,15 @@ window.AudioControlSystem = {
     clearModelCache: () => {
         loadedModels = {};
         logAudio('Model cache cleared');
+    },
+    
+    // Adjust minimum distance between buttons
+    setMinDistance: (distance) => {
+        MIN_BUTTON_DISTANCE = Math.max(distance, 5); // Minimum of 5 units
+        logAudio(`Minimum button distance set to: ${MIN_BUTTON_DISTANCE}`);
+        // Force regeneration of positions
+        randomOffsets = [];
+        buttonCurrentPositions = [];
     }
 };
 
