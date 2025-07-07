@@ -9,7 +9,7 @@ let isInteractionEnabled = true;
 
 // Configuration
 const BUTTON_COUNT = 8;
-const BUTTON_RADIUS = 15; // Distance in front of camera (increased from 8)
+const BUTTON_RADIUS = 10; // Distance in front of camera (increased from 8)
 const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
 const BUTTON_SIZE = 1; // Default size multiplier for custom models
 const FLOAT_AMPLITUDE = 0.2; // Less floating
