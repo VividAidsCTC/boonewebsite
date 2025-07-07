@@ -44,14 +44,14 @@ const TRACK_CONFIG = [
         name: "Vocals",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal.glb",
         scale: 5,
-        rotation: { x: 0, y: 0, z: 0 },
+        rotation: { x: Math.PI / 2, y: Math.PI / 4, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Piano",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/piano.glb",
         scale: 6,
-        rotation: { x: 0, y: Math.PI / 2, z: 0 },
+        rotation: { x: Math.PI / 2, y: Math.PI / 2, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
@@ -65,7 +65,7 @@ const TRACK_CONFIG = [
         name: "Synth",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/synths.glb",
         scale: 2.5,
-        rotation: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: Math.PI / 2 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
