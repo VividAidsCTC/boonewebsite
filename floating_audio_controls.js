@@ -21,56 +21,56 @@ const SCREEN_SPREAD = 25; // How spread out across screen (higher = more spread)
 const TRACK_CONFIG = [
     {
         name: "Guitar",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/guitar.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/white_mesh.glb",
         scale: 1.0,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Bass",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/bass.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/bass.glb",
         scale: 1.2,
         rotation: { x: 0, y: Math.PI / 4, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Drums",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/drums.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/drum.glb",
         scale: 0.8,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: -0.5, z: 0 }
     },
     {
         name: "Vocals",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/microphone.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal.glb",
         scale: 1.5,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Piano",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/piano.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/piano.glb",
         scale: 0.6,
         rotation: { x: 0, y: Math.PI / 2, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Strings",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/violin.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/string.glb",
         scale: 1.3,
         rotation: { x: Math.PI / 6, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Synth",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/synthesizer.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/synths.glb",
         scale: 0.9,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Effects",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/effects.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/effects.glb",
         scale: 1.1,
         rotation: { x: 0, y: Math.PI / 8, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
