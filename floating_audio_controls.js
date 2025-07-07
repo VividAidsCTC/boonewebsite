@@ -8,7 +8,7 @@ let hoveredButton = null;
 let isInteractionEnabled = true;
 
 // Configuration
-const BUTTON_COUNT = 7;
+const BUTTON_COUNT = 8;
 const BUTTON_RADIUS = 8; // Distance in front of camera
 const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
 const BUTTON_SIZE = 1; // Default size multiplier for custom models
@@ -66,6 +66,13 @@ const TRACK_CONFIG = [
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/synthesizer.glb",
         scale: 0.9,
         rotation: { x: 0, y: 0, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Effects",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/effects.glb",
+        scale: 1.1,
+        rotation: { x: 0, y: Math.PI / 8, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     }
 ];
