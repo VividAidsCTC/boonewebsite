@@ -45,7 +45,7 @@ const TRACK_CONFIG = [
         name: "Vocals",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal.glb",
         scale: 5,
-        rotation: { x: Math.PI / 3, y: Math.PI / 4, z: 0 },
+        rotation: { x: 3 * Math.PI, y: Math.PI / 4, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
