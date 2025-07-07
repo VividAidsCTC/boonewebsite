@@ -29,28 +29,28 @@ const TRACK_CONFIG = [
     {
         name: "Bass",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/bass.glb",
-        scale: 1.2,
+        scale: 3,
         rotation: { x: 0, y: Math.PI / 4, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Drums",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/drum.glb",
-        scale: 0.8,
+        scale: 3,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: -0.5, z: 0 }
     },
     {
         name: "Vocals",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal.glb",
-        scale: 1.5,
+        scale: 5,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Piano",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/piano.glb",
-        scale: 0.6,
+        scale: 4,
         rotation: { x: 0, y: Math.PI / 2, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
