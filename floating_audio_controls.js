@@ -71,65 +71,6 @@ const TRACK_CONFIG = [
     }
 ];
 
-// Track configuration with individual 3D models
-const TRACK_CONFIG = [
-    {
-        name: "Guitar",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/white_mesh.glb",
-        scale: 3.0,
-        rotation: { x: 0, y: 0, z: 0 },
-        offset: { x: 0, y: 0, z: 0 }
-    },
-    {
-        name: "Bass",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/bass.glb",
-        scale: 3,
-        rotation: { x: 0, y: Math.PI / 4, z: 0 },
-        offset: { x: 0, y: 0, z: 0 }
-    },
-    {
-        name: "Drums",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/drum.glb",
-        scale: 3,
-        rotation: { x: 0, y: 0, z: 0 },
-        offset: { x: 0, y: -0.5, z: 0 }
-    },
-    {
-        name: "Vocals",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal.glb",
-        scale: 5,
-        rotation: { x: Math.PI / 3, y: Math.PI / 4, z: 0 },
-        offset: { x: 0, y: 0, z: 0 }
-    },
-    {
-        name: "Piano",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/piano.glb",
-        scale: 3,
-        rotation: { x: Math.PI, y: Math.PI, z: Math.PI / 4 },
-        offset: { x: 0, y: 0, z: 0 }
-    },
-    {
-        name: "Strings",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/string.glb",
-        scale: 2.2,
-        rotation: { x: Math.PI / 6, y: 0, z: 0 },
-        offset: { x: 0, y: 0, z: 0 }
-    },
-    {
-        name: "Synth",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/synths.glb",
-        scale: 2.5,
-        rotation: { x: Math.PI / 2, y: Math.PI / 2, z: Math.PI },
-        offset: { x: 0, y: 0, z: 0 }
-    },
-    {
-        name: "Effects",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/effects.glb",
-        scale: 1.1,
-        rotation: { x: 0, y: Math.PI / 8, z: 0 },
-        offset: { x: 0, y: 0, z: 0 }
-    }
-];
 
 // Button states and positioning
 let buttonStates = new Array(BUTTON_COUNT).fill(true); // All active by default
