@@ -78,6 +78,8 @@ const TRACK_CONFIG = [
     }
 ];
 
+
+
 // Button states and positioning
 let buttonStates = new Array(BUTTON_COUNT).fill(true); // All active by default
 let animationTime = 0;
@@ -265,14 +267,19 @@ function updateModelMaterial(modelMesh, isActive) {
         }
         
         if (isActive) {
-            // Active state - use original color or default
-            const originalColor = modelMesh.userData.originalColor || 0x666666;
-            modelMesh.material.color.setHex(originalColor);
-            modelMesh.material.opacity = 0.9;
+            // Active state - bright green
+            modelMesh.material.color.setHex(0x00AA00); // Brighter green
+            modelMesh.material.opacity = 1.0;
+            if (modelMesh.material.emissive) {
+                modelMesh.material.emissive.setHex(0x002200); // Slight glow
+            }
         } else {
-            // Inactive state - make it grayer and more transparent
-            modelMesh.material.color.setHex(0x999999);
-            modelMesh.material.opacity = 0.5;
+            // Inactive state - light gray
+            modelMesh.material.color.setHex(0xBBBBBB); // Much lighter gray
+            modelMesh.material.opacity = 0.8;
+            if (modelMesh.material.emissive) {
+                modelMesh.material.emissive.setHex(0x000000); // No glow
+            }
         }
         
         // Ensure transparency is enabled
@@ -319,18 +326,19 @@ async function createButtonMesh(index, config) {
 
 // Add this function to override fish colors to green
 function makeModelsGreen() {
-    // Update the updateModelMaterial function
-    const originalUpdateModelMaterial = updateModelMaterial;
+    // Update the updateModelMaterial function to make models brighter
     updateModelMaterial = function(modelMesh, isActive) {
         if (modelMesh.material) {
             if (isActive) {
-                // Active state - green like the text boxes
-                modelMesh.material.color.setHex(0x006400);
-                modelMesh.material.opacity = 0.9;
+                // Active state - bright green like the text boxes
+                modelMesh.material.color.setHex(0x00AA00); // Brighter green
+                modelMesh.material.opacity = 1.0; // Full opacity
+                modelMesh.material.emissive.setHex(0x002200); // Slight glow
             } else {
-                // Inactive state - gray like inactive text boxes
-                modelMesh.material.color.setHex(0x999999);
-                modelMesh.material.opacity = 0.5;
+                // Inactive state - lighter gray
+                modelMesh.material.color.setHex(0xBBBBBB); // Much lighter gray
+                modelMesh.material.opacity = 0.8; // Less transparent
+                modelMesh.material.emissive.setHex(0x000000); // No glow
             }
             // Ensure transparency is enabled
             modelMesh.material.transparent = true;
@@ -368,21 +376,42 @@ function isValidPosition(newPosition, existingPositions, minDistance = MIN_BUTTO
 
 // Generate a grid-based position to ensure better spacing
 function generateGridPosition(index, totalButtons) {
+    // Use a more spread out arrangement
+    const positions = [
+        { x: -12, y: 8 },   // Top left
+        { x: 0, y: 12 },    // Top center
+        { x: 12, y: 8 },    // Top right
+        { x: -8, y: 0 },    // Middle left
+        { x: 8, y: 0 },     // Middle right
+        { x: -12, y: -8 },  // Bottom left
+        { x: 0, y: -12 },   // Bottom center
+        { x: 12, y: -8 }    // Bottom right
+    ];
+    
+    // Use predefined positions if available, otherwise fall back to grid
+    if (index < positions.length) {
+        return {
+            x: positions[index].x,
+            y: positions[index].y,
+            z: (Math.random() - 0.5) * 2
+        };
+    }
+    
+    // Fallback to grid for extra buttons
     const cols = Math.ceil(Math.sqrt(totalButtons));
     const rows = Math.ceil(totalButtons / cols);
     
     const col = index % cols;
     const row = Math.floor(index / cols);
     
-    // Center the grid and make it more compact
-    const spacing = MIN_BUTTON_DISTANCE * 0.8; // Closer spacing within the grid
+    const spacing = MIN_BUTTON_DISTANCE;
     const startX = -(cols - 1) * spacing / 2;
     const startY = -(rows - 1) * spacing / 2;
     
     return {
         x: startX + col * spacing,
         y: startY + row * spacing,
-        z: (Math.random() - 0.5) * 2 // Smaller random depth variation
+        z: (Math.random() - 0.5) * 2
     };
 }
 
@@ -427,17 +456,16 @@ function calculateButtonPosition(index, camera) {
             attempts++;
         }
         
-        // If we still can't find a valid position, use a fallback with increased spacing
+        // If we still can't find a valid position, use a fallback with guaranteed spacing
         if (!validPosition) {
             logAudio(`Could not find valid random position for button ${index}, using fallback`);
-            const fallbackSpacing = MIN_BUTTON_DISTANCE * 0.9; // Reduced spacing
             const angle = (index / BUTTON_COUNT) * Math.PI * 2;
-            const radius = fallbackSpacing * 2; // Smaller radius for tighter arrangement
+            const radius = MIN_BUTTON_DISTANCE * 1.5; // Ensure adequate spacing
             
             newOffset = {
                 x: Math.cos(angle) * radius,
-                y: Math.sin(angle) * radius * 0.6, // Less vertical spread
-                z: (Math.random() - 0.5) * 2 // Smaller depth variation
+                y: Math.sin(angle) * radius * 0.6,
+                z: (Math.random() - 0.5) * 2
             };
         }
         
@@ -842,3 +870,11 @@ if (typeof window.AssetUpdateCallbacks === 'undefined') {
     window.AssetUpdateCallbacks = [];
 }
 window.AssetUpdateCallbacks.push(updateAudioControls);
+
+
+
+
+
+
+
+
