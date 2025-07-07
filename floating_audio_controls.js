@@ -16,7 +16,7 @@ const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
 const SCREEN_SPREAD = 22; // How spread out across screen (reduced from 25)
-const MIN_BUTTON_DISTANCE = 7; // Minimum distance between buttons (reduced from 10)
+const MIN_BUTTON_DISTANCE = 10; // Minimum distance between buttons (reduced from 10)
 
 // Track configuration with individual 3D models
 const TRACK_CONFIG = [
