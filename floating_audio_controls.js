@@ -44,8 +44,8 @@ const TRACK_CONFIG = [
     {
         name: "Vocals",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal.glb",
-        scale: 3,
-        rotation: { x: 3 * Math.PI, y: Math.PI / 2, z: 0 },
+        scale: 5,
+        rotation: { x: Math.PI / 3, y: Math.PI / 4, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
@@ -68,9 +68,15 @@ const TRACK_CONFIG = [
         scale: 2.5,
         rotation: { x: Math.PI / 2, y: Math.PI / 2, z: Math.PI },
         offset: { x: 0, y: 0, z: 0 }
+    },
+    {
+        name: "Effects",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/effects.glb",
+        scale: 1.1,
+        rotation: { x: 0, y: Math.PI / 8, z: 0 },
+        offset: { x: 0, y: 0, z: 0 }
     }
 ];
-
 
 // Button states and positioning
 let buttonStates = new Array(BUTTON_COUNT).fill(true); // All active by default
@@ -368,23 +374,23 @@ function isValidPosition(newPosition, existingPositions, minDistance = MIN_BUTTO
 
 // Generate a grid-based position to ensure better spacing
 function generateGridPosition(index, totalButtons) {
-    // Use a more compact arrangement that stays above ground
+    // Use a more spread out arrangement
     const positions = [
-        { x: -8, y: 6 },    // Top left
-        { x: 0, y: 8 },     // Top center
-        { x: 8, y: 6 },     // Top right
-        { x: -6, y: 2 },    // Mid left
-        { x: 6, y: 2 },     // Mid right
-        { x: -8, y: -2 },   // Lower left
-        { x: 0, y: -4 },    // Lower center
-        { x: 8, y: -2 }     // Lower right
+        { x: -12, y: 8 },   // Top left
+        { x: 0, y: 12 },    // Top center
+        { x: 12, y: 8 },    // Top right
+        { x: -8, y: 0 },    // Middle left
+        { x: 8, y: 0 },     // Middle right
+        { x: -12, y: -8 },  // Bottom left
+        { x: 0, y: -12 },   // Bottom center
+        { x: 12, y: -8 }    // Bottom right
     ];
     
     // Use predefined positions if available, otherwise fall back to grid
     if (index < positions.length) {
         return {
             x: positions[index].x,
-            y: Math.max(positions[index].y, 0), // Ensure Y is never negative (below ground)
+            y: positions[index].y,
             z: (Math.random() - 0.5) * 2
         };
     }
@@ -398,11 +404,11 @@ function generateGridPosition(index, totalButtons) {
     
     const spacing = MIN_BUTTON_DISTANCE;
     const startX = -(cols - 1) * spacing / 2;
-    const startY = Math.max(-(rows - 1) * spacing / 2, 0); // Keep above ground
+    const startY = -(rows - 1) * spacing / 2;
     
     return {
         x: startX + col * spacing,
-        y: Math.max(startY + row * spacing, 0), // Ensure positive Y
+        y: startY + row * spacing,
         z: (Math.random() - 0.5) * 2
     };
 }
@@ -435,7 +441,7 @@ function calculateButtonPosition(index, camera) {
         while (!validPosition && attempts < 100) {
             newOffset = {
                 x: (Math.random() - 0.5) * SCREEN_SPREAD,
-                y: Math.max((Math.random() - 0.3) * SCREEN_SPREAD * 0.6, 0), // Bias upward, never below ground
+                y: (Math.random() - 0.5) * SCREEN_SPREAD * 0.6, // Reduced vertical spread
                 z: (Math.random() - 0.5) * 2 // Smaller depth variation
             };
             
@@ -452,11 +458,11 @@ function calculateButtonPosition(index, camera) {
         if (!validPosition) {
             logAudio(`Could not find valid random position for button ${index}, using fallback`);
             const angle = (index / BUTTON_COUNT) * Math.PI * 2;
-            const radius = MIN_BUTTON_DISTANCE * 1.2; // Reasonable spacing
+            const radius = MIN_BUTTON_DISTANCE * 1.5; // Ensure adequate spacing
             
             newOffset = {
                 x: Math.cos(angle) * radius,
-                y: Math.max(Math.sin(angle) * radius * 0.3 + 3, 0), // Keep above ground with minimum height
+                y: Math.sin(angle) * radius * 0.6,
                 z: (Math.random() - 0.5) * 2
             };
         }
@@ -862,5 +868,4 @@ if (typeof window.AssetUpdateCallbacks === 'undefined') {
     window.AssetUpdateCallbacks = [];
 }
 window.AssetUpdateCallbacks.push(updateAudioControls);
-
 
