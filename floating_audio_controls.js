@@ -316,6 +316,37 @@ async function createButtonMesh(index, config) {
     return { group: buttonGroup, button: configuredModel, text: textMesh };
 }
 
+// Add this function to override fish colors to green
+function makeModelsGreen() {
+    // Update the updateModelMaterial function
+    const originalUpdateModelMaterial = updateModelMaterial;
+    updateModelMaterial = function(modelMesh, isActive) {
+        if (modelMesh.material) {
+            if (isActive) {
+                // Active state - green like the text boxes
+                modelMesh.material.color.setHex(0x006400);
+                modelMesh.material.opacity = 0.9;
+            } else {
+                // Inactive state - gray like inactive text boxes
+                modelMesh.material.color.setHex(0x999999);
+                modelMesh.material.opacity = 0.5;
+            }
+            // Ensure transparency is enabled
+            modelMesh.material.transparent = true;
+        }
+    };
+    
+    // Update existing buttons if they're already created
+    if (buttonMeshes.length > 0) {
+        buttonMeshes.forEach((buttonData, index) => {
+            updateModelMaterial(buttonData.button, buttonStates[index]);
+        });
+    }
+}
+
+// Call this after your audio controls are loaded
+setTimeout(makeModelsGreen, 5000); // Wait 5 seconds for models to load, then make them green
+
 // Position buttons randomly spread in front of camera with trailing
 function calculateButtonPosition(index, camera) {
     const floatOffset = Math.sin(animationTime + index) * FLOAT_AMPLITUDE;
