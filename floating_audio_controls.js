@@ -10,7 +10,7 @@ let isInteractionEnabled = true;
 // Configuration
 const BUTTON_COUNT = 8;
 const BUTTON_RADIUS = 9.5; // Distance in front of camera (increased from 8)
-const BUTTON_HEIGHT = 2; // Height above camera (adjustable)
+const BUTTON_HEIGHT = 4; // Height above camera (adjustable)
 const BUTTON_SIZE = 1; // Default size multiplier for custom models
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
@@ -45,7 +45,7 @@ const TRACK_CONFIG = [
         name: "Vocals",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal.glb",
         scale: 3,
-        rotation: { x: Math.PI / 2, y: 0, z: 0 },
+        rotation: { x: 0, y: Math.PI / 2, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
