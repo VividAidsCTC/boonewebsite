@@ -21,56 +21,56 @@ const SCREEN_SPREAD = 25; // How spread out across screen (higher = more spread)
 const TRACK_CONFIG = [
     {
         name: "Guitar",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/guitar.glb",
-        scale: 1.0,
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/white_mesh.glb",
+        scale: 3.0,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Bass",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/bass.glb",
-        scale: 1.2,
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/bass.glb",
+        scale: 3,
         rotation: { x: 0, y: Math.PI / 4, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Drums",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/drums.glb",
-        scale: 0.8,
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/drum.glb",
+        scale: 3,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: -0.5, z: 0 }
     },
     {
         name: "Vocals",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/microphone.glb",
-        scale: 1.5,
-        rotation: { x: 0, y: 0, z: 0 },
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal.glb",
+        scale: 5,
+        rotation: { x: Math.PI / 2, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Piano",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/piano.glb",
-        scale: 0.6,
-        rotation: { x: 0, y: Math.PI / 2, z: 0 },
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/piano.glb",
+        scale: 4,
+        rotation: { x: Math.PI, y: Math.PI / 2, z: Math.PI / 2 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Strings",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/violin.glb",
-        scale: 1.3,
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/string.glb",
+        scale: 2.2,
         rotation: { x: Math.PI / 6, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Synth",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/synthesizer.glb",
-        scale: 0.9,
-        rotation: { x: 0, y: 0, z: 0 },
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/synths.glb",
+        scale: 2.5,
+        rotation: { x: Math.PI, y: 0, z: Math.PI / 2 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Effects",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest/main/models/effects.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/effects.glb",
         scale: 1.1,
         rotation: { x: 0, y: Math.PI / 8, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
@@ -174,7 +174,7 @@ async function load3DModel(config, index) {
                         modelMesh = child.clone();
                         // Ensure the model has proper materials
                         if (!modelMesh.material) {
-                            modelMesh.material = new THREE.MeshLambertMaterial({ color: 0x006400 }); // Green default
+                            modelMesh.material = new THREE.MeshLambertMaterial({ color: 0x666666 });
                         }
                     }
                 });
@@ -209,13 +209,13 @@ async function load3DModel(config, index) {
 function createFallbackButton(config) {
     const geometry = new THREE.SphereGeometry(BUTTON_SIZE, 16, 12);
     const material = new THREE.MeshLambertMaterial({
-        color: 0x006400, // Green color like text boxes
+        color: 0x666666,
         transparent: true,
         opacity: 0.8
     });
     
     const mesh = new THREE.Mesh(geometry, material);
-    logAudio(`Created fallback sphere for ${config.name} with green color`);
+    logAudio(`Created fallback sphere for ${config.name}`);
     return mesh;
 }
 
@@ -258,12 +258,18 @@ function configureModel(modelMesh, config, index, isActive) {
 // Update model material based on active state
 function updateModelMaterial(modelMesh, isActive) {
     if (modelMesh.material) {
+        // Store original color if not already stored
+        if (!modelMesh.userData.originalColor && modelMesh.material.color) {
+            modelMesh.userData.originalColor = modelMesh.material.color.getHex();
+        }
+        
         if (isActive) {
-            // Active state - green like the text boxes
-            modelMesh.material.color.setHex(0x006400); // Same green as text boxes
+            // Active state - use original color or default
+            const originalColor = modelMesh.userData.originalColor || 0x666666;
+            modelMesh.material.color.setHex(originalColor);
             modelMesh.material.opacity = 0.9;
         } else {
-            // Inactive state - gray like inactive text boxes
+            // Inactive state - make it grayer and more transparent
             modelMesh.material.color.setHex(0x999999);
             modelMesh.material.opacity = 0.5;
         }
