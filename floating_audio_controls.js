@@ -10,13 +10,13 @@ let isInteractionEnabled = true;
 // Configuration
 const BUTTON_COUNT = 8;
 const BUTTON_RADIUS = 10; // Distance in front of camera (increased from 8)
-const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
+const BUTTON_HEIGHT = 1.5; // Height above camera (adjustable)
 const BUTTON_SIZE = 1; // Default size multiplier for custom models
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
 const SCREEN_SPREAD = 22; // How spread out across screen (reduced from 25)
-const MIN_BUTTON_DISTANCE = 10; // Minimum distance between buttons (reduced from 10)
+const MIN_BUTTON_DISTANCE = 8.5; // Minimum distance between buttons (reduced from 10)
 
 // Track configuration with individual 3D models
 const TRACK_CONFIG = [
