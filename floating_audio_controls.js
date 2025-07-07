@@ -9,14 +9,14 @@ let isInteractionEnabled = true;
 
 // Configuration
 const BUTTON_COUNT = 8;
-const BUTTON_RADIUS = 8; // Distance in front of camera
+const BUTTON_RADIUS = 15; // Distance in front of camera (increased from 8)
 const BUTTON_HEIGHT = 1; // Height above camera (adjustable)
 const BUTTON_SIZE = 1; // Default size multiplier for custom models
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
-const SCREEN_SPREAD = 25; // How spread out across screen (higher = more spread)
-const MIN_BUTTON_DISTANCE = 10; // Minimum distance between buttons (increased from 8)
+const SCREEN_SPREAD = 18; // How spread out across screen (reduced from 25)
+const MIN_BUTTON_DISTANCE = 7; // Minimum distance between buttons (reduced from 10)
 
 // Track configuration with individual 3D models
 const TRACK_CONFIG = [
@@ -374,14 +374,15 @@ function generateGridPosition(index, totalButtons) {
     const col = index % cols;
     const row = Math.floor(index / cols);
     
-    // Center the grid
-    const startX = -(cols - 1) * MIN_BUTTON_DISTANCE / 2;
-    const startY = -(rows - 1) * MIN_BUTTON_DISTANCE / 2;
+    // Center the grid and make it more compact
+    const spacing = MIN_BUTTON_DISTANCE * 0.8; // Closer spacing within the grid
+    const startX = -(cols - 1) * spacing / 2;
+    const startY = -(rows - 1) * spacing / 2;
     
     return {
-        x: startX + col * MIN_BUTTON_DISTANCE,
-        y: startY + row * MIN_BUTTON_DISTANCE,
-        z: (Math.random() - 0.5) * 4 // Small random depth variation
+        x: startX + col * spacing,
+        y: startY + row * spacing,
+        z: (Math.random() - 0.5) * 2 // Smaller random depth variation
     };
 }
 
@@ -413,8 +414,8 @@ function calculateButtonPosition(index, camera) {
         while (!validPosition && attempts < 100) {
             newOffset = {
                 x: (Math.random() - 0.5) * SCREEN_SPREAD,
-                y: (Math.random() - 0.5) * SCREEN_SPREAD * 0.7, // Less vertical spread
-                z: (Math.random() - 0.5) * 4 // Small depth variation
+                y: (Math.random() - 0.5) * SCREEN_SPREAD * 0.6, // Reduced vertical spread
+                z: (Math.random() - 0.5) * 2 // Smaller depth variation
             };
             
             // Check if this position is valid
@@ -429,14 +430,14 @@ function calculateButtonPosition(index, camera) {
         // If we still can't find a valid position, use a fallback with increased spacing
         if (!validPosition) {
             logAudio(`Could not find valid random position for button ${index}, using fallback`);
-            const fallbackSpacing = MIN_BUTTON_DISTANCE * 1.5;
+            const fallbackSpacing = MIN_BUTTON_DISTANCE * 0.9; // Reduced spacing
             const angle = (index / BUTTON_COUNT) * Math.PI * 2;
-            const radius = fallbackSpacing * Math.ceil(BUTTON_COUNT / 6); // Arrange in rough circle
+            const radius = fallbackSpacing * 2; // Smaller radius for tighter arrangement
             
             newOffset = {
                 x: Math.cos(angle) * radius,
-                y: Math.sin(angle) * radius * 0.7, // Less vertical spread
-                z: (Math.random() - 0.5) * 4
+                y: Math.sin(angle) * radius * 0.6, // Less vertical spread
+                z: (Math.random() - 0.5) * 2 // Smaller depth variation
             };
         }
         
