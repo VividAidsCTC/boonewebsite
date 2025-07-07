@@ -22,7 +22,7 @@ const TRACK_CONFIG = [
     {
         name: "Guitar",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/white_mesh.glb",
-        scale: 1.0,
+        scale: 3.0,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
