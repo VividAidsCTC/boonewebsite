@@ -58,14 +58,14 @@ const TRACK_CONFIG = [
     {
         name: "Strings",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/string.glb",
-        scale: 2.2,
+        scale: 3,
         rotation: { x: Math.PI / 6, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Synth",
         modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/synths.glb",
-        scale: 2.5,
+        scale: 2.2,
         rotation: { x: Math.PI / 2, y: Math.PI / 2, z: Math.PI },
         offset: { x: 0, y: 0, z: 0 }
     },
@@ -869,114 +869,186 @@ if (typeof window.AssetUpdateCallbacks === 'undefined') {
 }
 window.AssetUpdateCallbacks.push(updateAudioControls);
 
+
+
+
+
+
+
+// Replace the createAudioButtonFloor function with this invisible version
 function createAudioButtonFloor() {
-    logAudio('Creating elevated floor for audio buttons...');
+    logAudio('Creating invisible floor boundary for audio buttons...');
     
-    // Create a slightly elevated floor for buttons
+    // Create an invisible floor that just acts as a boundary
     const buttonFloorGeometry = new THREE.PlaneGeometry(1000, 1000);
-    const buttonFloorMaterial = new THREE.MeshLambertMaterial({ 
-        color: 0x3a2818, // Slightly darker than main floor
+    const buttonFloorMaterial = new THREE.MeshBasicMaterial({ 
         transparent: true,
-        opacity: 0.8,
-        fog: true
+        opacity: 0.0, // Completely invisible
+        visible: false // Also set to not visible
     });
 
     const buttonFloor = new THREE.Mesh(buttonFloorGeometry, buttonFloorMaterial);
     buttonFloor.rotation.x = -Math.PI / 2;
-    buttonFloor.position.y = -0.5; // Slightly above the main floor at y = -1
-    buttonFloor.receiveShadow = true;
-    buttonFloor.castShadow = false;
+    buttonFloor.position.y = -0.5; // Boundary level
+    buttonFloor.name = 'invisibleButtonFloor'; // For identification
     
     if (typeof scene !== 'undefined') {
         scene.add(buttonFloor);
-        logAudio('Audio button floor created successfully');
-    } else {
-        logAudio('Scene not available for button floor');
+        logAudio('Invisible audio button floor boundary created');
     }
     
     return buttonFloor;
 }
 
-// Set minimum height for all audio buttons
-function setAudioButtonMinimumHeight(minHeight = 0) {
-    logAudio(`Setting minimum height for audio buttons to: ${minHeight}`);
+// Enhanced height enforcement that actually works
+function enforceButtonMinimumHeight() {
+    const minY = -0.3; // Minimum height above the boundary
     
     buttonMeshes.forEach((buttonData, index) => {
-        if (buttonData.group.position.y < minHeight) {
-            buttonData.group.position.y = minHeight;
-            // Also update the current position tracking
-            if (buttonCurrentPositions[index]) {
-                buttonCurrentPositions[index].y = Math.max(buttonCurrentPositions[index].y, minHeight);
-            }
-            logAudio(`Button ${index} (${TRACK_CONFIG[index].name}) height adjusted to ${minHeight}`);
+        // Force the button to the minimum height if it's below
+        if (buttonData.group.position.y < minY) {
+            buttonData.group.position.y = minY;
+        }
+        
+        // Also update the current and target positions
+        if (buttonCurrentPositions[index] && buttonCurrentPositions[index].y < minY) {
+            buttonCurrentPositions[index].y = minY;
+        }
+        
+        // Update the random offset to prevent it from going below again
+        if (randomOffsets[index] && randomOffsets[index].y < 0) {
+            randomOffsets[index].y = Math.max(randomOffsets[index].y, 0);
         }
     });
 }
 
-// Enhanced calculateButtonPosition function with minimum height constraint
+// Completely replace the calculateButtonPosition function to enforce height
 const originalCalculateButtonPosition = calculateButtonPosition;
 calculateButtonPosition = function(index, camera) {
-    const position = originalCalculateButtonPosition(index, camera);
+    const floatOffset = Math.sin(animationTime + index) * FLOAT_AMPLITUDE;
     
-    // Ensure minimum height above button floor (at y = -0.5)
-    const minY = -0.3; // Slightly above the button floor
-    if (position.y < minY) {
-        position.y = minY;
+    // Get or create random offset for this button
+    if (!randomOffsets[index]) {
+        let attempts = 0;
+        let validPosition = false;
+        let newOffset;
+        
+        // First try grid-based positioning for better initial spread
+        if (attempts === 0) {
+            newOffset = generateGridPosition(index, BUTTON_COUNT);
+            
+            // FORCE minimum Y position here
+            newOffset.y = Math.max(newOffset.y, 1.0); // Ensure at least 1 unit above ground
+            
+            // Add some randomness to the grid position
+            newOffset.x += (Math.random() - 0.5) * (MIN_BUTTON_DISTANCE * 0.3);
+            newOffset.y += Math.abs((Math.random() - 0.5) * (MIN_BUTTON_DISTANCE * 0.3)); // Only positive Y offsets
+            
+            // Check if this grid position is valid
+            if (isValidPosition(newOffset, randomOffsets, MIN_BUTTON_DISTANCE)) {
+                validPosition = true;
+            }
+        }
+        
+        // If grid position failed, try random positioning with height constraints
+        while (!validPosition && attempts < 100) {
+            newOffset = {
+                x: (Math.random() - 0.5) * SCREEN_SPREAD,
+                y: Math.max((Math.random() - 0.5) * SCREEN_SPREAD * 0.6, 1.0), // FORCE minimum Y
+                z: (Math.random() - 0.5) * 2
+            };
+            
+            // Check if this position is valid
+            if (isValidPosition(newOffset, randomOffsets, MIN_BUTTON_DISTANCE)) {
+                validPosition = true;
+                logAudio(`Found valid position for button ${index} after ${attempts + 1} attempts`);
+            }
+            
+            attempts++;
+        }
+        
+        // Fallback with guaranteed height
+        if (!validPosition) {
+            logAudio(`Could not find valid random position for button ${index}, using fallback`);
+            const angle = (index / BUTTON_COUNT) * Math.PI * 2;
+            const radius = MIN_BUTTON_DISTANCE * 1.5;
+            
+            newOffset = {
+                x: Math.cos(angle) * radius,
+                y: Math.max(Math.sin(angle) * radius * 0.6, 1.5), // FORCE minimum Y
+                z: (Math.random() - 0.5) * 2
+            };
+        }
+        
+        randomOffsets[index] = newOffset;
+        logAudio(`Button ${index} positioned at: ${newOffset.x.toFixed(1)}, ${newOffset.y.toFixed(1)}, ${newOffset.z.toFixed(1)}`);
     }
     
-    return position;
+    const offset = randomOffsets[index];
+    
+    // Position in front of camera with ENFORCED minimum height
+    const localX = offset.x;
+    const localY = Math.max(offset.y + floatOffset, 0.5); // FORCE minimum local Y
+    const localZ = -BUTTON_RADIUS + offset.z;
+    
+    // Get camera's world position and rotation
+    const cameraPosition = camera.position.clone();
+    const cameraRotation = camera.rotation.clone();
+    
+    // Create local position vector
+    const localPosition = new THREE.Vector3(localX, localY, localZ);
+    
+    // Rotate the local position by camera's Y rotation only
+    localPosition.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraRotation.y);
+    
+    // Add to camera position to get world position
+    const targetWorldPosition = cameraPosition.clone().add(localPosition);
+    
+    // FINAL HEIGHT ENFORCEMENT - this is the key fix
+    const absoluteMinY = -0.3; // Absolute minimum world Y position
+    if (targetWorldPosition.y < absoluteMinY) {
+        targetWorldPosition.y = absoluteMinY;
+    }
+    
+    return targetWorldPosition;
 };
 
-// Add to the AudioControlSystem export object
-const originalAudioControlSystem = window.AudioControlSystem;
-window.AudioControlSystem = {
-    ...originalAudioControlSystem,
+// Add this to the update function to continuously enforce height
+const originalUpdateAudioControls = updateAudioControls;
+updateAudioControls = function(deltaTime = 0.016) {
+    // Call original update
+    originalUpdateAudioControls(deltaTime);
     
-    // Add floor-related methods
+    // Continuously enforce minimum height
+    enforceButtonMinimumHeight();
+};
+
+// Update the AudioControlSystem with the new functions
+window.AudioControlSystem = {
+    ...window.AudioControlSystem,
+    
     createButtonFloor: createAudioButtonFloor,
     
-    setMinimumHeight: (height) => {
-        setAudioButtonMinimumHeight(height);
+    forceHeightCorrection: () => {
+        // Reset all positions to force regeneration with proper heights
+        randomOffsets = [];
+        buttonCurrentPositions = [];
+        logAudio('Forced height correction - all positions reset');
     },
     
-    adjustAllButtonHeights: () => {
-        setAudioButtonMinimumHeight(0.1); // Default minimum height
-        logAudio('All button heights adjusted');
-    },
-    
-    // Enhanced debugInfo to include height information
-    debugInfo: () => {
-        const originalDebugInfo = originalAudioControlSystem.debugInfo();
-        
-        logAudio('=== BUTTON HEIGHTS ===');
-        buttonMeshes.forEach((buttonData, i) => {
-            logAudio(`Button ${i} height: ${buttonData.group.position.y.toFixed(2)}`);
+    setAbsoluteMinHeight: (height) => {
+        // Update the minimum height and force all buttons above it
+        buttonMeshes.forEach((buttonData, index) => {
+            buttonData.group.position.y = Math.max(buttonData.group.position.y, height);
+            if (buttonCurrentPositions[index]) {
+                buttonCurrentPositions[index].y = Math.max(buttonCurrentPositions[index].y, height);
+            }
+            if (randomOffsets[index]) {
+                randomOffsets[index].y = Math.max(randomOffsets[index].y, height + 1);
+            }
         });
-        
-        return {
-            ...originalDebugInfo,
-            buttonHeights: buttonMeshes.map((buttonData, i) => ({
-                index: i,
-                name: TRACK_CONFIG[i].name,
-                height: buttonData.group.position.y
-            }))
-        };
+        logAudio(`Set absolute minimum height to: ${height}`);
     }
 };
 
-// Initialize the button floor after the audio controls are set up
-const originalInitializeAudioControls = initializeAudioControls;
-initializeAudioControls = function() {
-    originalInitializeAudioControls();
-    
-    // Create button floor after a short delay to ensure scene is ready
-    setTimeout(() => {
-        createAudioButtonFloor();
-        // Set minimum height for any existing buttons
-        setTimeout(() => {
-            setAudioButtonMinimumHeight(0.1);
-        }, 1000);
-    }, 2000);
-};
-
-logAudio('Button floor system integrated into audio controls');
+logAudio('Button height enforcement and invisible floor system activated');
