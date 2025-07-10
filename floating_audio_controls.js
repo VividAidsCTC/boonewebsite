@@ -22,49 +22,49 @@ const MIN_BUTTON_DISTANCE = 5; // Minimum distance between buttons (reduced from
 const TRACK_CONFIG = [
     {
         name: "Bass Pluck",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/guitar2.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/fish/guitar2.glb",
         scale: 2.0,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Pluck",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/bass2.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/fish/bass2.glb",
         scale: 2.2,
         rotation: { x: 0, y: Math.PI / 4, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Pluck (High Pitch)",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/drum2.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/fish/drum2.glb",
         scale: 2.2,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: -0.5, z: 0 }
     },
     {
         name: "Violin Chorus",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal2.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/fish/vocal2.glb",
         scale: 2.2,
         rotation: { x: 2 * Math.PI, y: Math.PI / 4, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Synth",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/piano2.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/fish/piano2.glb",
         scale: 2.2,
         rotation: { x: 2 * Math.PI, y: Math.PI, z: Math.PI / 4 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Drums",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/string2.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/fish/string2.glb",
         scale: 2.2,
         rotation: { x: Math.PI / 6, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
         name: "Violin Lead",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/synths2.glb",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/fish/synths2.glb",
         scale: 2.2,
         rotation: { x: Math.PI / 6, y: Math.PI / 2, z: 0 },
         offset: { x: 0, y: 0, z: 0 }

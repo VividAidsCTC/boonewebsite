@@ -5,31 +5,31 @@
 const AUDIO_CONFIG = [
     {
         name: "Guitar",
-        url: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/mp3/02aa.mp3"
+        url: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/mp3/02aa.mp3"
     },
     {
         name: "Bass", 
-        url: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/mp3/04aa.mp3"
+        url: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/mp3/04aa.mp3"
     },
     {
         name: "Drums",
-        url: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/mp3/06aa.mp3"
+        url: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/mp3/06aa.mp3"
     },
     {
         name: "Vocals",
-        url: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/mp3/08aa.mp3"
+        url: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/mp3/08aa.mp3"
     },
     {
         name: "Piano",
-        url: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/mp3/10aa.mp3"
+        url: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/mp3/10aa.mp3"
     },
     {
         name: "Strings", 
-        url: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/mp3/12aa.mp3"
+        url: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/mp3/12aa.mp3"
     },
     {
         name: "Synth",
-        url: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/mp3/14aa.mp3"
+        url: "https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/mp3/14aa.mp3"
     }
 ];
 

@@ -30,8 +30,8 @@ const CAMERA_EXCLUSION_RADIUS = 10;
 
 // Kelp model URLs
 const KELP_MODELS = {
-    primary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/nouveaukelp4.glb',
-    secondary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/smallkelp2.glb' // Add your second model URL here
+    primary: 'https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/nouveaukelp4.glb',
+    secondary: 'https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/smallkelp2.glb' // Add your second model URL here
 };
 
 // Function to check if a position is too close to the camera
