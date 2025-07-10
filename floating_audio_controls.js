@@ -869,3 +869,114 @@ if (typeof window.AssetUpdateCallbacks === 'undefined') {
 }
 window.AssetUpdateCallbacks.push(updateAudioControls);
 
+function createAudioButtonFloor() {
+    logAudio('Creating elevated floor for audio buttons...');
+    
+    // Create a slightly elevated floor for buttons
+    const buttonFloorGeometry = new THREE.PlaneGeometry(1000, 1000);
+    const buttonFloorMaterial = new THREE.MeshLambertMaterial({ 
+        color: 0x3a2818, // Slightly darker than main floor
+        transparent: true,
+        opacity: 0.8,
+        fog: true
+    });
+
+    const buttonFloor = new THREE.Mesh(buttonFloorGeometry, buttonFloorMaterial);
+    buttonFloor.rotation.x = -Math.PI / 2;
+    buttonFloor.position.y = -0.5; // Slightly above the main floor at y = -1
+    buttonFloor.receiveShadow = true;
+    buttonFloor.castShadow = false;
+    
+    if (typeof scene !== 'undefined') {
+        scene.add(buttonFloor);
+        logAudio('Audio button floor created successfully');
+    } else {
+        logAudio('Scene not available for button floor');
+    }
+    
+    return buttonFloor;
+}
+
+// Set minimum height for all audio buttons
+function setAudioButtonMinimumHeight(minHeight = 0) {
+    logAudio(`Setting minimum height for audio buttons to: ${minHeight}`);
+    
+    buttonMeshes.forEach((buttonData, index) => {
+        if (buttonData.group.position.y < minHeight) {
+            buttonData.group.position.y = minHeight;
+            // Also update the current position tracking
+            if (buttonCurrentPositions[index]) {
+                buttonCurrentPositions[index].y = Math.max(buttonCurrentPositions[index].y, minHeight);
+            }
+            logAudio(`Button ${index} (${TRACK_CONFIG[index].name}) height adjusted to ${minHeight}`);
+        }
+    });
+}
+
+// Enhanced calculateButtonPosition function with minimum height constraint
+const originalCalculateButtonPosition = calculateButtonPosition;
+calculateButtonPosition = function(index, camera) {
+    const position = originalCalculateButtonPosition(index, camera);
+    
+    // Ensure minimum height above button floor (at y = -0.5)
+    const minY = -0.3; // Slightly above the button floor
+    if (position.y < minY) {
+        position.y = minY;
+    }
+    
+    return position;
+};
+
+// Add to the AudioControlSystem export object
+const originalAudioControlSystem = window.AudioControlSystem;
+window.AudioControlSystem = {
+    ...originalAudioControlSystem,
+    
+    // Add floor-related methods
+    createButtonFloor: createAudioButtonFloor,
+    
+    setMinimumHeight: (height) => {
+        setAudioButtonMinimumHeight(height);
+    },
+    
+    adjustAllButtonHeights: () => {
+        setAudioButtonMinimumHeight(0.1); // Default minimum height
+        logAudio('All button heights adjusted');
+    },
+    
+    // Enhanced debugInfo to include height information
+    debugInfo: () => {
+        const originalDebugInfo = originalAudioControlSystem.debugInfo();
+        
+        logAudio('=== BUTTON HEIGHTS ===');
+        buttonMeshes.forEach((buttonData, i) => {
+            logAudio(`Button ${i} height: ${buttonData.group.position.y.toFixed(2)}`);
+        });
+        
+        return {
+            ...originalDebugInfo,
+            buttonHeights: buttonMeshes.map((buttonData, i) => ({
+                index: i,
+                name: TRACK_CONFIG[i].name,
+                height: buttonData.group.position.y
+            }))
+        };
+    }
+};
+
+// Initialize the button floor after the audio controls are set up
+const originalInitializeAudioControls = initializeAudioControls;
+initializeAudioControls = function() {
+    originalInitializeAudioControls();
+    
+    // Create button floor after a short delay to ensure scene is ready
+    setTimeout(() => {
+        createAudioButtonFloor();
+        // Set minimum height for any existing buttons
+        setTimeout(() => {
+            setAudioButtonMinimumHeight(0.1);
+        }, 1000);
+    }, 2000);
+};
+
+logAudio('Button floor system integrated into audio controls');
