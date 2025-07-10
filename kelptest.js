@@ -3,7 +3,7 @@ let scene, camera, renderer;
 let kelpInstances = [];
 let instancedKelp = null;
 let instancedKelp2 = null; // Second kelp model
-let waveSpeed = 1.2;
+let waveSpeed = 1;
 let waveIntensity = 0.6;
 let currentDirection = 45;
 let time = 0;
@@ -15,8 +15,8 @@ let isMouseDown = false;
 let floorTextures = { diffuse: null, normal: null, roughness: null, displacement: null };
 let textureLoader = new THREE.TextureLoader();
 
-const KELP_COUNT = 175;
-const KELP2_COUNT = 100; // Count for second kelp type
+const KELP_COUNT = 250;
+const KELP2_COUNT = 125; // Count for second kelp type
 let instanceData = [];
 let instanceData2 = []; // Data for second kelp type
 let kelpGeometry = null;
@@ -24,11 +24,54 @@ let kelpGeometry2 = null; // Second kelp geometry
 let kelpMaterial = null;
 let kelpMaterial2 = null; // Second kelp material
 
+// Camera position for exclusion zone calculation
+const CAMERA_POSITION = { x: 0, y: 10, z: 30 };
+const CAMERA_EXCLUSION_RADIUS = 10;
+
 // Kelp model URLs
 const KELP_MODELS = {
     primary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/nouveaukelp4.glb',
     secondary: 'https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/smallkelp2.glb' // Add your second model URL here
 };
+
+// Function to check if a position is too close to the camera
+function isPositionTooCloseToCamera(x, y, z) {
+    const dx = x - CAMERA_POSITION.x;
+    const dy = y - CAMERA_POSITION.y;
+    const dz = z - CAMERA_POSITION.z;
+    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    return distance < CAMERA_EXCLUSION_RADIUS;
+}
+
+// Function to generate a safe position away from camera
+function generateSafePosition(isSecondary = false) {
+    let x, z, y = -1;
+    let attempts = 0;
+    const maxAttempts = 100; // Prevent infinite loop
+    
+    do {
+        if (isSecondary) {
+            // Place secondary kelp spread out more than primary
+            x = (Math.random() - 0.5) * 220; // Larger area than primary
+            z = (Math.random() - 0.5) * 220;
+        } else {
+            x = (Math.random() - 0.5) * 175;
+            z = (Math.random() - 0.5) * 175;
+        }
+        attempts++;
+        
+        // If we can't find a safe position after many attempts, place it far away
+        if (attempts > maxAttempts) {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = CAMERA_EXCLUSION_RADIUS + 5 + Math.random() * 50;
+            x = CAMERA_POSITION.x + Math.cos(angle) * distance;
+            z = CAMERA_POSITION.z + Math.sin(angle) * distance;
+            break;
+        }
+    } while (isPositionTooCloseToCamera(x, y, z));
+    
+    return { x, y, z };
+}
 
 // Vertex shader with simple shadow support
 const kelpVertexShader = `
@@ -271,7 +314,7 @@ function initializeScene() {
     log('Initializing Three.js scene...');
 
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(120, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(100, window.innerWidth / window.innerHeight, 0.1, 1000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -341,7 +384,7 @@ function initializeScene() {
 // Create GPU-instanced kelp with fallback geometry
 function createGPUKelp(isSecondary = false) {
     const kelpType = isSecondary ? 'secondary' : 'primary';
-    log(`Creating GPU-instanced ${kelpType} kelp...`);
+    log(`Creating GPU-instanced ${kelpType} kelp with camera exclusion zone...`);
 
     const baseKelpHeight = 20;
     const segments = 32;
@@ -369,7 +412,7 @@ function createGPUKelp(isSecondary = false) {
 
     scene.add(instancedMesh);
 
-    log(`Created ${count} GPU-instanced ${kelpType} kelp plants`);
+    log(`Created ${count} GPU-instanced ${kelpType} kelp plants with camera exclusion zone`);
 
     if (typeof window.FogSystem !== 'undefined') {
         log(`Fog system detected - ${kelpType} kelp material fog compatibility enabled`);
@@ -483,14 +526,14 @@ function processGLTFModel(gltf, isSecondary = false) {
         }
 
         scene.add(instancedMesh);
-        log(`Created ${count} GPU-instanced ${kelpType} GLTF kelp plants`);
+        log(`Created ${count} GPU-instanced ${kelpType} GLTF kelp plants with camera exclusion zone`);
     } else {
         log(`No geometry found in ${kelpType} GLTF, using fallback`);
         createGPUKelp(isSecondary);
     }
 }
 
-// Enhanced instance data setup
+// Enhanced instance data setup with camera exclusion zone
 function setupInstanceData(baseHeight = 20, isSecondary = false) {
     const count = isSecondary ? KELP2_COUNT : KELP_COUNT;
     const geometry = isSecondary ? kelpGeometry2 : kelpGeometry;
@@ -510,18 +553,25 @@ function setupInstanceData(baseHeight = 20, isSecondary = false) {
         instanceData.length = 0;
     }
 
+    log(`Setting up ${count} ${isSecondary ? 'secondary' : 'primary'} kelp instances with ${CAMERA_EXCLUSION_RADIUS} unit camera exclusion zone...`);
+    log(`Camera position: (${CAMERA_POSITION.x}, ${CAMERA_POSITION.y}, ${CAMERA_POSITION.z})`);
+
+    let successfulPlacements = 0;
+    let tooCloseCount = 0;
+
     for (let i = 0; i < count; i++) {
-        // Position distribution - secondary kelp uses different areas
-        let x, z;
-        if (isSecondary) {
-            // Place secondary kelp spread out more than primary
-            x = (Math.random() - 0.5) * 220; // Larger area than primary
-            z = (Math.random() - 0.5) * 220;
+        // Generate safe position away from camera
+        const safePosition = generateSafePosition(isSecondary);
+        const { x, y, z } = safePosition;
+
+        // Double-check the position is actually safe
+        const distanceFromCamera = Math.sqrt((x - CAMERA_POSITION.x) ** 2 + (z - CAMERA_POSITION.z) ** 2);
+        if (distanceFromCamera < CAMERA_EXCLUSION_RADIUS) {
+            tooCloseCount++;
+            log(`WARNING: Kelp ${i} placed too close! Distance: ${distanceFromCamera.toFixed(2)} at (${x.toFixed(1)}, ${z.toFixed(1)})`);
         } else {
-            x = (Math.random() - 0.5) * 175;
-            z = (Math.random() - 0.5) * 175;
+            successfulPlacements++;
         }
-        const y = -1;
 
         instancePositions[i * 3] = x;
         instancePositions[i * 3 + 1] = y;
@@ -558,7 +608,8 @@ function setupInstanceData(baseHeight = 20, isSecondary = false) {
         dataArray[i] = {
             position: { x, y, z },
             scale: scale,
-            rotation: rotation
+            rotation: rotation,
+            distanceFromCamera: distanceFromCamera
         };
     }
 
@@ -568,6 +619,23 @@ function setupInstanceData(baseHeight = 20, isSecondary = false) {
     geometry.setAttribute('animationData', new THREE.InstancedBufferAttribute(animationData, 4));
     geometry.setAttribute('animationData2', new THREE.InstancedBufferAttribute(animationData2, 4));
     geometry.setAttribute('animationData3', new THREE.InstancedBufferAttribute(animationData3, 2));
+
+    log(`Successfully positioned ${successfulPlacements}/${count} ${isSecondary ? 'secondary' : 'primary'} kelp instances outside camera exclusion zone`);
+    if (tooCloseCount > 0) {
+        log(`ERROR: ${tooCloseCount} kelp instances were placed too close to camera!`);
+    }
+    
+    // Log some sample positions for verification
+    if (count > 0) {
+        const sampleCount = Math.min(5, count);
+        log(`Sample ${isSecondary ? 'secondary' : 'primary'} kelp positions:`);
+        for (let i = 0; i < sampleCount; i++) {
+            const x = instancePositions[i * 3];
+            const z = instancePositions[i * 3 + 2];
+            const dist = Math.sqrt((x - CAMERA_POSITION.x) ** 2 + (z - CAMERA_POSITION.z) ** 2);
+            log(`  Kelp ${i}: (${x.toFixed(1)}, ${z.toFixed(1)}) - Distance: ${dist.toFixed(1)}`);
+        }
+    }
 }
 
 // Setup controls for fixed camera rotation
@@ -771,5 +839,9 @@ window.KelpSystem = {
     setKelpVisibility: (primaryVisible = true, secondaryVisible = true) => {
         if (instancedKelp) instancedKelp.visible = primaryVisible;
         if (instancedKelp2) instancedKelp2.visible = secondaryVisible;
-    }
-};
+    },
+    // Camera exclusion zone utilities
+    getCameraPosition: () => CAMERA_POSITION,
+    getCameraExclusionRadius: () => CAMERA_EXCLUSION_RADIUS,
+    isPositionSafe: (x, y, z) => !isPositionTooCloseToCamera(x, y, z)
+}

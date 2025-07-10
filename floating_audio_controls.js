@@ -8,72 +8,65 @@ let hoveredButton = null;
 let isInteractionEnabled = true;
 
 // Configuration
-const BUTTON_COUNT = 8;
+const BUTTON_COUNT = 7;
 const BUTTON_RADIUS = 9.5; // Distance in front of camera (increased from 8)
-const BUTTON_HEIGHT = 4; // Height above camera (adjustable)
+const BUTTON_HEIGHT = 0; // Height above camera (adjustable)
 const BUTTON_SIZE = 1; // Default size multiplier for custom models
 const FLOAT_AMPLITUDE = 0.2; // Less floating
 const FLOAT_SPEED = 0.8; // Slower floating
 const TRAIL_SPEED = 0.02; // How slowly buttons follow camera (lower = more trailing)
-const SCREEN_SPREAD = 18; // How spread out across screen (reduced from 25)
-const MIN_BUTTON_DISTANCE = 8.5; // Minimum distance between buttons (reduced from 10)
+const SCREEN_SPREAD = 7; // How spread out across screen (reduced from 25)
+const MIN_BUTTON_DISTANCE = 5; // Minimum distance between buttons (reduced from 10)
 
 // Track configuration with individual 3D models
 const TRACK_CONFIG = [
     {
-        name: "Guitar",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/white_mesh.glb",
-        scale: 3.0,
+        name: "Bass Pluck",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/guitar2.glb",
+        scale: 2.0,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
-        name: "Bass",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/bass.glb",
-        scale: 3,
+        name: "Pluck",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/bass2.glb",
+        scale: 2.2,
         rotation: { x: 0, y: Math.PI / 4, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
-        name: "Drums",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/drum.glb",
-        scale: 3,
+        name: "Pluck (High Pitch)",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/drum2.glb",
+        scale: 2.2,
         rotation: { x: 0, y: 0, z: 0 },
         offset: { x: 0, y: -0.5, z: 0 }
     },
     {
-        name: "Vocals",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal.glb",
-        scale: 3,
+        name: "Violin Chorus",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/vocal2.glb",
+        scale: 2.2,
         rotation: { x: 2 * Math.PI, y: Math.PI / 4, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
-        name: "Piano",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/piano.glb",
-        scale: 3,
-        rotation: { x: Math.PI, y: Math.PI, z: Math.PI / 4 },
+        name: "Synth",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/piano2.glb",
+        scale: 2.2,
+        rotation: { x: 2 * Math.PI, y: Math.PI, z: Math.PI / 4 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
-        name: "Strings",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/string.glb",
-        scale: 3,
+        name: "Drums",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/string2.glb",
+        scale: 2.2,
         rotation: { x: Math.PI / 6, y: 0, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     },
     {
-        name: "Synth",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/synths.glb",
+        name: "Violin Lead",
+        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/synths2.glb",
         scale: 2.2,
-        rotation: { x: Math.PI / 2, y: Math.PI / 2, z: Math.PI },
-        offset: { x: 0, y: 0, z: 0 }
-    },
-    {
-        name: "Effects",
-        modelUrl: "https://raw.githubusercontent.com/VividAidsCTC/boonetest2/main/fish/effects.glb",
-        scale: 1.1,
-        rotation: { x: 0, y: Math.PI / 8, z: 0 },
+        rotation: { x: Math.PI / 6, y: Math.PI / 2, z: 0 },
         offset: { x: 0, y: 0, z: 0 }
     }
 ];
@@ -88,6 +81,11 @@ let fadeStartTime = 0; // When fade-in started
 let isFadingIn = false; // Whether buttons are currently fading in
 let loadedModels = {}; // Cache for loaded 3D models
 let loadingModels = {}; // Track which models are currently loading
+
+// NEW: Variables for synchronized initialization
+let allButtonsInitialized = false;
+let initializationProgress = 0;
+let totalButtonsToLoad = BUTTON_COUNT;
 
 // Debug logging
 function logAudio(message) {
@@ -107,11 +105,11 @@ function createTextTexture(text, isActive = true) {
     canvas.height = 128;
     
     // Background
-    context.fillStyle = isActive ? 'rgba(0, 100, 0, 0.8)' : 'rgba(100, 100, 100, 0.6)';
+    context.fillStyle = isActive ? 'rgba(23, 23, 23, 0.8)' : 'rgba(100, 100, 100, 0.6)';
     context.fillRect(0, 0, canvas.width, canvas.height);
     
     // Border
-    context.strokeStyle = isActive ? '#006400' : '#CCCCCC';
+    context.strokeStyle = isActive ? '#5e5e5c' : '#CCCCCC';
     context.lineWidth = 4;
     context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
     
@@ -173,9 +171,26 @@ async function load3DModel(config, index) {
                 gltf.scene.traverse((child) => {
                     if (child.isMesh && !modelMesh) {
                         modelMesh = child.clone();
-                        // Ensure the model has proper materials
-                        if (!modelMesh.material) {
-                            modelMesh.material = new THREE.MeshLambertMaterial({ color: 0x666666 });
+                        
+                        // Ensure the model has proper materials that work without lighting
+                        if (modelMesh.material) {
+                            // Convert any material to MeshBasicMaterial to avoid lighting issues
+                            const originalColor = modelMesh.material.color ? modelMesh.material.color.getHex() : 0x666666;
+                            const originalMap = modelMesh.material.map || null;
+                            
+                            modelMesh.material = new THREE.MeshBasicMaterial({
+                                color: originalColor,
+                                map: originalMap,
+                                transparent: true,
+                                opacity: 1.0
+                            });
+                        } else {
+                            // Add default material if none exists
+                            modelMesh.material = new THREE.MeshBasicMaterial({ 
+                                color: 0x666666,
+                                transparent: true,
+                                opacity: 1.0
+                            });
                         }
                     }
                 });
@@ -209,10 +224,10 @@ async function load3DModel(config, index) {
 // Create fallback button (sphere) when 3D model fails to load
 function createFallbackButton(config) {
     const geometry = new THREE.SphereGeometry(BUTTON_SIZE, 16, 12);
-    const material = new THREE.MeshLambertMaterial({
+    const material = new THREE.MeshBasicMaterial({
         color: 0x666666,
         transparent: true,
-        opacity: 0.8
+        opacity: 0 // Start invisible for synchronized fade-in
     });
     
     const mesh = new THREE.Mesh(geometry, material);
@@ -250,37 +265,36 @@ function configureModel(modelMesh, config, index, isActive) {
         config: config
     };
     
-    // Update material based on active state
-    updateModelMaterial(modelMesh, isActive);
+    // Store original material properties for potential opacity changes
+    if (modelMesh.material) {
+        // Store original opacity if not already stored
+        if (modelMesh.userData.originalOpacity === undefined) {
+            modelMesh.userData.originalOpacity = modelMesh.material.opacity || 1.0;
+        }
+        // Ensure material can handle transparency for hover effects
+        modelMesh.material.transparent = true;
+        // Start invisible for synchronized fade-in
+        modelMesh.material.opacity = 0;
+    }
     
     return modelMesh;
 }
 
-// Update model material based on active state
+// Update model material based on active state - NO COLOR CHANGES, only opacity
 function updateModelMaterial(modelMesh, isActive) {
     if (modelMesh.material) {
-        // Store original color if not already stored
-        if (!modelMesh.userData.originalColor && modelMesh.material.color) {
-            modelMesh.userData.originalColor = modelMesh.material.color.getHex();
-        }
+        // Only change opacity based on active state, preserve original colors/textures
+        const originalOpacity = modelMesh.userData.originalOpacity || 1.0;
         
         if (isActive) {
-            // Active state - bright green
-            modelMesh.material.color.setHex(0x00AA00); // Brighter green
-            modelMesh.material.opacity = 1.0;
-            if (modelMesh.material.emissive) {
-                modelMesh.material.emissive.setHex(0x002200); // Slight glow
-            }
+            // Active state - full opacity (but only if fade-in is complete)
+            modelMesh.material.opacity = allButtonsInitialized ? originalOpacity : 0;
         } else {
-            // Inactive state - light gray
-            modelMesh.material.color.setHex(0xBBBBBB); // Much lighter gray
-            modelMesh.material.opacity = 0.8;
-            if (modelMesh.material.emissive) {
-                modelMesh.material.emissive.setHex(0x000000); // No glow
-            }
+            // Inactive state - slightly transparent (but only if fade-in is complete)
+            modelMesh.material.opacity = allButtonsInitialized ? originalOpacity * 0.7 : 0;
         }
         
-        // Ensure transparency is enabled
+        // Keep transparency enabled for hover effects
         modelMesh.material.transparent = true;
     }
 }
@@ -290,16 +304,17 @@ async function createButtonMesh(index, config) {
     // Load the 3D model
     const modelMesh = await load3DModel(config, index);
     
-    // Configure the model
+    // Configure the model (starts invisible)
     const configuredModel = configureModel(modelMesh, config, index, buttonStates[index]);
     
-    // Create text plane
+    // Create text plane (starts invisible)
     const textGeometry = new THREE.PlaneGeometry(3, 1.5);
     const textTexture = createTextTexture(config.name, buttonStates[index]);
     const textMaterial = new THREE.MeshBasicMaterial({
         map: textTexture,
         transparent: true,
-        side: THREE.DoubleSide
+        side: THREE.DoubleSide,
+        opacity: 0 // Start invisible
     });
     
     const textMesh = new THREE.Mesh(textGeometry, textMaterial);
@@ -321,38 +336,6 @@ async function createButtonMesh(index, config) {
     
     return { group: buttonGroup, button: configuredModel, text: textMesh };
 }
-
-// Add this function to override fish colors to green
-function makeModelsGreen() {
-    // Update the updateModelMaterial function to make models brighter
-    updateModelMaterial = function(modelMesh, isActive) {
-        if (modelMesh.material) {
-            if (isActive) {
-                // Active state - bright green like the text boxes
-                modelMesh.material.color.setHex(0x00AA00); // Brighter green
-                modelMesh.material.opacity = 1.0; // Full opacity
-                modelMesh.material.emissive.setHex(0x002200); // Slight glow
-            } else {
-                // Inactive state - lighter gray
-                modelMesh.material.color.setHex(0xBBBBBB); // Much lighter gray
-                modelMesh.material.opacity = 0.8; // Less transparent
-                modelMesh.material.emissive.setHex(0x000000); // No glow
-            }
-            // Ensure transparency is enabled
-            modelMesh.material.transparent = true;
-        }
-    };
-    
-    // Update existing buttons if they're already created
-    if (buttonMeshes.length > 0) {
-        buttonMeshes.forEach((buttonData, index) => {
-            updateModelMaterial(buttonData.button, buttonStates[index]);
-        });
-    }
-}
-
-// Call this after your audio controls are loaded
-setTimeout(makeModelsGreen, 5000); // Wait 5 seconds for models to load, then make them green
 
 // Check if a position is valid (not too close to existing buttons)
 function isValidPosition(newPosition, existingPositions, minDistance = MIN_BUTTON_DISTANCE) {
@@ -376,13 +359,13 @@ function isValidPosition(newPosition, existingPositions, minDistance = MIN_BUTTO
 function generateGridPosition(index, totalButtons) {
     // Use a more spread out arrangement
     const positions = [
-        { x: -12, y: 8 },   // Top left
-        { x: 0, y: 12 },    // Top center
-        { x: 12, y: 8 },    // Top right
-        { x: -8, y: 0 },    // Middle left
-        { x: 8, y: 0 },     // Middle right
-        { x: -12, y: -8 },  // Bottom left
-        { x: 0, y: -12 },   // Bottom center
+        { x: -10, y: 8 },   // Top left
+        { x: 0, y: 9 },    // Top center
+        { x: 11, y: 7 },    // Top right
+        { x: -10, y: 0 },    // Middle left
+        { x: 2, y: 1 },     // Middle right
+        { x: -8, y: -6 },  // Bottom left
+        { x: 5, y: -5 },   // Bottom center
         { x: 12, y: -8 }    // Bottom right
     ];
     
@@ -494,12 +477,14 @@ function calculateButtonPosition(index, camera) {
     return targetWorldPosition;
 }
 
+const MINIMUM_BUTTON_HEIGHT = 1.5; // Change this single value to adjust all button heights
+
 // Update button positions with trailing effect
 function updateButtonPositions(camera) {
     if (!camera || buttonMeshes.length === 0) return;
     
     buttonMeshes.forEach((buttonData, index) => {
-        // Calculate where button wants to be
+        // Calculate where button wants to be (using original logic)
         const targetPosition = calculateButtonPosition(index, camera);
         
         // Initialize current position if needed
@@ -510,10 +495,15 @@ function updateButtonPositions(camera) {
         // Slowly move current position toward target (trailing effect)
         buttonCurrentPositions[index].lerp(targetPosition, TRAIL_SPEED);
         
+        // SIMPLE HEIGHT ENFORCEMENT - just one line!
+        if (buttonCurrentPositions[index].y < MINIMUM_BUTTON_HEIGHT) {
+            buttonCurrentPositions[index].y = MINIMUM_BUTTON_HEIGHT;
+        }
+        
         // Set button to current position
         buttonData.group.position.copy(buttonCurrentPositions[index]);
         
-        // Make buttons face the camera (optional, can be disabled for specific models)
+        // Make buttons face the camera
         if (!buttonData.button.userData.config.noAutoRotate) {
             buttonData.group.lookAt(camera.position);
         }
@@ -526,7 +516,7 @@ function updateButtonVisual(index, isActive) {
     
     const buttonData = buttonMeshes[index];
     
-    // Update 3D model material
+    // Update 3D model material (only opacity, not colors)
     updateModelMaterial(buttonData.button, isActive);
     buttonData.button.userData.isActive = isActive;
     
@@ -613,9 +603,36 @@ function setupInteraction() {
     logAudio('Mouse interaction setup complete');
 }
 
-// Create all audio control buttons with 3D models
+// NEW: Check if all buttons are ready for synchronized fade-in
+function checkInitializationComplete() {
+    // Count successfully created buttons
+    const readyButtons = buttonMeshes.filter(buttonData => 
+        buttonData && buttonData.group && buttonData.button && buttonData.text
+    ).length;
+    
+    initializationProgress = readyButtons;
+    
+    // All buttons are ready - start synchronized fade-in
+    if (readyButtons === totalButtonsToLoad && !allButtonsInitialized) {
+        allButtonsInitialized = true;
+        fadeStartTime = performance.now();
+        isFadingIn = true;
+        logAudio(`All ${readyButtons} buttons initialized! Starting synchronized fade-in...`);
+        
+        // Set all buttons to their final positions immediately
+        if (typeof camera !== 'undefined') {
+            buttonMeshes.forEach((buttonData, index) => {
+                const position = calculateButtonPosition(index, camera);
+                buttonData.group.position.copy(position);
+                buttonCurrentPositions[index] = position.clone();
+            });
+        }
+    }
+}
+
+// Create all audio control buttons with 3D models - MODIFIED for synchronized loading
 async function createAudioButtons() {
-    logAudio('Creating 8 floating audio control buttons with custom 3D models...');
+    logAudio('Creating 7 floating audio control buttons with custom 3D models...');
     
     if (typeof scene === 'undefined') {
         logAudio('Scene not available, retrying...');
@@ -623,7 +640,7 @@ async function createAudioButtons() {
         return;
     }
     
-    // Clear existing buttons and reset positions
+    // Clear existing buttons and reset state
     buttonMeshes.forEach(buttonData => {
         scene.remove(buttonData.group);
         // Clean up materials and textures
@@ -635,27 +652,24 @@ async function createAudioButtons() {
     buttonCurrentPositions = [];
     randomOffsets = []; // Clear the random offsets to force regeneration
     
-    // Start fade-in effect
-    fadeStartTime = performance.now();
-    isFadingIn = true;
+    // Reset initialization state
+    allButtonsInitialized = false;
+    isFadingIn = false;
+    initializationProgress = 0;
+    totalButtonsToLoad = BUTTON_COUNT;
     
-    // Create new buttons (initially invisible)
-    logAudio('Loading 3D models for each button...');
+    logAudio('Loading ALL 3D models simultaneously...');
+    
+    // Create ALL buttons simultaneously using Promise.all
+    const buttonPromises = [];
     
     for (let i = 0; i < BUTTON_COUNT; i++) {
         const config = TRACK_CONFIG[i];
-        logAudio(`Creating button ${i}: ${config.name}`);
+        logAudio(`Queuing button ${i}: ${config.name} for simultaneous loading`);
         
-        try {
-            const buttonData = await createButtonMesh(i, config);
-            
-            // Set initial opacity to 0 for fade-in
-            if (buttonData.button.material) {
-                buttonData.button.material.opacity = 0;
-            }
-            buttonData.text.material.opacity = 0;
-            
-            buttonMeshes.push(buttonData);
+        const buttonPromise = createButtonMesh(i, config).then(buttonData => {
+            // Add to scene immediately but keep invisible
+            buttonMeshes[i] = buttonData;
             scene.add(buttonData.group);
             
             // Set initial position
@@ -665,27 +679,51 @@ async function createAudioButtons() {
                 buttonCurrentPositions[i] = position.clone();
             }
             
-            logAudio(`Successfully created button ${i}: ${config.name}`);
-        } catch (error) {
+            logAudio(`Button ${i}: ${config.name} created and added to scene (invisible)`);
+            return buttonData;
+        }).catch(error => {
             logAudio(`Error creating button ${i}: ${error.message}`);
-        }
+            return null;
+        });
+        
+        buttonPromises.push(buttonPromise);
     }
     
-    logAudio(`Successfully created ${buttonMeshes.length} buttons with custom 3D models`);
+    // Wait for ALL buttons to be created
+    try {
+        logAudio('Waiting for all buttons to finish loading...');
+        const results = await Promise.all(buttonPromises);
+        
+        // Filter out any null results from failed loads
+        const successfulButtons = results.filter(result => result !== null);
+        
+        logAudio(`Successfully loaded ${successfulButtons.length}/${BUTTON_COUNT} buttons`);
+        
+        // Check if initialization is complete
+        checkInitializationComplete();
+        
+    } catch (error) {
+        logAudio(`Error during batch button creation: ${error.message}`);
+        // Still check what we managed to create
+        checkInitializationComplete();
+    }
 }
 
-// Animation update function
+// Animation update function - MODIFIED for synchronized fade-in
 function updateAudioControls(deltaTime = 0.016) {
     animationTime += deltaTime * FLOAT_SPEED;
     
-    // Handle fade-in effect
-    if (isFadingIn) {
+    // Handle synchronized fade-in effect
+    if (isFadingIn && allButtonsInitialized) {
         const elapsed = (performance.now() - fadeStartTime) / 1000; // Convert to seconds
-        const fadeProgress = Math.min(elapsed / 3.0, 1.0); // 3 second fade duration for loading models
+        const fadeProgress = Math.min(elapsed / 2.0, 1.0); // 2 second fade duration for smoother effect
         
-        // Update opacity for all buttons
+        // Update opacity for ALL buttons simultaneously
         buttonMeshes.forEach((buttonData, index) => {
-            const targetButtonOpacity = buttonStates[index] ? 0.9 : 0.5;
+            if (!buttonData) return;
+            
+            const originalOpacity = buttonData.button.userData.originalOpacity || 1.0;
+            const targetButtonOpacity = buttonStates[index] ? originalOpacity : originalOpacity * 0.7;
             const targetTextOpacity = 1.0;
             
             if (buttonData.button.material) {
@@ -697,19 +735,19 @@ function updateAudioControls(deltaTime = 0.016) {
         // Stop fading when complete
         if (fadeProgress >= 1.0) {
             isFadingIn = false;
-            logAudio('Fade-in complete');
+            logAudio('Synchronized fade-in complete! All fish are now visible.');
         }
     }
     
-    // Update button positions relative to camera
-    if (typeof camera !== 'undefined') {
+    // Update button positions relative to camera (only if not still loading)
+    if (typeof camera !== 'undefined' && allButtonsInitialized) {
         updateButtonPositions(camera);
     }
 }
 
 // Initialize the audio control system
 function initializeAudioControls() {
-    logAudio('Initializing floating audio controls system with custom 3D models...');
+    logAudio('Initializing floating audio controls system with synchronized loading...');
     
     if (typeof scene === 'undefined' || typeof camera === 'undefined') {
         logAudio('Scene or camera not ready, retrying in 1 second...');
@@ -720,7 +758,7 @@ function initializeAudioControls() {
     createAudioButtons();
     setupInteraction();
     
-    logAudio('Audio controls system initialized successfully');
+    logAudio('Audio controls system initialized - waiting for all models to load...');
 }
 
 // DOM ready handler
@@ -796,12 +834,44 @@ window.AudioControlSystem = {
     
     getTrackNames: () => TRACK_CONFIG.map(config => config.name),
     
+    // Simple method to change minimum height
+    setMinimumHeight: (height) => {
+        // Just update the global constant
+        window.MINIMUM_BUTTON_HEIGHT = height;
+        
+        // Immediately apply to existing buttons
+        buttonMeshes.forEach((buttonData, index) => {
+            if (buttonData.group.position.y < height) {
+                buttonData.group.position.y = height;
+            }
+            if (buttonCurrentPositions[index] && buttonCurrentPositions[index].y < height) {
+                buttonCurrentPositions[index].y = height;
+            }
+        });
+        
+        logAudio(`Minimum height set to: ${height}`);
+    },
+    
+    getMinimumHeight: () => MINIMUM_BUTTON_HEIGHT,
+    
+    // NEW: Get initialization status
+    getInitializationStatus: () => ({
+        isComplete: allButtonsInitialized,
+        progress: initializationProgress,
+        total: totalButtonsToLoad,
+        isFadingIn: isFadingIn,
+        percentage: Math.round((initializationProgress / totalButtonsToLoad) * 100)
+    }),
+    
     // Debug functions
     debugInfo: () => {
         logAudio('=== AUDIO CONTROLS DEBUG ===');
         logAudio(`Buttons created: ${buttonMeshes.length}`);
         logAudio(`Models loaded: ${Object.keys(loadedModels).length}`);
         logAudio(`Models loading: ${Object.keys(loadingModels).length}`);
+        logAudio(`All initialized: ${allButtonsInitialized}`);
+        logAudio(`Is fading in: ${isFadingIn}`);
+        logAudio(`Progress: ${initializationProgress}/${totalButtonsToLoad}`);
         logAudio(`Interaction enabled: ${isInteractionEnabled}`);
         logAudio(`Camera available: ${typeof camera !== 'undefined'}`);
         logAudio(`Scene available: ${typeof scene !== 'undefined'}`);
@@ -809,21 +879,25 @@ window.AudioControlSystem = {
         
         if (buttonMeshes.length > 0 && typeof camera !== 'undefined') {
             buttonMeshes.forEach((buttonData, i) => {
-                logAudio(`Button ${i} position: ${buttonData.group.position.x.toFixed(1)}, ${buttonData.group.position.y.toFixed(1)}, ${buttonData.group.position.z.toFixed(1)}`);
+                if (buttonData) {
+                    logAudio(`Button ${i} position: ${buttonData.group.position.x.toFixed(1)}, ${buttonData.group.position.y.toFixed(1)}, ${buttonData.group.position.z.toFixed(1)}`);
+                }
             });
             
             // Check distances between buttons
             logAudio('=== BUTTON DISTANCES ===');
             for (let i = 0; i < buttonMeshes.length; i++) {
                 for (let j = i + 1; j < buttonMeshes.length; j++) {
-                    const pos1 = buttonMeshes[i].group.position;
-                    const pos2 = buttonMeshes[j].group.position;
-                    const distance = Math.sqrt(
-                        Math.pow(pos1.x - pos2.x, 2) +
-                        Math.pow(pos1.y - pos2.y, 2) +
-                        Math.pow(pos1.z - pos2.z, 2)
-                    );
-                    logAudio(`Distance between ${i} and ${j}: ${distance.toFixed(2)} (min required: ${MIN_BUTTON_DISTANCE})`);
+                    if (buttonMeshes[i] && buttonMeshes[j]) {
+                        const pos1 = buttonMeshes[i].group.position;
+                        const pos2 = buttonMeshes[j].group.position;
+                        const distance = Math.sqrt(
+                            Math.pow(pos1.x - pos2.x, 2) +
+                            Math.pow(pos1.y - pos2.y, 2) +
+                            Math.pow(pos1.z - pos2.z, 2)
+                        );
+                        logAudio(`Distance between ${i} and ${j}: ${distance.toFixed(2)} (min required: ${MIN_BUTTON_DISTANCE})`);
+                    }
                 }
             }
         }
@@ -832,6 +906,10 @@ window.AudioControlSystem = {
             buttonCount: buttonMeshes.length,
             modelsLoaded: Object.keys(loadedModels).length,
             modelsLoading: Object.keys(loadingModels).length,
+            allInitialized: allButtonsInitialized,
+            fadingIn: isFadingIn,
+            progress: initializationProgress,
+            total: totalButtonsToLoad,
             interactionEnabled: isInteractionEnabled,
             cameraAvailable: typeof camera !== 'undefined',
             states: buttonStates,
@@ -868,187 +946,3 @@ if (typeof window.AssetUpdateCallbacks === 'undefined') {
     window.AssetUpdateCallbacks = [];
 }
 window.AssetUpdateCallbacks.push(updateAudioControls);
-
-
-
-
-
-
-
-// Replace the createAudioButtonFloor function with this invisible version
-function createAudioButtonFloor() {
-    logAudio('Creating invisible floor boundary for audio buttons...');
-    
-    // Create an invisible floor that just acts as a boundary
-    const buttonFloorGeometry = new THREE.PlaneGeometry(1000, 1000);
-    const buttonFloorMaterial = new THREE.MeshBasicMaterial({ 
-        transparent: true,
-        opacity: 0.0, // Completely invisible
-        visible: false // Also set to not visible
-    });
-
-    const buttonFloor = new THREE.Mesh(buttonFloorGeometry, buttonFloorMaterial);
-    buttonFloor.rotation.x = -Math.PI / 2;
-    buttonFloor.position.y = -0.5; // Boundary level
-    buttonFloor.name = 'invisibleButtonFloor'; // For identification
-    
-    if (typeof scene !== 'undefined') {
-        scene.add(buttonFloor);
-        logAudio('Invisible audio button floor boundary created');
-    }
-    
-    return buttonFloor;
-}
-
-// Enhanced height enforcement that actually works
-function enforceButtonMinimumHeight() {
-    const minY = -0.3; // Minimum height above the boundary
-    
-    buttonMeshes.forEach((buttonData, index) => {
-        // Force the button to the minimum height if it's below
-        if (buttonData.group.position.y < minY) {
-            buttonData.group.position.y = minY;
-        }
-        
-        // Also update the current and target positions
-        if (buttonCurrentPositions[index] && buttonCurrentPositions[index].y < minY) {
-            buttonCurrentPositions[index].y = minY;
-        }
-        
-        // Update the random offset to prevent it from going below again
-        if (randomOffsets[index] && randomOffsets[index].y < 0) {
-            randomOffsets[index].y = Math.max(randomOffsets[index].y, 0);
-        }
-    });
-}
-
-// Completely replace the calculateButtonPosition function to enforce height
-const originalCalculateButtonPosition = calculateButtonPosition;
-calculateButtonPosition = function(index, camera) {
-    const floatOffset = Math.sin(animationTime + index) * FLOAT_AMPLITUDE;
-    
-    // Get or create random offset for this button
-    if (!randomOffsets[index]) {
-        let attempts = 0;
-        let validPosition = false;
-        let newOffset;
-        
-        // First try grid-based positioning for better initial spread
-        if (attempts === 0) {
-            newOffset = generateGridPosition(index, BUTTON_COUNT);
-            
-            // FORCE minimum Y position here
-            newOffset.y = Math.max(newOffset.y, 1.0); // Ensure at least 1 unit above ground
-            
-            // Add some randomness to the grid position
-            newOffset.x += (Math.random() - 0.5) * (MIN_BUTTON_DISTANCE * 0.3);
-            newOffset.y += Math.abs((Math.random() - 0.5) * (MIN_BUTTON_DISTANCE * 0.3)); // Only positive Y offsets
-            
-            // Check if this grid position is valid
-            if (isValidPosition(newOffset, randomOffsets, MIN_BUTTON_DISTANCE)) {
-                validPosition = true;
-            }
-        }
-        
-        // If grid position failed, try random positioning with height constraints
-        while (!validPosition && attempts < 100) {
-            newOffset = {
-                x: (Math.random() - 0.5) * SCREEN_SPREAD,
-                y: Math.max((Math.random() - 0.5) * SCREEN_SPREAD * 0.6, 1.0), // FORCE minimum Y
-                z: (Math.random() - 0.5) * 2
-            };
-            
-            // Check if this position is valid
-            if (isValidPosition(newOffset, randomOffsets, MIN_BUTTON_DISTANCE)) {
-                validPosition = true;
-                logAudio(`Found valid position for button ${index} after ${attempts + 1} attempts`);
-            }
-            
-            attempts++;
-        }
-        
-        // Fallback with guaranteed height
-        if (!validPosition) {
-            logAudio(`Could not find valid random position for button ${index}, using fallback`);
-            const angle = (index / BUTTON_COUNT) * Math.PI * 2;
-            const radius = MIN_BUTTON_DISTANCE * 1.5;
-            
-            newOffset = {
-                x: Math.cos(angle) * radius,
-                y: Math.max(Math.sin(angle) * radius * 0.6, 1.5), // FORCE minimum Y
-                z: (Math.random() - 0.5) * 2
-            };
-        }
-        
-        randomOffsets[index] = newOffset;
-        logAudio(`Button ${index} positioned at: ${newOffset.x.toFixed(1)}, ${newOffset.y.toFixed(1)}, ${newOffset.z.toFixed(1)}`);
-    }
-    
-    const offset = randomOffsets[index];
-    
-    // Position in front of camera with ENFORCED minimum height
-    const localX = offset.x;
-    const localY = Math.max(offset.y + floatOffset, 0.5); // FORCE minimum local Y
-    const localZ = -BUTTON_RADIUS + offset.z;
-    
-    // Get camera's world position and rotation
-    const cameraPosition = camera.position.clone();
-    const cameraRotation = camera.rotation.clone();
-    
-    // Create local position vector
-    const localPosition = new THREE.Vector3(localX, localY, localZ);
-    
-    // Rotate the local position by camera's Y rotation only
-    localPosition.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraRotation.y);
-    
-    // Add to camera position to get world position
-    const targetWorldPosition = cameraPosition.clone().add(localPosition);
-    
-    // FINAL HEIGHT ENFORCEMENT - this is the key fix
-    const absoluteMinY = -0.3; // Absolute minimum world Y position
-    if (targetWorldPosition.y < absoluteMinY) {
-        targetWorldPosition.y = absoluteMinY;
-    }
-    
-    return targetWorldPosition;
-};
-
-// Add this to the update function to continuously enforce height
-const originalUpdateAudioControls = updateAudioControls;
-updateAudioControls = function(deltaTime = 0.016) {
-    // Call original update
-    originalUpdateAudioControls(deltaTime);
-    
-    // Continuously enforce minimum height
-    enforceButtonMinimumHeight();
-};
-
-// Update the AudioControlSystem with the new functions
-window.AudioControlSystem = {
-    ...window.AudioControlSystem,
-    
-    createButtonFloor: createAudioButtonFloor,
-    
-    forceHeightCorrection: () => {
-        // Reset all positions to force regeneration with proper heights
-        randomOffsets = [];
-        buttonCurrentPositions = [];
-        logAudio('Forced height correction - all positions reset');
-    },
-    
-    setAbsoluteMinHeight: (height) => {
-        // Update the minimum height and force all buttons above it
-        buttonMeshes.forEach((buttonData, index) => {
-            buttonData.group.position.y = Math.max(buttonData.group.position.y, height);
-            if (buttonCurrentPositions[index]) {
-                buttonCurrentPositions[index].y = Math.max(buttonCurrentPositions[index].y, height);
-            }
-            if (randomOffsets[index]) {
-                randomOffsets[index].y = Math.max(randomOffsets[index].y, height + 1);
-            }
-        });
-        logAudio(`Set absolute minimum height to: ${height}`);
-    }
-};
-
-logAudio('Button height enforcement and invisible floor system activated');
