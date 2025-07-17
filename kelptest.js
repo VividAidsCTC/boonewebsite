@@ -30,7 +30,7 @@ const CAMERA_EXCLUSION_RADIUS = 10;
 
 // Kelp model URLs
 const KELP_MODELS = {
-    primary: 'https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/nouveaukelp4.glb',
+    primary: 'https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/kelpcompressed.glb',
     secondary: 'https://raw.githubusercontent.com/VividAidsCTC/boonewebsite/main/smallkelp2.glb' // Add your second model URL here
 };
 
